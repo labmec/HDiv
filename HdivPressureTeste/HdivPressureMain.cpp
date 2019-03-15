@@ -171,9 +171,9 @@ TPZCompMesh *CreateCompMesh2d(TPZGeoMesh &gmesh,int porder){
 	TPZMaterial * automat(mat);
 	comp->InsertMaterialObject(automat);
 	
-  TPZAutoPointer<TPZFunction<STATE> > force1 = new TPZDummyFunction<STATE>(Forcing1);
+    TPZAutoPointer<TPZFunction<STATE> > force1 = new TPZDummyFunction<STATE>(Forcing1,0);
 	mat->SetForcingFunction(force1);
-	TPZAutoPointer<TPZFunction<STATE> > exata1 = new TPZDummyFunction<STATE>(SolExata);
+	TPZAutoPointer<TPZFunction<STATE> > exata1 = new TPZDummyFunction<STATE>(SolExata,0);
 	mat->SetForcingFunctionExact(exata1);
 	///Inserir condicoes de contorno
 	
@@ -184,7 +184,7 @@ TPZCompMesh *CreateCompMesh2d(TPZGeoMesh &gmesh,int porder){
 	TPZMaterial *bnd3 = automat->CreateBC (automat,-3,0,val1,val2);//1
 	TPZMaterial *bnd4 = automat->CreateBC (automat,-4,0,val1,val2);
 	
-	TPZAutoPointer<TPZFunction<STATE> > fCC1 = new TPZDummyFunction<STATE>(CC1);
+	TPZAutoPointer<TPZFunction<STATE> > fCC1 = new TPZDummyFunction<STATE>(CC1,0);
 	bnd->SetForcingFunction(fCC1);
 	bnd2->SetForcingFunction(fCC1);
 	bnd3->SetForcingFunction(fCC1);
@@ -257,14 +257,14 @@ TPZGeoMesh * MalhaGeoT(const int h){//malha triangulo
 	//Criacao de elementos
 	
 	
-	TPZVec<int> nodind1(3);
-	TPZVec<int> nodind2(3);
+	TPZVec<int64_t> nodind1(3);
+	TPZVec<int64_t> nodind2(3);
 	for(int i=0; i<3; i++){
 		nodind1[i] = indices[0][i];
 		nodind2[i] = indices[1][i];
 	}
 	
-	int index;
+	int64_t index;
 	elvec[0] = gmesh->CreateGeoElement(ETriangle,nodind1,1,index); //AQUI
 	elvec[1] = gmesh->CreateGeoElement(ETriangle,nodind2,1,index); //AQUI
 	
@@ -328,9 +328,9 @@ TPZGeoMesh * MalhaGeoQ( const int h )/*QUADRILATEROS*/
 	int el;
 	for ( el=0; el<nelem; el++ )
 	{
-		TPZVec<int> nodind ( 4 );
+		TPZVec<int64_t> nodind ( 4 );
 		for ( nod=0; nod<4; nod++ ) nodind[nod]=indices[el][nod];
-		int index;
+		int64_t index;
 		elvec[el] = gmesh->CreateGeoElement ( EQuadrilateral,nodind,1,index );
 	}
 	
