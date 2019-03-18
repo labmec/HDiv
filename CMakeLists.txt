@@ -67,3 +67,5 @@ add_subdirectory(HDivEstabilizado)
 add_subdirectory(HDiv_demo)
 add_subdirectory(HDiv3DCurved)
 add_subdirectory(HDivPressureTeste)
+add_subdirectory(HDiv_Benchmarks)
+
