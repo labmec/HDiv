@@ -254,9 +254,19 @@ void Configuration_Affine();
  */
 void Configuration_Non_Affine();
 
+
+
 int main()
 {
-
+    TPZGeoMesh *geomesh = new TPZGeoMesh;
+    TPZGmshReader Geometry;
+    REAL s = 1.0;
+    Geometry.SetfDimensionlessL(s);
+    geomesh = Geometry.GeometricGmshMesh("case3_30k.msh");
+    std::ofstream file("case3.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(geomesh, file);
+    
+    
   HDivPiola = 1;
     
   gRefDBase.InitializeAllUniformRefPatterns();
@@ -4664,3 +4674,4 @@ void BuildMacroElements(TPZCompMesh * mixed_cmesh)
     mixed_cmesh->ExpandSolution();
     
 }
+
