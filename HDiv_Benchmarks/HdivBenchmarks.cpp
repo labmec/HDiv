@@ -648,7 +648,7 @@ void Configuration_Affine(){
     common.n_h_levels = 3;
     common.n_p_levels = 2;
     common.int_order  = 10;
-    common.n_threads  = 10;
+    common.n_threads  = 0;
     common.NonAffineQ = false;
     common.domain_type = "cube";
     common.conv_summary = "convergence_summary";

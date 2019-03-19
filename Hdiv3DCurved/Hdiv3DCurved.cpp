@@ -147,7 +147,7 @@ static int level_mhm = 0;
 
 static void Analytic(const TPZVec<REAL> &x, TPZVec<STATE> &u,TPZFMatrix<STATE> &gradu);
 static void Solution(const TPZVec<REAL> &x, TPZVec<STATE> &f);   ///Jorhge 2017. It is not used: , TPZFMatrix<STATE> &gradf);
-static void f(const TPZVec<REAL> &p, TPZVec<STATE> &f, TPZFMatrix<STATE> &gradf);
+static void forcing(const TPZVec<REAL> &p, TPZVec<STATE> &f);
 
 TPZGeoMesh * GeomtricMesh(int ndiv, SimulationCase  & sim_data);
 void ComputeCharacteristicHElSize(TPZGeoMesh * geometry, REAL & h_min, REAL & rho_min);
@@ -271,7 +271,7 @@ int main()
     
     
     
-    bool IsAffineSettingQ = false;
+    bool IsAffineSettingQ = true;
     
     
     if (IsAffineSettingQ) {
@@ -313,7 +313,7 @@ void Configuration_Affine(){
     
     //     // Primal Formulation over the solid cube
     struct SimulationCase H1Case_1 = common;
-    H1Case_1.IsHdivQ = false;
+    H1Case_1.IsHdivQ = true;
     H1Case_1.mesh_type = "linear";
     H1Case_1.elemen_type = 0;
     H1Case_1.dump_folder = "H1_T_affine_cube";
@@ -1092,7 +1092,7 @@ void Solution(const TPZVec<REAL> &p, TPZVec<STATE> &f) {   //Jorge 2017    It is
     
 }
 
-void f(const TPZVec<REAL> &p, TPZVec<STATE> &f, TPZFMatrix<STATE> &gradf){
+void forcing(const TPZVec<REAL> &p, TPZVec<STATE> &f){
     
     REAL x,y,z;
     x = p[0];
@@ -1523,7 +1523,7 @@ TPZCompMesh * PrimalMesh(TPZGeoMesh * geometry, int p, SimulationCase sim_data, 
         
         TPZMaterial * volume = new TPZPrimalPoisson(sim_data.omega_ids[iv]);
         
-        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(f, 5);
+        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
         rhs_exact->SetPolynomialOrder(sim_data.int_order);
         TPZAutoPointer<TPZFunction<STATE> > rhs = rhs_exact;
         volume->SetForcingFunction(rhs);
@@ -1602,11 +1602,14 @@ TPZCompMesh *DualMesh(TPZGeoMesh * geometry, int p, SimulationCase sim_data, TPZ
         
         TPZMaterial * volume = new TPZDualPoisson(sim_data.omega_ids[iv]);
         
-        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(f, 5);
+        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
         rhs_exact->SetPolynomialOrder(sim_data.int_order);
         TPZAutoPointer<TPZFunction<STATE> > rhs = rhs_exact;
         volume->SetForcingFunction(rhs);
-        
+        TPZVec<REAL> x(3);
+        TPZVec<STATE> ft(1);
+        TPZFMatrix<STATE> gradf(3,1);
+        rhs->Execute(x,ft,gradf);
         
         TPZDummyFunction<STATE> * analytic = new TPZDummyFunction<STATE>(Analytic, 5);
         analytic->SetPolynomialOrder(sim_data.int_order);
@@ -1829,7 +1832,7 @@ TPZCompMesh * qMesh(TPZGeoMesh * geometry, int p, SimulationCase sim_data){
         TPZMaterial * volume = new TPZDualPoisson(sim_data.omega_ids[iv]);
         set_vol.insert(sim_data.omega_ids[iv]);
         
-        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(f, 5);
+        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
         rhs_exact->SetPolynomialOrder(sim_data.int_order);
         TPZAutoPointer<TPZFunction<STATE> > rhs = rhs_exact;
         volume->SetForcingFunction(rhs);
@@ -1902,7 +1905,7 @@ TPZCompMesh * pMesh(TPZGeoMesh * geometry, int p, SimulationCase sim_data){
         
         TPZMaterial * volume = new TPZMatPoisson3d(sim_data.omega_ids[iv]);
         
-        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(f, 5);
+        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
         rhs_exact->SetPolynomialOrder(sim_data.int_order);
         TPZAutoPointer<TPZFunction<STATE> > rhs = rhs_exact;
         volume->SetForcingFunction(rhs);
@@ -4426,7 +4429,7 @@ void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REA
 
 void ErrorHdiv(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REAL & error_hdiv){
     
-    bool Serial_ErrorQ = false;
+    bool Serial_ErrorQ = true;
     int nthreads = 12;
     
     TPZCompMesh * cmesh = analysis->Mesh();
@@ -4464,7 +4467,7 @@ void ErrorHdiv(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, R
     else{
         analysis->SetThreadsForError(nthreads);
         analysis->SetExact(Analytic);
-        analysis->PostProcessError(globalerror);
+        analysis->PostProcessError(globalerror,false);
         
         error_primal    = globalerror[0];
         error_dual      = globalerror[1];
