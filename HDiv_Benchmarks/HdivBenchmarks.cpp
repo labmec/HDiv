@@ -176,9 +176,8 @@ int main(){
     
     
     TPZGmshReader Geometry;
-    REAL s = 1.0;
     TPZGeoMesh *gmesh = new TPZGeoMesh;
-    Geometry.SetFormatVersion("3");
+    Geometry.SetFormatVersion("4");
     gmesh = Geometry.GeometricGmshMesh("case_1.msh");
     Geometry.PrintPartitionSummary(std::cout);
     
