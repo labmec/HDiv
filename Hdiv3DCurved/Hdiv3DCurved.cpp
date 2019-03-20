@@ -301,9 +301,9 @@ void Configuration_Affine(){
     common.UseFrontalQ = false;
     common.UseGmshMeshQ = true;
     common.n_h_levels = 3;
-    common.n_p_levels = 2;
+    common.n_p_levels = 1;
     common.int_order  = 10;
-    common.n_threads  = 10;
+    common.n_threads  = 12;
     common.NonAffineQ = false;
     common.domain_type = "cube";
     common.conv_summary = "convergence_summary";
@@ -825,7 +825,7 @@ void Analytic(const TPZVec<REAL> &p, TPZVec<STATE> &u,TPZFMatrix<STATE> &gradu){
     y = p[1];
     z = p[2];
     
-/*    STATE r = sqrt(x*x+y*y+z*z);
+    STATE r = sqrt(x*x+y*y+z*z);
     STATE theta = acos(z/r);
     STATE phi = atan2(y,x);
     
@@ -847,7 +847,7 @@ void Analytic(const TPZVec<REAL> &p, TPZVec<STATE> &u,TPZFMatrix<STATE> &gradu){
     STATE Phiunitx = -sinphi;
     STATE Phiunity = cosphi;
     STATE Phiunitz = 0.0;
-  */
+
 #ifdef Solution1
     
     STATE dfdr       = 2.0*r;
@@ -1014,7 +1014,7 @@ void Solution(const TPZVec<REAL> &p, TPZVec<STATE> &f) {   //Jorge 2017    It is
     y = p[1];
     z = p[2];
     
-//    REAL r = sqrt(x*x+y*y+z*z);
+    REAL r = sqrt(x*x+y*y+z*z);
     
 #ifdef Solution1
     
@@ -4429,7 +4429,7 @@ void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REA
 
 void ErrorHdiv(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REAL & error_hdiv){
     
-    bool Serial_ErrorQ = true;
+    bool Serial_ErrorQ = false;
     int nthreads = 12;
     
     TPZCompMesh * cmesh = analysis->Mesh();
