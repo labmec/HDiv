@@ -1,7 +1,3 @@
-//
-//  Hdiv3DCurved.cpp
-//  Publication about 3D Curved piola mapping for mixed formulation
-
 
 #include <iostream>
 #include <string>
@@ -75,9 +71,8 @@
 
 
 struct SimulationCase {
-    bool            IsHdivQ;
     bool            IsMHMQ;
-    bool            IsHybr;
+    bool            IsHybrid;
     bool            UsePardisoQ;
     bool            UseFrontalQ;
     bool            UseGmshMeshQ;
@@ -99,12 +94,12 @@ struct SimulationCase {
     TPZStack<REAL>   type;
     TPZStack<REAL>   vals;
     
-    SimulationCase() : IsHdivQ(false), IsMHMQ(false), UsePardisoQ(true), IsHybr(false),UseFrontalQ(false), UseGmshMeshQ(false), NonAffineQ(false), elemen_type(0), n_h_levels(0), n_p_levels(1), n_acc_terms(0), int_order(1), n_threads(0),perturbation_type(0), mesh_type(""), domain_type(""),conv_summary(""),dump_folder(""),omega_ids(),gamma_ids(), permeabilities(), type(), vals()
+    SimulationCase() : IsMHMQ(false), UsePardisoQ(true), IsHybrid(false),UseFrontalQ(false), UseGmshMeshQ(false), NonAffineQ(false), elemen_type(0), n_h_levels(0), n_p_levels(1), n_acc_terms(0), int_order(1), n_threads(0),perturbation_type(0), mesh_type(""), domain_type(""),conv_summary(""),dump_folder(""),omega_ids(),gamma_ids(), permeabilities(), type(), vals()
     {
         
     }
     
-    SimulationCase(const SimulationCase &copy) : IsHdivQ(copy.IsHdivQ),IsHybr(copy.IsHybr) ,IsMHMQ(copy.IsMHMQ), UsePardisoQ(copy.UsePardisoQ), UseFrontalQ(copy.UseFrontalQ),
+    SimulationCase(const SimulationCase &copy) :IsHybrid(copy.IsHybrid) ,IsMHMQ(copy.IsMHMQ), UsePardisoQ(copy.UsePardisoQ), UseFrontalQ(copy.UseFrontalQ),
     UseGmshMeshQ(copy.UseGmshMeshQ), NonAffineQ(copy.NonAffineQ), elemen_type(copy.elemen_type), n_h_levels(copy.n_h_levels), n_p_levels(copy.n_p_levels), n_acc_terms(copy.n_acc_terms), int_order(copy.int_order),n_threads(copy.n_threads),perturbation_type(copy.perturbation_type), mesh_type(copy.mesh_type), domain_type(copy.domain_type), conv_summary(copy.conv_summary),
     dump_folder(copy.dump_folder), omega_ids(copy.omega_ids), gamma_ids(copy.gamma_ids),
     permeabilities(copy.permeabilities),
@@ -116,9 +111,9 @@ struct SimulationCase {
     
     SimulationCase &operator=(const SimulationCase &copy)
     {
-        IsHdivQ = copy.IsHdivQ;
+
         IsMHMQ = copy.IsMHMQ;
-        IsHybr = copy.IsHybr;
+        IsHybrid = copy.IsHybrid;
         UsePardisoQ = copy.UsePardisoQ;
         UseFrontalQ = copy.UseFrontalQ;
         UseGmshMeshQ = copy.UseGmshMeshQ;
@@ -142,6 +137,7 @@ struct SimulationCase {
         return *this;
     }
 };
+
 void InsertFrac(TPZGeoMesh *gmesh, TPZFMatrix<REAL> corners, int matids );
 TPZGeoMesh * case2mesh();
 TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
@@ -150,12 +146,29 @@ TPZCompMesh * PressureMesh(TPZGeoMesh * gmesh, int order,SimulationCase sim);
 TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data);
 void forcing(const TPZVec<REAL> &p, TPZVec<STATE> &f);
 void UnwrapMesh(TPZCompMesh *cmesh);
+
+/// Executes case 1
+void Case_1();
+
+/// Executes case 2
+void Case_2();
+
 int main(){
+    Case_1();
+    Case_2();
+}
+
+void Case_1(){
+    
+    DebugStop();
+}
+
+void Case_2(){
+    
     SimulationCase sim;
-    sim.IsHdivQ=true;
-    sim.IsMHMQ=false;
+    
     sim.UsePardisoQ=true;
-    sim.IsHybr=true;
+    sim.IsHybrid=true;
     sim.omega_ids.push_back(1);
     sim.omega_ids.push_back(2);
     sim.permeabilities.push_back(1.0);
@@ -170,20 +183,10 @@ int main(){
     sim.vals.push_back(0.0);
     sim.vals.push_back(1.0);
     sim.vals.push_back(-1.0);
-//    TPZGeoMesh *gmesh = case2mesh();
-//    std::ofstream file("Case2_NoF.vtk");
-//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
-    
-    
-    TPZGmshReader Geometry;
-    TPZGeoMesh *gmesh = new TPZGeoMesh;
-    Geometry.SetFormatVersion("4");
-    gmesh = Geometry.GeometricGmshMesh("case_1.msh");
-    Geometry.PrintPartitionSummary(std::cout);
-    
-    std::ofstream file("case2.vtk");
+
+    TPZGeoMesh *gmesh = case2mesh();
+    std::ofstream file("geometry_case_2.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file, true);
-    
     
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = CMeshMixed(gmesh, 1, sim, meshvec);
@@ -191,12 +194,12 @@ int main(){
     cmixedmesh->Print(filemixed);
     
     TPZCompMesh *cmeshm =NULL;
-    if(sim.IsHybr){
-    TPZCompMesh * cmesh_m_Hybrid;
-    TPZManVector<TPZCompMesh*, 3> meshvector_Hybrid(3);
-    TPZHybridizeHDiv hybridizer;
-    tie(cmesh_m_Hybrid, meshvector_Hybrid) = hybridizer.Hybridize(cmixedmesh, meshvec, true, -1.);
-    cmesh_m_Hybrid->InitializeBlock();
+    if(sim.IsHybrid){
+        TPZCompMesh * cmesh_m_Hybrid;
+        TPZManVector<TPZCompMesh*, 3> meshvector_Hybrid(3);
+        TPZHybridizeHDiv hybridizer;
+        tie(cmesh_m_Hybrid, meshvector_Hybrid) = hybridizer.Hybridize(cmixedmesh, meshvec, true, -1.);
+        cmesh_m_Hybrid->InitializeBlock();
         cmeshm=cmesh_m_Hybrid;
     }
     else{
@@ -206,29 +209,21 @@ int main(){
     
     TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
     
-    std::cout << "Assembly neq = " << cmeshm->NEquations() << "\n";
+    std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
     an->Assemble();
     
-    std::cout << "Solution of the system\n";
+    std::cout << "Solution of the system" << std::endl;
     an->Solve();
-    
-  
-   
     
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("Flux");
- 
     scalnames.Push("Pressure");
     scalnames.Push("Permeability");
     
-int div = 0;
-    std::string fileresult("result_H.vtk");
-an->DefineGraphMesh(3,scalnames,vecnames,fileresult);
-an->PostProcess(div,3);
-
-
-
-    return 0;
+    int div = 0;
+    std::string fileresult("case_2.vtk");
+    an->DefineGraphMesh(3,scalnames,vecnames,fileresult);
+    an->PostProcess(div,3);
 }
 
 void InsertFrac(TPZGeoMesh *gmesh, TPZFMatrix<REAL> corners, int matid){
