@@ -155,6 +155,8 @@ void Case_1();
 /// Executes case 2
 void Case_2();
 
+#define NewMPCmesh_Q
+
 int main(){
 //    Case_1();
     Case_2();
@@ -164,8 +166,6 @@ void Case_1(){
     
     DebugStop();
 }
-
-#define NewMPCmesh_Q
 
 void Case_2(){
     
