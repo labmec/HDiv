@@ -64,6 +64,7 @@
 #include "pzintel.h"
 
 #include "TPZHybridizeHDiv.h"
+#include "TMultiphysicsMesh.h"
 
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -141,6 +142,7 @@ struct SimulationCase {
 void InsertFrac(TPZGeoMesh *gmesh, TPZFMatrix<REAL> corners, int matids );
 TPZGeoMesh * case2mesh();
 TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
+TMultiphysicsMesh * MPCMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data);
 TPZCompMesh * FluxMesh(TPZGeoMesh * gmesh, int order, SimulationCase sim);
 TPZCompMesh * PressureMesh(TPZGeoMesh * gmesh, int order,SimulationCase sim);
 TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data);
@@ -163,12 +165,14 @@ void Case_1(){
     DebugStop();
 }
 
+#define NewMPCmesh_Q
+
 void Case_2(){
     
     SimulationCase sim;
     
     sim.UsePardisoQ=true;
-    sim.IsHybrid=true;
+    sim.IsHybrid=false; /// For now testing without hybrid mesh.
     sim.omega_ids.push_back(1);
     sim.omega_ids.push_back(2);
     sim.permeabilities.push_back(1.0);
@@ -189,7 +193,12 @@ void Case_2(){
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file, true);
     
     TPZVec<TPZCompMesh *> meshvec;
-    TPZCompMesh *cmixedmesh = CMeshMixed(gmesh, 1, sim, meshvec);
+    TPZCompMesh *cmixedmesh = NULL;
+#ifdef NewMPCmesh_Q
+    cmixedmesh = MPCMeshMixed(gmesh, 1, sim);
+#else
+    cmixedmesh = CMeshMixed(gmesh, 1, sim, meshvec);
+#endif
     std::ofstream filemixed("mixedMesh.txt");
     cmixedmesh->Print(filemixed);
     
@@ -657,6 +666,7 @@ void forcing(const TPZVec<REAL> &p, TPZVec<STATE> &f){
     REAL z = p[0];
     f[0]=x*y*z;
 }
+
 TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec){
     
     int dimension = geometry->Dimension();
@@ -739,6 +749,65 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     meshvec = meshvector;
     return cmesh;
 }
+
+TMultiphysicsMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_data){
+    
+    int dimension = geometry->Dimension();
+    int nvols = sim_data.omega_ids.size();
+    int nbound= sim_data.gamma_ids.size();
+    if (nvols<1) {
+        std::cout<<"Error: Omega is not defined."<<std::endl;
+        DebugStop();
+    }
+    if (nbound<1) {
+        std::cout<<"Error: Gamma is not defined."<<std::endl;
+        DebugStop();
+    }
+    
+    TPZManVector<TPZCompMesh * ,2> meshvec(2);
+    meshvec[0] = FluxMesh(geometry, order, sim_data);
+    meshvec[1] = PressureMesh(geometry, order, sim_data);
+    TMultiphysicsMesh *cmesh = new TMultiphysicsMesh(geometry,meshvec);
+    
+    TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
+    
+    for (int ivol=0; ivol<nvols; ivol++) {
+        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+        volume->SetPermeability(sim_data.permeabilities[ivol]);
+        
+        TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
+        rhs_exact->SetPolynomialOrder(sim_data.int_order);
+        TPZAutoPointer<TPZFunction<STATE> > rhs = rhs_exact;
+        volume->SetForcingFunction(rhs);
+        cmesh->InsertMaterialObject(volume);
+        
+        if (ivol==0) {
+            for (int ibound=0; ibound<nbound; ibound++) {
+                val2(0,0)=sim_data.vals[ibound];
+                int condType=sim_data.type[ibound];
+                TPZMaterial * face = volume->CreateBC(volume,sim_data.gamma_ids[ibound],condType,val1,val2);
+                cmesh->InsertMaterialObject(face);
+            }
+        }
+    }
+    
+    cmesh->SetDimModel(dimension);
+    cmesh->SetDefaultOrder(order);
+    cmesh->SetAllCreateFunctionsMultiphysicElem();
+    
+    cmesh->AutoBuild();
+    cmesh->AdjustBoundaryElements();
+    
+#ifdef PZDEBUG
+    std::stringstream file_name;
+    file_name   << sim_data.dump_folder << "/" << "Dual_cmesh" << ".txt";
+    std::ofstream sout(file_name.str().c_str());
+    cmesh->Print(sout);
+#endif
+    
+    return cmesh;
+}
+
 TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data){
     
     TPZAnalysis * analysis = new TPZAnalysis(cmesh, true);
