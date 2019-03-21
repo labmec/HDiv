@@ -1,6 +1,6 @@
 
 Mesh.Algorithm = 8;
-h = 1.101;           
+h = 0.0273;           
 
 
 // Dimensions: x is left to right, y is front to back and z is top to bottom
@@ -125,24 +125,13 @@ Plane Surface(64) = {63};
 Surface Loop(65) = {64, 62, 162, 60, 58, 56, 52};
 Volume(66) = {65};
 
-
-Physical Surface("fracture") = {52};
-Physical Surface("outlet_box") = {36, 34, 38, 40, 32, 30};
-Physical Surface("domain_box") = {44, 50, 56, 58, 46, 60, 48, 162, 62, 64, 40};
-
-
 Physical Volume("Vol1") = {42};
 Physical Volume("Vol2") = {66, 54};
+
+Physical Surface("fracture") = {52};
+
+Physical Surface("domain_box") = {44, 50, 56, 58, 46, 60, 48, 162, 64, 36, 34, 38, 30};
 Physical Surface("inlet") = {62};
-
-
-Physical Surface("outlet_front") = {30};
 Physical Surface("outlet_right") = {32};
-Physical Surface("outlet_back") = {34};
-Physical Surface("outlet_left") = {36};
-Physical Surface("bc_bottom") = {38};
-Physical Surface("bc_front") = {44, 56};
-Physical Surface("bc_right") = {58, 46};
-Physical Surface("bc_back") = {48, 60};
-Physical Surface("bc_left") = {50, 162};
-Physical Surface("bc_top") = {64};
+
+
