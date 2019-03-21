@@ -764,10 +764,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
         DebugStop();
     }
     
-    TPZManVector<TPZCompMesh * ,2> meshvec(2);
-    meshvec[0] = FluxMesh(geometry, order, sim_data);
-    meshvec[1] = PressureMesh(geometry, order, sim_data);
-    TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry,meshvec);
+    TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
     
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
@@ -795,8 +792,31 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     cmesh->SetDefaultOrder(order);
     cmesh->SetAllCreateFunctionsMultiphysicElem();
     
+    TPZManVector<TPZCompMesh * ,2> meshvec(2);
+    meshvec[0] = FluxMesh(geometry, order, sim_data);
+    meshvec[1] = PressureMesh(geometry, order, sim_data);
+    TPZManVector<int,5> active_approx_spaces(2); /// 1 stands for an active approximation spaces
+    active_approx_spaces[0] = 1;
+    active_approx_spaces[1] = 1;
+    cmesh->SetActiveApproxSpaces(active_approx_spaces,meshvec);
+    
     cmesh->AutoBuild();
-    cmesh->AdjustBoundaryElements();
+    
+    std::cout << "Created multi physics mesh\n";
+    if (sim_data.IsMHMQ) {
+        cmesh->CleanUpUnconnectedNodes();
+        cmesh->ExpandSolution();
+    }
+    else{
+        TPZCompMeshTools::GroupElements(cmesh);
+        std::cout << "Created grouped elements\n";
+        bool keepmatrix = false;
+        bool keeponelagrangian = true;
+        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
+        std::cout << "Created condensed elements\n";
+        cmesh->CleanUpUnconnectedNodes();
+        cmesh->ExpandSolution();
+    }
     
 #ifdef PZDEBUG
     std::stringstream file_name;
