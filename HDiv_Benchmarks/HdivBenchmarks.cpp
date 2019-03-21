@@ -155,12 +155,81 @@ void Case_2();
 
 int main(){
     Case_1();
-    Case_2();
+ //   Case_2();
 }
 
 void Case_1(){
     
-    DebugStop();
+    SimulationCase sim;
+    
+    sim.UsePardisoQ=true;
+    sim.IsHybrid=true;
+    sim.omega_ids.push_back(1);
+    sim.omega_ids.push_back(2);
+    sim.permeabilities.push_back(1.0);
+    sim.permeabilities.push_back(0.1);
+    
+    sim.gamma_ids.push_back(4);
+    sim.gamma_ids.push_back(5);
+    sim.gamma_ids.push_back(6);
+    
+//    d = 0;
+//    n = 1;
+    sim.type.push_back(1);
+    sim.type.push_back(0);
+    sim.type.push_back(0);
+    
+    sim.vals.push_back(0.0);
+    sim.vals.push_back(4.0);
+    sim.vals.push_back(1.0);
+    
+    
+    
+    TPZGmshReader Geometry;
+    TPZGeoMesh *gmesh = new TPZGeoMesh;
+    Geometry.SetFormatVersion("3");
+    gmesh = Geometry.GeometricGmshMesh("case_1_1k.msh");
+    Geometry.PrintPartitionSummary(std::cout);
+    std::ofstream file("test.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
+    
+    TPZVec<TPZCompMesh *> meshvec;
+    TPZCompMesh *cmixedmesh = CMeshMixed(gmesh, 2, sim, meshvec);
+    std::ofstream filemixed("mixedMesh.txt");
+    cmixedmesh->Print(filemixed);
+    
+    TPZCompMesh *cmeshm =NULL;
+    if(sim.IsHybrid){
+        TPZCompMesh * cmesh_m_Hybrid;
+        TPZManVector<TPZCompMesh*, 3> meshvector_Hybrid(3);
+        TPZHybridizeHDiv hybridizer;
+        tie(cmesh_m_Hybrid, meshvector_Hybrid) = hybridizer.Hybridize(cmixedmesh, meshvec, true, -1.);
+        cmesh_m_Hybrid->InitializeBlock();
+        cmeshm=cmesh_m_Hybrid;
+    }
+    else{
+        cmeshm=cmixedmesh;
+        
+    }
+    
+    TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
+    
+    std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
+    an->Assemble();
+    
+    std::cout << "Solution of the system" << std::endl;
+    an->Solve();
+    
+    TPZStack<std::string,10> scalnames, vecnames;
+    vecnames.Push("Flux");
+    scalnames.Push("Pressure");
+    scalnames.Push("Permeability");
+    
+    int div = 0;
+    std::string fileresult("case_1_1k.vtk");
+    an->DefineGraphMesh(3,scalnames,vecnames,fileresult);
+    an->PostProcess(div,3);
+    
 }
 
 void Case_2(){
@@ -526,71 +595,47 @@ TPZFMatrix<REAL> frac7(3,4,0.0);
 TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data){
     
     int dimension = 3;
-    int dirichlet = 0;
-    int neumann = 1;
-    int nvolumes = sim_data.omega_ids.size();
-    int nboundaries = sim_data.gamma_ids.size();
+    int nvols = sim_data.omega_ids.size();
+    int nbound = sim_data.gamma_ids.size();
+    int dim=3;
     
-//#ifdef PZDEBUG
-//    if (nvolumes != 1) {
-//        std::cout << "Error:: unable to compute the given case = " << &sim_data << std::endl;
-//        DebugStop();
-//    }
-//#endif
-    
+
    
     
     TPZCompMesh *cmesh = new TPZCompMesh(geometry);
     
-    
-    
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
-    
-        TPZMixedPoisson * volume1 = new TPZMixedPoisson(sim_data.omega_ids[0],3);
-  
+    for (int ivol=0; ivol<nvols; ivol++) {
+        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dim);
+        volume->SetPermeability(sim_data.permeabilities[ivol]);
+        
         TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
         rhs_exact->SetPolynomialOrder(sim_data.int_order);
         TPZAutoPointer<TPZFunction<STATE> > rhs = rhs_exact;
-        volume1->SetForcingFunction(rhs);
-    
-    volume1->SetPermeability(1.0);
-        cmesh->InsertMaterialObject(volume1);
-   
-    TPZMixedPoisson * volume2 = new TPZMixedPoisson(sim_data.omega_ids[1],3);
-    
-    volume2->SetForcingFunction(rhs);
-    volume1->SetPermeability(1.0);
-    cmesh->InsertMaterialObject(volume2);
-    
-    
-    TPZMaterial * face_1 = volume1->CreateBC(volume1,sim_data.gamma_ids[0],neumann,val1,val2);
-    
-    cmesh->InsertMaterialObject(face_1);
-    
-    val2(0,0)=1000;
-    TPZMaterial * face_2 = volume1->CreateBC(volume1,sim_data.gamma_ids[1],dirichlet,val1,val2);
-    
-    cmesh->InsertMaterialObject(face_2);
-    
-    val2(0,0)=-100;
-    TPZMaterial * face_3 = volume1->CreateBC(volume1,sim_data.gamma_ids[2],neumann,val1,val2);
-    
-    cmesh->InsertMaterialObject(face_3);
-    
+        volume->SetForcingFunction(rhs);
+        cmesh->InsertMaterialObject(volume);
         
-    
-    
+        if (ivol==0) {
+            for (int ibound=0; ibound<nbound; ibound++) {
+                val2(0,0)=sim_data.vals[ibound];
+                int condType=sim_data.type[ibound];
+                TPZMaterial * face = volume->CreateBC(volume,sim_data.gamma_ids[ibound],condType,val1,val2);
+                cmesh->InsertMaterialObject(face);
+            }
+        }
+    }
+//
     
     cmesh->SetDimModel(dimension);
     cmesh->SetDefaultOrder(order);
     cmesh->SetAllCreateFunctionsHDiv();
     cmesh->AutoBuild();
     
-        cmesh->SetDefaultOrder(order);
+    cmesh->SetDefaultOrder(order);
     
         
-        cmesh->AutoBuild();
+    cmesh->AutoBuild();
     
     
 #ifdef PZDEBUG
@@ -663,13 +708,11 @@ void forcing(const TPZVec<REAL> &p, TPZVec<STATE> &f){
     REAL x = p[0];
     REAL y = p[0];
     REAL z = p[0];
-    f[0]=x*y*z;
+    f[0]=0.0*x*y*z;
 }
 TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec){
     
     int dimension = 3;
-    int dirichlet = 0;
-    int neumann = 1;
     int nvols = sim_data.omega_ids.size();
     int nbound= sim_data.gamma_ids.size();
     int dim = 3;
@@ -705,50 +748,10 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
         }
     }
     
+    TPZManVector<TPZCompMesh * ,2> meshvector(2);
+    meshvector[0] = FluxMesh(geometry, order, sim_data);
+    meshvector[1] = PressureMesh(geometry, order, sim_data);
     
-    
-    
-   
-    
-
-//    TPZFMatrix<REAL> K(3,3,0.0);
-//    TPZFMatrix<REAL> invK(3,3,0.0);
-//    K(0,0)=1;
-//    K(1,1)=1;
-//    K(2,2)=1;
-//    invK=K;
-//  //  volume1->SetPermeabilityTensor(K,  invK);
-//
-//    TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
-//    rhs_exact->SetPolynomialOrder(sim_data.int_order);
-//    TPZAutoPointer<TPZFunction<STATE> > rhs = rhs_exact;
-//    volume1->SetForcingFunction(rhs);
-//
-//    volume1->SetPermeability(1.0);
-//
-//    cmesh->InsertMaterialObject(volume1);
-//
-//     TPZMixedPoisson * volume2 = new TPZMixedPoisson(sim_data.omega_ids[1],3);
-//
-//    volume2->SetForcingFunction(rhs);
-//    volume2->SetPermeability(0.1);
-//  //  volume2->SetPermeabilityTensor(K,  invK);
-//    cmesh->InsertMaterialObject(volume2);
-//
-//
-//    TPZMaterial * face_1 = volume2->CreateBC(volume1,sim_data.gamma_ids[0],neumann,val1,val2);
-//
-//    cmesh->InsertMaterialObject(face_1);
-//
-//     val2(0,0)=1.0;
-//    TPZMaterial * face_2 = volume1->CreateBC(volume1,sim_data.gamma_ids[1],dirichlet,val1,val2);
-//
-//    cmesh->InsertMaterialObject(face_2);
-//
-//     val2(0,0)=-1.0;
-//    TPZMaterial * face_3 = volume2->CreateBC(volume1,sim_data.gamma_ids[2],neumann,val1,val2);
-//
-//    cmesh->InsertMaterialObject(face_3);
     
     cmesh->SetDimModel(dimension);
     cmesh->SetDefaultOrder(order);
@@ -758,45 +761,13 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     cmesh->AdjustBoundaryElements();
     
     
-    TPZManVector<TPZCompMesh * ,2> meshvector(2);
-    meshvector[0] = FluxMesh(geometry, order, sim_data);
-    meshvector[1] = PressureMesh(geometry, order, sim_data);
-    
-//    AdjustFluxPolynomialOrders(meshvector[0], sim_data.n_acc_terms);
-//    SetPressureOrders(meshvector[0], meshvector[1]);
-    
-//    if (sim_data.IsMHMQ) {
-//        SeparateConnectsByNeighborhood(meshvector[0]);
-//    }
-    
     // Transferindo para a multifisica
     TPZBuildMultiphysicsMesh::AddElements(meshvector, cmesh);
     TPZBuildMultiphysicsMesh::AddConnects(meshvector, cmesh);
     TPZBuildMultiphysicsMesh::TransferFromMeshes(meshvector, cmesh);
     
     std::cout << "Created multi physics mesh\n";
-    if (sim_data.IsMHMQ) {
-        //        BuildMacroElements(cmesh);
-        cmesh->CleanUpUnconnectedNodes();
-        cmesh->ExpandSolution();
-    }
-    else{
-        TPZCompMeshTools::GroupElements(cmesh);
-        std::cout << "Created grouped elements\n";
-        bool keepmatrix = false;
-        bool keeponelagrangian = true;
-        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
-        std::cout << "Created condensed elements\n";
-        cmesh->CleanUpUnconnectedNodes();
-        cmesh->ExpandSolution();
-    }
-    
-#ifdef PZDEBUG2
-    std::stringstream file_name;
-    file_name   << sim_data.dump_folder << "/" << "Dual_cmesh" << ".txt";
-    std::ofstream sout(file_name.str().c_str());
-    cmesh->Print(sout);
-#endif
+
     
     meshvec = meshvector;
     
@@ -846,4 +817,3 @@ TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data){
     return analysis;
     
 }
-
