@@ -64,7 +64,7 @@
 #include "pzintel.h"
 
 #include "TPZHybridizeHDiv.h"
-#include "TMultiphysicsMesh.h"
+#include "TPZMultiphysicsCompMesh.h"
 
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -142,7 +142,7 @@ struct SimulationCase {
 void InsertFrac(TPZGeoMesh *gmesh, TPZFMatrix<REAL> corners, int matids );
 TPZGeoMesh * case2mesh();
 TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
-TMultiphysicsMesh * MPCMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data);
+TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data);
 TPZCompMesh * FluxMesh(TPZGeoMesh * gmesh, int order, SimulationCase sim);
 TPZCompMesh * PressureMesh(TPZGeoMesh * gmesh, int order,SimulationCase sim);
 TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data);
@@ -750,7 +750,7 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     return cmesh;
 }
 
-TMultiphysicsMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_data){
+TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_data){
     
     int dimension = geometry->Dimension();
     int nvols = sim_data.omega_ids.size();
@@ -767,7 +767,7 @@ TMultiphysicsMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, SimulationCas
     TPZManVector<TPZCompMesh * ,2> meshvec(2);
     meshvec[0] = FluxMesh(geometry, order, sim_data);
     meshvec[1] = PressureMesh(geometry, order, sim_data);
-    TMultiphysicsMesh *cmesh = new TMultiphysicsMesh(geometry,meshvec);
+    TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry,meshvec);
     
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
