@@ -17,10 +17,7 @@
 class TMultiphysicsMesh : public TPZCompMesh {
     
     /// Vector of active physics
-    TPZVec<int> m_active_physics;
-    
-    /// Vector of inert physics
-    TPZVec<int> m_inert_physics;
+    TPZVec<int> m_active_approx_spaces;
     
     /// Vector of computational meshes
     TPZVec<TPZCompMesh * > m_mesh_vector;
@@ -42,9 +39,8 @@ public:
     /// Automatic builder for the computational mesh structure
     void AutoBuild();
   
-    void SetActivePhysics(TPZVec<int> & active_physics);
-    
-    void SetInertPhysics(TPZVec<int> & m_inert_physics);
+    /// Set active approximation spaces
+    void SetActiveApproxSpaces(TPZVec<int> & active_approx_spaces);
 };
 
 #endif /* TMultiphysicsMesh_h */

@@ -10,8 +10,7 @@
 
 TMultiphysicsMesh::TMultiphysicsMesh(){
     
-    m_active_physics.Resize(0);
-    m_inert_physics.Resize(0);
+    m_active_approx_spaces.Resize(0);
     m_mesh_vector.Resize(0);
     
 }
@@ -34,12 +33,8 @@ void TMultiphysicsMesh::AutoBuild(){
     TPZBuildMultiphysicsMesh::TransferFromMeshes(m_mesh_vector, this);
 }
 
-void TMultiphysicsMesh::SetActivePhysics(TPZVec<int> & active_physics){
-    m_active_physics = active_physics;
-}
-
-void TMultiphysicsMesh::SetInertPhysics(TPZVec<int> & m_inert_physics){
-    m_inert_physics = m_inert_physics;
+void TMultiphysicsMesh::SetActiveApproxSpaces(TPZVec<int> & active_approx_spaces){
+    m_active_approx_spaces = active_approx_spaces;
 }
 
 TMultiphysicsMesh::TMultiphysicsMesh(const TMultiphysicsMesh &other) : TPZCompMesh(other) {
@@ -51,9 +46,8 @@ TMultiphysicsMesh & TMultiphysicsMesh::operator=(const TMultiphysicsMesh &other)
     if (this != & other) // prevent self-assignment
     {
         TPZCompMesh::operator=(other);
-        m_active_physics    = other.m_active_physics;
-        m_inert_physics     = other.m_inert_physics;
-        m_mesh_vector       = other.m_mesh_vector;
+        m_active_approx_spaces  = other.m_active_approx_spaces;
+        m_mesh_vector           = other.m_mesh_vector;
     }
     return *this;
 }
