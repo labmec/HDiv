@@ -155,12 +155,10 @@ void Case_1();
 /// Executes case 2
 void Case_2();
 
-//#define NewMPCmesh_Q
-
 int main(){
     
     Case_1();
- //   Case_2();
+    Case_2();
 }
 
 void Case_1(){
@@ -200,11 +198,7 @@ void Case_1(){
     
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
-#ifdef NewMPCmesh_Q
     cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
-#else
-    cmixedmesh = CMeshMixed(gmesh, 1, sim, meshvec);
-#endif
     std::ofstream filemixed("mixedMesh.txt");
     cmixedmesh->Print(filemixed);
     
@@ -269,11 +263,7 @@ void Case_2(){
     
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
-#ifdef NewMPCmesh_Q
     cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
-#else
-    cmixedmesh = CMeshMixed(gmesh, 1, sim, meshvec);
-#endif
     std::ofstream filemixed("mixedMesh.txt");
     cmixedmesh->Print(filemixed);
     
@@ -839,8 +829,6 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     }
     
     cmesh->SetDimModel(dimension);
-    cmesh->SetDefaultOrder(order);
-    cmesh->SetAllCreateFunctionsMultiphysicElem();
     
     TPZManVector<TPZCompMesh * ,2> mesh_vec(2);
     mesh_vec[0] = FluxMesh(geometry, order, sim_data);
@@ -848,9 +836,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     TPZManVector<int,5> active_approx_spaces(2); /// 1 stands for an active approximation spaces
     active_approx_spaces[0] = 1;
     active_approx_spaces[1] = 1;
-    cmesh->SetActiveApproxSpaces(active_approx_spaces,mesh_vec);
-    
-    cmesh->AutoBuild();
+    cmesh->BuildMultiphysicsSpace(active_approx_spaces,mesh_vec);
     
     std::cout << "Created multi physics mesh\n";
     if (sim_data.IsMHMQ) {
