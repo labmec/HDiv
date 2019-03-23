@@ -269,11 +269,13 @@ void Pretty_cube(){
                 DebugStop();
             }
             
-            int n_meshes = mp_cmesh->MeshVector().size();
-            TPZManVector<TPZCompMesh *, 2> dfn_mixed_mesh_vec(n_meshes, 0);
-            for (int i = 0; i <  n_meshes; i++) {
-                dfn_mixed_mesh_vec[i] =  mp_cmesh->MeshVector()[i]->Clone(); /// @TODO There is smth weird without
-            }
+//            int n_meshes = mp_cmesh->MeshVector().size();
+//            TPZManVector<TPZCompMesh *, 2> dfn_mixed_mesh_vec(n_meshes, 0);
+//            for (int i = 0; i <  n_meshes; i++) {
+//                dfn_mixed_mesh_vec[i] =  mp_cmesh->MeshVector()[i]->Clone();
+//            }
+            
+            TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
             
             int lagrange_mult_id; /// compute a proper LM id
             int flux_trace_id; /// compute a proper flux_trace id
@@ -426,8 +428,8 @@ void Pretty_cube(){
                 
                 /// Cleanup mp_cmesh
                 {
-//                    cmixedmesh->CleanUp();
-//                    cmixedmesh->SetReference(NULL);
+                    cmixedmesh->CleanUp();
+                    cmixedmesh->SetReference(NULL);
                 }
                 
                 /// Insert fractures material objects
