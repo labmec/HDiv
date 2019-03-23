@@ -70,6 +70,8 @@
 
 #include "THybridzeDFN.h"
 #include "pzl2projection.h"
+#include "pzmat1dlin.h"
+#include "pzmat2dlin.h"
 
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -220,10 +222,40 @@ void Pretty_cube(){
     std::ofstream filemixed("mixedMesh.txt");
     cmixedmesh->Print(filemixed);
     
+    std::ofstream file_txt("geometry_cube_base.txt");
+    cmixedmesh->Reference()->Print(file_txt);
+    
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
         TPZCompMesh * cmesh_m_Hybrid;
+        
         TPZHybridizeHDiv hybridizer;
+        
+        bool old_version_Q = false;
+        
+        if(old_version_Q)
+        {
+            TPZManVector<TPZCompMesh*, 2> meshvector_Hybrid(2);
+            std::ofstream file_txt("geometry_cube_base_before_Hybridize.txt");
+            cmixedmesh->Reference()->Print(file_txt);
+            tie(cmesh_m_Hybrid, meshvector_Hybrid) = hybridizer.Hybridize(cmixedmesh, meshvec, true, -1.);
+            cmesh_m_Hybrid->InitializeBlock();
+            
+            std::ofstream file_geo_hybrid("geometry_cube_hybrid_old.vtk");
+            TPZVTKGeoMesh::PrintGMeshVTK(cmesh_m_Hybrid->Reference(), file_geo_hybrid);
+            
+            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh_old.txt");
+            cmesh_m_Hybrid->Print(file_hybrid_mixed);
+            {
+                std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_old_q.txt");
+                meshvector_Hybrid[0]->Print(file_hybrid_mixed_q);
+                std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_old_p.txt");
+                meshvector_Hybrid[1]->Print(file_hybrid_mixed_p);
+            }
+            return;
+        }
+        
+        
         THybridzeDFN dfn_hybridzer;
         int target_dim = 3;
         TPZStack<int> fracture_ids;
@@ -237,11 +269,11 @@ void Pretty_cube(){
                 DebugStop();
             }
             
-            TPZGeoMesh *gmesh = mp_cmesh->Reference();
-            TPZMultiphysicsCompMesh * dfn_hybrid_cmesh = new TPZMultiphysicsCompMesh(gmesh);
-            TPZManVector<int,5> & active_approx_spaces = mp_cmesh->GetActiveApproximationSpaces();
-            
-            TPZManVector<TPZCompMesh * ,3> & dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
+            int n_meshes = mp_cmesh->MeshVector().size();
+            TPZManVector<TPZCompMesh *, 2> dfn_mixed_mesh_vec(n_meshes, 0);
+            for (int i = 0; i <  n_meshes; i++) {
+                dfn_mixed_mesh_vec[i] =  mp_cmesh->MeshVector()[i]->Clone(); /// @TODO There is smth weird without
+            }
             
             int lagrange_mult_id; /// compute a proper LM id
             int flux_trace_id; /// compute a proper flux_trace id
@@ -259,22 +291,29 @@ void Pretty_cube(){
                 if (maxMatId == std::numeric_limits<int>::min()) {
                     maxMatId = 0;
                 }
-                lagrange_mult_id = maxMatId + 1;
-                flux_trace_id = maxMatId + 2;
+                flux_trace_id = maxMatId + 1;
+                lagrange_mult_id = maxMatId + 2;
                 truly_lagrange_mult_id = maxMatId + 3;
             }
             
             /// Insert LM and flux_trace materials
             {
-                
+                TPZFNMatrix<1, STATE> xk(n_state, n_state, 0.), xb(n_state, n_state, 0.), xc(n_state, n_state, 0.), xf(n_state, 1, 0.);
                 TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
                 if (!flux_cmesh) {
                     DebugStop();
                 }
-                if (!flux_cmesh->FindMaterial(lagrange_mult_id)) {
-                    TPZVec<STATE> sol;
-                    auto flux_trace_mat = new TPZL2Projection(flux_trace_id, target_dim, n_state, sol);
-                    flux_cmesh->InsertMaterialObject(flux_trace_mat);
+                if (!flux_cmesh->FindMaterial(flux_trace_id)) {
+
+                    if (target_dim == 2) {
+                        auto flux_trace_mat = new TPZMat1dLin(flux_trace_id);
+                        flux_trace_mat->SetMaterial(xk, xb, xc, xf);
+                        flux_cmesh->InsertMaterialObject(flux_trace_mat);
+                    }else if(target_dim == 3){
+                        auto flux_trace_mat = new TPZMat2dLin(flux_trace_id);
+                        flux_trace_mat->SetMaterial(xk, xc, xf);
+                        flux_cmesh->InsertMaterialObject(flux_trace_mat);
+                    }
                 }
 
                 TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
@@ -282,9 +321,16 @@ void Pretty_cube(){
                     DebugStop();
                 }
                 if (!pressure_cmesh->FindMaterial(lagrange_mult_id)) {
-                    TPZVec<STATE> sol;
-                    auto lagrange_mult_mat = new TPZL2Projection(lagrange_mult_id, target_dim, n_state, sol);
-                    pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
+
+                    if (target_dim == 2) {
+                        auto lagrange_mult_mat = new TPZMat1dLin(lagrange_mult_id);
+                        lagrange_mult_mat->SetMaterial(xk, xb, xc, xf);
+                        pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
+                    }else if(target_dim == 3){
+                        auto lagrange_mult_mat = new TPZMat2dLin(lagrange_mult_id);
+                        lagrange_mult_mat->SetMaterial(xk, xc, xf);
+                        pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
+                    }
                 }
                 
             }
@@ -312,7 +358,7 @@ void Pretty_cube(){
                             continue;
                         }
                         TPZCompElSide celside(intel, side);
-                        TPZCompElSide neighcomp;/// = hybridizer.RightElement(intel, side); it makes sense
+                        TPZCompElSide neighcomp = hybridizer.RightElement(intel, side); //it makes sense
                         if (neighcomp) {
                             pressures.push_back(dfn_hybridzer.DissociateConnects(flux_trace_id,lagrange_mult_id,celside, neighcomp, dfn_mixed_mesh_vec));
                         }
@@ -354,7 +400,24 @@ void Pretty_cube(){
             }
             
             /// ResconstrucMultiphysicsCMesh
+            
+            TPZGeoMesh *gmesh = mp_cmesh->Reference();
+            TPZMultiphysicsCompMesh * dfn_hybrid_cmesh = new TPZMultiphysicsCompMesh(gmesh);
+            TPZManVector<int,5> & active_approx_spaces = mp_cmesh->GetActiveApproximationSpaces();
             {
+                
+//                {
+//                    TPZGeoMesh *gmesh = cmesh_HDiv->Reference();
+//                    TPZCompMesh *cmesh_Hybrid = new TPZCompMesh(gmesh);
+//                    cmesh_HDiv->CopyMaterials(*cmesh_Hybrid);
+//                    InsertPeriferalMaterialObjects(cmesh_Hybrid, Lagrange_term_multiplier);
+//                    cmesh_Hybrid->ApproxSpace().SetAllCreateFunctionsMultiphysicElem();
+//                    cmesh_Hybrid->AutoBuild();
+//
+//                    TPZBuildMultiphysicsMesh::AddElements(meshvector_Hybrid, cmesh_Hybrid);
+//                    TPZBuildMultiphysicsMesh::AddConnects(meshvector_Hybrid, cmesh_Hybrid);
+//                    cmesh_Hybrid->LoadReferences();
+//                }
                 
                 /// copy already inserted materials
                 {
@@ -363,12 +426,44 @@ void Pretty_cube(){
                 
                 /// Cleanup mp_cmesh
                 {
-                    cmixedmesh->CleanUp();
-                    cmixedmesh->SetReference(NULL);
+//                    cmixedmesh->CleanUp();
+//                    cmixedmesh->SetReference(NULL);
                 }
                 
                 /// Insert fractures material objects
                 {
+                    
+                    TPZFNMatrix<1, STATE> xk(n_state, n_state, 0.), xb(n_state, n_state, 0.), xc(n_state, n_state, 0.), xf(n_state, 1, 0.);
+                    
+                    if (!dfn_hybrid_cmesh) {
+                        DebugStop();
+                    }
+                    if (!dfn_hybrid_cmesh->FindMaterial(flux_trace_id)) {
+                        
+                        if (target_dim == 2) {
+                            auto flux_trace_mat = new TPZMat1dLin(flux_trace_id);
+                            flux_trace_mat->SetMaterial(xk, xb, xc, xf);
+                            dfn_hybrid_cmesh->InsertMaterialObject(flux_trace_mat);
+                        }else if(target_dim == 3){
+                            auto flux_trace_mat = new TPZMat2dLin(flux_trace_id);
+                            flux_trace_mat->SetMaterial(xk, xc, xf);
+                            dfn_hybrid_cmesh->InsertMaterialObject(flux_trace_mat);
+                        }
+                    }
+                    
+                    if (!dfn_hybrid_cmesh->FindMaterial(lagrange_mult_id)) {
+                        
+                        if (target_dim == 2) {
+                            auto lagrange_mult_mat = new TPZMat1dLin(lagrange_mult_id);
+                            lagrange_mult_mat->SetMaterial(xk, xb, xc, xf);
+                            dfn_hybrid_cmesh->InsertMaterialObject(lagrange_mult_mat);
+                        }else if(target_dim == 3){
+                            auto lagrange_mult_mat = new TPZMat2dLin(lagrange_mult_id);
+                            lagrange_mult_mat->SetMaterial(xk, xc, xf);
+                            dfn_hybrid_cmesh->InsertMaterialObject(lagrange_mult_mat);
+                        }
+                    }
+                    
                     if (!dfn_hybrid_cmesh->FindMaterial(truly_lagrange_mult_id)) {
                         auto lagrange_multiplier = new TPZLagrangeMultiplier(truly_lagrange_mult_id, target_dim - 1, n_state);
                         lagrange_multiplier->SetMultiplier(1.0);
@@ -376,11 +471,34 @@ void Pretty_cube(){
                     }
                 }
                 dfn_hybrid_cmesh->SetDimModel(target_dim);
-                dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
+                
+                if(1){
+                    dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
+                }else{
+                    dfn_hybrid_cmesh->ApproxSpace().SetAllCreateFunctionsMultiphysicElem();
+                    dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
+
+                    TPZBuildMultiphysicsMesh::AddElements(dfn_mixed_mesh_vec, dfn_hybrid_cmesh);
+                    TPZBuildMultiphysicsMesh::AddConnects(dfn_mixed_mesh_vec, dfn_hybrid_cmesh);
+                    dfn_hybrid_cmesh->LoadReferences();
+                }
+                
                 dfn_hybridzer.CreateInterfaceElements(truly_lagrange_mult_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
                 
                 dfn_hybrid_cmesh->InitializeBlock();
                 cmeshm=dfn_hybrid_cmesh;
+                
+                //            mp_cmesh->Reference()->ResetReference();
+                std::ofstream file_geo_new("new_geometry_cube.txt");
+                dfn_hybrid_cmesh->Reference()->Print(file_geo_new);
+                
+                {
+                    std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+                    dfn_hybrid_cmesh->MeshVector()[0]->Print(file_hybrid_mixed_q);
+                    std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+                    dfn_hybrid_cmesh->MeshVector()[1]->Print(file_hybrid_mixed_p);
+                }
+                
             }
 
         }
