@@ -157,6 +157,9 @@ void Case_1();
 /// Executes case 2
 void Case_2();
 
+/// Executes case 2
+void Pretty_2();
+
 int main(){
     Case_1();
 //     Case_2();
