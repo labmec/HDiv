@@ -215,15 +215,15 @@ void Pretty_cube(){
     std::ofstream file("geometry_cube.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     
+    std::ofstream file_txt("geometry_cube_base.txt");
+    gmesh->Print(file_txt);
+    
     int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
     std::ofstream filemixed("mixedMesh.txt");
     cmixedmesh->Print(filemixed);
-    
-    std::ofstream file_txt("geometry_cube_base.txt");
-    cmixedmesh->Reference()->Print(file_txt);
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
@@ -259,9 +259,11 @@ void Pretty_cube(){
         THybridzeDFN dfn_hybridzer;
         int target_dim = 3;
         TPZStack<int> fracture_ids;
-        fracture_ids.Push(3);
+        fracture_ids.Push(100);
         dfn_hybridzer.Hybridize(cmixedmesh,target_dim,fracture_ids);
         
+        std::set<int> m_fracture_ids;
+        m_fracture_ids.insert(100);
         {
             int material_id = 1; /// Material ids being hybridized
             TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmixedmesh);
@@ -359,10 +361,11 @@ void Pretty_cube(){
                         if (gel->SideDimension(side) != dim - 1) {
                             continue;
                         }
+
                         TPZCompElSide celside(intel, side);
                         TPZCompElSide neighcomp = hybridizer.RightElement(intel, side); //it makes sense
                         if (neighcomp) {
-                            pressures.push_back(dfn_hybridzer.DissociateConnects(flux_trace_id,lagrange_mult_id,celside, neighcomp, dfn_mixed_mesh_vec));
+                           pressures.push_back(dfn_hybridzer.DissociateConnects(flux_trace_id,lagrange_mult_id,celside, neighcomp, dfn_mixed_mesh_vec));
                         }
                     }
                 }
@@ -407,19 +410,6 @@ void Pretty_cube(){
             TPZMultiphysicsCompMesh * dfn_hybrid_cmesh = new TPZMultiphysicsCompMesh(gmesh);
             TPZManVector<int,5> & active_approx_spaces = mp_cmesh->GetActiveApproximationSpaces();
             {
-                
-//                {
-//                    TPZGeoMesh *gmesh = cmesh_HDiv->Reference();
-//                    TPZCompMesh *cmesh_Hybrid = new TPZCompMesh(gmesh);
-//                    cmesh_HDiv->CopyMaterials(*cmesh_Hybrid);
-//                    InsertPeriferalMaterialObjects(cmesh_Hybrid, Lagrange_term_multiplier);
-//                    cmesh_Hybrid->ApproxSpace().SetAllCreateFunctionsMultiphysicElem();
-//                    cmesh_Hybrid->AutoBuild();
-//
-//                    TPZBuildMultiphysicsMesh::AddElements(meshvector_Hybrid, cmesh_Hybrid);
-//                    TPZBuildMultiphysicsMesh::AddConnects(meshvector_Hybrid, cmesh_Hybrid);
-//                    cmesh_Hybrid->LoadReferences();
-//                }
                 
                 /// copy already inserted materials
                 {
@@ -473,26 +463,67 @@ void Pretty_cube(){
                     }
                 }
                 dfn_hybrid_cmesh->SetDimModel(target_dim);
-                
-                if(1){
-                    dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
-                }else{
-                    dfn_hybrid_cmesh->ApproxSpace().SetAllCreateFunctionsMultiphysicElem();
-                    dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
-
-                    TPZBuildMultiphysicsMesh::AddElements(dfn_mixed_mesh_vec, dfn_hybrid_cmesh);
-                    TPZBuildMultiphysicsMesh::AddConnects(dfn_mixed_mesh_vec, dfn_hybrid_cmesh);
-                    dfn_hybrid_cmesh->LoadReferences();
-                }
+                dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
                 
                 dfn_hybridzer.CreateInterfaceElements(truly_lagrange_mult_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
                 
                 dfn_hybrid_cmesh->InitializeBlock();
                 cmeshm=dfn_hybrid_cmesh;
                 
-                //            mp_cmesh->Reference()->ResetReference();
-                std::ofstream file_geo_new("new_geometry_cube.txt");
-                dfn_hybrid_cmesh->Reference()->Print(file_geo_new);
+                
+                /// Change lagrange multipliers identifiers to fractures identifiers
+                {
+//                    TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
+                    dfn_hybrid_cmesh->Reference()->BuildConnectivity();
+                    dfn_hybrid_cmesh->Reference()->ResetReference();
+                    dfn_hybrid_cmesh->LoadReferences();
+                    TPZGeoMesh  * gmesh = dfn_hybrid_cmesh->Reference();
+                    int64_t n_cel = dfn_hybrid_cmesh->NElements();
+                    for (auto gel : gmesh->ElementVec()) {
+                
+                        if (!gel) {
+                            DebugStop();
+                        }
+                        
+                        int gel_mat_id = gel->MaterialId();
+                        std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
+                        bool is_not_fracture_Q = it == m_fracture_ids.end();
+                        if (is_not_fracture_Q) {
+                            continue;
+                        }
+                        
+                        TPZCompEl * cel = gel->Reference();
+                        if (!cel) {
+                            DebugStop();
+                        }
+                        
+                        
+                        if (gel->MaterialId() == lagrange_mult_id) {
+                            int side = gel->NSides() - 1;
+                            TPZGeoElSide gel_side(gel,side);
+                            TPZStack<TPZGeoElSide> gelsides;
+                            gel_side.AllNeighbours(gelsides);
+                            
+                            for (auto iside : gelsides) {
+                                if(iside.Element()->MaterialId() == material_id){
+                                    int side = iside.Side();
+                                    TPZGeoEl * gel = iside.Element();
+                                    TPZGeoElSide gel_side(gel,side);
+                                    TPZStack<TPZGeoElSide> vol_gelsides;
+                                    gel_side.AllNeighbours(vol_gelsides);
+                                    int aka = 0;
+                                }
+                            }
+                            
+                        }
+                        
+                        
+                    }
+                    
+                }
+                
+                
+
                 
                 {
                     std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
@@ -513,6 +544,9 @@ void Pretty_cube(){
     
     std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
+    
+    std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
+    cmeshm->Reference()->Print(file_geo_hybrid_txt);
     
     std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
     cmeshm->Print(file_hybrid_mixed);
@@ -720,7 +754,6 @@ void InsertFrac(TPZGeoMesh *gmesh, TPZFMatrix<REAL> corners, int matid){
     TPZGeoEl * frac_gel = gmesh->Element(Nels);
     TPZVec<TPZGeoEl *> sons;
     frac_gel->Divide(sons);
-    
 }
 TPZGeoMesh * case2mesh(){
     // Creating the Geo mesh
@@ -1178,15 +1211,16 @@ TPZGeoMesh * PrettyCubemesh(){
     frac9(2,3) = 0.75;
     
     //  InsertFrac(mesh, corners, matid)
-    InsertFrac(gmesh3d,frac1,3);
-    InsertFrac(gmesh3d,frac2,3);
+    InsertFrac(gmesh3d,frac1,100);
+    InsertFrac(gmesh3d,frac2,100);
 //    InsertFrac(gmesh3d,frac3,3);
 //    InsertFrac(gmesh3d,frac4,3);
 //    InsertFrac(gmesh3d,frac5,3);
 //    InsertFrac(gmesh3d,frac6,3);
-    InsertFrac(gmesh3d,frac7,3);
+    InsertFrac(gmesh3d,frac7,100);
 //    InsertFrac(gmesh3d,frac8,3);
 //    InsertFrac(gmesh3d,frac9,3);
+    gmesh->BuildConnectivity();
     return gmesh3d;
     
 }
