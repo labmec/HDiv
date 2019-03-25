@@ -68,7 +68,7 @@
 #include "TPZLagrangeMultiplier.h"
 
 #include "TFracture.h"
-#include "THybridzeDFN.h"
+#include "THybridizeDFN.h"
 #include "pzl2projection.h"
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
@@ -182,7 +182,7 @@ int main(){
 //    FractureTest();
 }
 
-#define DFN_H_Q
+//#define DFN_H_Q
 
 /// Executes cube
 void Pretty_cube(){
@@ -273,158 +273,17 @@ void Pretty_cube(){
         }
         
         
-        THybridzeDFN dfn_hybridzer;
+        int dimension = 3;
+        THybridizeDFN dfn_hybridzer;
+        dfn_hybridzer.SetFractureData(fracture_data);
+        dfn_hybridzer.SetDimension(dimension);
+        
+        /// step 1 apply process on dimension 3 entities
         int target_dim = 3;
-        dfn_hybridzer.Hybridize(cmixedmesh,target_dim,fracture_data);
+        dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
         
 
-        std::set<int> m_fracture_ids;
-        
-        /// Fill m_fracture_ids
-        for (auto fracture: fracture_data) {
-            m_fracture_ids.insert(fracture.m_id);
-        }
-        
-        
-        {
-            int material_id = 1; /// Material ids being hybridized
-            TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmixedmesh);
-            if (!mp_cmesh) {
-                DebugStop();
-            }
-            
-//            int n_meshes = mp_cmesh->MeshVector().size();
-//            TPZManVector<TPZCompMesh *, 2> dfn_mixed_mesh_vec(n_meshes, 0);
-//            for (int i = 0; i <  n_meshes; i++) {
-//                dfn_mixed_mesh_vec[i] =  mp_cmesh->MeshVector()[i]->Clone();
-//            }
-            
-            TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
-            
-            int lagrange_mult_id; /// compute a proper LM id
-            int flux_trace_id; /// compute a proper flux_trace id
-            int truly_lagrange_mult_id;
-            int n_state = 1;
-            
-            /// Computes maximum material identifier
-            {
-                int maxMatId = std::numeric_limits<int>::min();
-                for (auto &mesh : dfn_mixed_mesh_vec) {
-                    for (auto &mat : mesh->MaterialVec()) {
-                        maxMatId = std::max(maxMatId, mat.first);
-                    }
-                }
-                if (maxMatId == std::numeric_limits<int>::min()) {
-                    maxMatId = 0;
-                }
-                flux_trace_id = maxMatId + 1;
-                lagrange_mult_id = maxMatId + 2;
-                truly_lagrange_mult_id = maxMatId + 3;
-            }
-            
-            /// Insert LM and flux_trace materials
-            {
-                TPZFNMatrix<1, STATE> xk(n_state, n_state, 0.), xb(n_state, n_state, 0.), xc(n_state, n_state, 0.), xf(n_state, 1, 0.);
-                TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
-                if (!flux_cmesh) {
-                    DebugStop();
-                }
-                if (!flux_cmesh->FindMaterial(flux_trace_id)) {
-
-                    if (target_dim == 2) {
-                        auto flux_trace_mat = new TPZMat1dLin(flux_trace_id);
-                        flux_trace_mat->SetMaterial(xk, xb, xc, xf);
-                        flux_cmesh->InsertMaterialObject(flux_trace_mat);
-                    }else if(target_dim == 3){
-                        auto flux_trace_mat = new TPZMat2dLin(flux_trace_id);
-                        flux_trace_mat->SetMaterial(xk, xc, xf);
-                        flux_cmesh->InsertMaterialObject(flux_trace_mat);
-                    }
-                }
-
-                TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
-                if (!pressure_cmesh) {
-                    DebugStop();
-                }
-                if (!pressure_cmesh->FindMaterial(lagrange_mult_id)) {
-
-                    if (target_dim == 2) {
-                        auto lagrange_mult_mat = new TPZMat1dLin(lagrange_mult_id);
-                        lagrange_mult_mat->SetMaterial(xk, xb, xc, xf);
-                        pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
-                    }else if(target_dim == 3){
-                        auto lagrange_mult_mat = new TPZMat2dLin(lagrange_mult_id);
-                        lagrange_mult_mat->SetMaterial(xk, xc, xf);
-                        pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
-                    }
-                }
-                
-            }
-            
-            /// HybridizeInternalFaces
-            {
-                TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
-                TPZGeoMesh * gmesh = flux_cmesh->Reference();
-                int dim = gmesh->Dimension();
-                gmesh->ResetReference();
-                flux_cmesh->LoadReferences();
-                int64_t nel = flux_cmesh->NElements();
-                std::list<std::tuple<int64_t, int> > pressures;
-                for (int64_t el = 0; el < nel; el++) {
-                    TPZCompEl *cel = flux_cmesh->Element(el);
-                    TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-                    if (!intel || (intel->Reference()->Dimension() != dim && material_id != cel->Material()->Id())) {
-                        continue;
-                    }
-                    
-                    // loop over the side of dimension dim-1
-                    TPZGeoEl *gel = intel->Reference();
-                    for (int side = gel->NCornerNodes(); side < gel->NSides() - 1; side++) {
-                        if (gel->SideDimension(side) != dim - 1) {
-                            continue;
-                        }
-
-                        TPZCompElSide celside(intel, side);
-                        TPZCompElSide neighcomp = hybridizer.RightElement(intel, side); //it makes sense
-                        if (neighcomp) {
-                           pressures.push_back(dfn_hybridzer.DissociateConnects(flux_trace_id,lagrange_mult_id,celside, neighcomp, dfn_mixed_mesh_vec));
-                        }
-                    }
-                }
-                flux_cmesh->InitializeBlock();
-                flux_cmesh->ComputeNodElCon();
-                
-                TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
-                gmesh->ResetReference();
-                pressure_cmesh->SetDimModel(gmesh->Dimension()-1);
-                for (auto pindex : pressures) {
-                    int64_t elindex;
-                    int order;
-                    std::tie(elindex, order) = pindex;
-                    TPZGeoEl *gel = gmesh->Element(elindex);
-                    int64_t celindex;
-                    TPZCompEl *cel = pressure_cmesh->ApproxSpace().CreateCompEl(gel, *pressure_cmesh, celindex);
-                    TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-                    TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-                    if (intel){
-                        intel->PRefine(order);
-                        //            intel->SetSideOrder(gel->NSides() - 1, order);
-                    } else if (intelDisc) {
-                        intelDisc->SetDegree(order);
-                        intelDisc->SetTrueUseQsiEta();
-                    } else {
-                        DebugStop();
-                    }
-                    int n_connects = cel->NConnects();
-                    for (int i = 0; i < n_connects; ++i) {
-                        cel->Connect(i).SetLagrangeMultiplier(2);
-                    }
-                    gel->ResetReference();
-                }
-                pressure_cmesh->InitializeBlock();
-                pressure_cmesh->SetDimModel(gmesh->Dimension());
-                
-            }
+    
             
 #ifdef DFN_H_Q
             
@@ -482,13 +341,7 @@ void Pretty_cube(){
                             std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
                             bool fracture_detected_Q = it != m_fracture_ids.end();
                             if (fracture_detected_Q) {
-//                                cel->Print(std::cout);
-//                                std::cout << std::endl;
-//                                cel->Reference()->SetMaterialId(gel_mat_id);
                                 cel->SetReference(neigh_gel->Index());
-//                                cel->Print(std::cout);
-//                                std::cout << std::endl;
-//                                std::cout << std::endl;
                             }
                             
                         }
@@ -496,8 +349,6 @@ void Pretty_cube(){
                     }
                     
                 }
-//                pressure_cmesh->ComputeNodElCon();
-//                pressure_cmesh->InitializeBlock();
                 
                 {
                     std::ofstream file_hybrid_mixed_q("a_mixed_cmesh_p.txt");
@@ -525,12 +376,85 @@ void Pretty_cube(){
                     flux_cmesh->InsertMaterialObject(fracture_material);
                     fracture_set.insert(fracture_id);
                 }
+                
 
-                    flux_cmesh->SetDimModel(target_dim-1);
-                    flux_cmesh->SetDefaultOrder(p_order);
-                    flux_cmesh->SetAllCreateFunctionsHDiv();
-                    flux_cmesh->AutoBuild(fracture_set);
-                    flux_cmesh->InitializeBlock();
+                
+                /// Adding bc elements (This method must provide the correct material ids.)
+                {
+                    /// Insert fractures intersections with bc
+                    {
+                        TPZGeoMesh * geometry = flux_cmesh->Reference();
+                        int dim = geometry->Dimension();
+                        std::map<std::pair<int,int>,std::pair<int,int>> surf_to_surf_side_indexes;
+                        std::vector<int> sides = {4,5,6,7};
+                        std::set<int> bc_indexes = {-1,-2,-3,-4,-5,-6};
+                        for (auto gel : geometry->ElementVec()) {
+                            
+                            if (!gel) continue;
+                            if (gel->Dimension() != dim - 1) continue;
+                            int bc_mat_id = gel->MaterialId();
+                            bool is_not_bc_memeber_Q = bc_indexes.find(bc_mat_id) ==  bc_indexes.end();
+                            if (is_not_bc_memeber_Q) {
+                                continue;
+                            }
+                            
+                            for (auto side: sides) {
+                                TPZStack<TPZGeoElSide> all_neigh;
+                                TPZGeoElSide gelside(gel, side);
+                                gelside.AllNeighbours(all_neigh);
+                                std::set<int> surfaces;
+                                surfaces.insert(gel->Index());
+                                for (auto gel_side : all_neigh) {
+                                    bool is_not_bc_memeber_Q = gel_side.Element()->MaterialId() != bc_mat_id;
+                                    if (is_not_bc_memeber_Q) {
+                                        continue;
+                                    }
+                                    if (gel_side.Element()->Dimension() == dim - 1) {
+                                        int surfaces_index = gel_side.Element()->Index();
+                                        surfaces.insert(surfaces_index);
+                                    }
+                                }
+                                if (surfaces.size()!=2) {
+                                    continue;
+                                }
+                                
+                                std::set<int>::iterator it;
+                                it=surfaces.begin();
+                                int left = *it;
+                                ++it;
+                                int right = *it;
+                                
+                                surf_to_surf_side_indexes.insert(std::make_pair(std::make_pair(left, right),std::make_pair(side, bc_mat_id)));
+                                
+                            }
+                        }
+                        
+                        for (auto chunk : surf_to_surf_side_indexes) {
+                            TPZGeoEl * gel = geometry->Element(chunk.first.first);
+                            TPZGeoElSide gelside(gel, chunk.second.first);
+                            int bc_id = chunk.second.second * 1000;
+                            TPZGeoElBC gbc(gelside, bc_id);
+                        }
+                        geometry->BuildConnectivity();
+                        
+                    }
+                    
+                    std::set<int> fracture_bc_set;
+                    fracture_set.insert(-1000);
+                    fracture_set.insert(-2000);
+                    fracture_set.insert(-3000);
+                    fracture_set.insert(-4000);
+                    fracture_set.insert(-5000);
+                    fracture_set.insert(-6000);
+                }
+
+                flux_cmesh->SetDimModel(target_dim-1);
+                flux_cmesh->SetDefaultOrder(p_order);
+                flux_cmesh->SetAllCreateFunctionsHDiv();
+                flux_cmesh->AutoBuild(fracture_set);
+
+                flux_cmesh->InitializeBlock();
+                
                 
                 {
                     std::ofstream file_hybrid_mixed_q("a_mixed_cmesh_q.txt");
@@ -540,103 +464,153 @@ void Pretty_cube(){
                 
             }
             
+            
+//            int frac_2d_lagrange_mult_id; /// compute a proper LM id
+//            int frac_2d_flux_trace_id; /// compute a proper flux_trace id
+//            int frac_2d_truly_lagrange_mult_id;
+//            int frac_2d_n_state = 1;
+//            int frac_2d_target_dim = 2;
+//            //// Hybridize fractures
+//            {
+//
+//
+//
+//                /// Computes maximum material identifier
+//                {
+//                    int maxMatId = std::numeric_limits<int>::min();
+//                    for (auto &mesh : dfn_mixed_mesh_vec) {
+//                        for (auto &mat : mesh->MaterialVec()) {
+//                            maxMatId = std::max(maxMatId, mat.first);
+//                        }
+//                    }
+//                    if (maxMatId == std::numeric_limits<int>::min()) {
+//                        maxMatId = 0;
+//                    }
+//                    frac_2d_flux_trace_id = maxMatId + 1;
+//                    frac_2d_lagrange_mult_id = maxMatId + 2;
+//                    frac_2d_truly_lagrange_mult_id = maxMatId + 3;
+//                }
+//
+//                /// Insert LM and flux_trace materials
+//                {
+//                    TPZFNMatrix<1, STATE> xk(n_state, n_state, 0.), xb(n_state, n_state, 0.), xc(n_state, n_state, 0.), xf(n_state, 1, 0.);
+//                    TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
+//                    if (!flux_cmesh) {
+//                        DebugStop();
+//                    }
+//                    if (!flux_cmesh->FindMaterial(frac_2d_flux_trace_id)) {
+//
+//                        if (frac_2d_target_dim == 2) {
+//                            auto flux_trace_mat = new TPZMat1dLin(frac_2d_flux_trace_id);
+//                            flux_trace_mat->SetMaterial(xk, xb, xc, xf);
+//                            flux_cmesh->InsertMaterialObject(flux_trace_mat);
+//                        }
+//                    }
+//
+//                    TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
+//                    if (!pressure_cmesh) {
+//                        DebugStop();
+//                    }
+//                    if (!pressure_cmesh->FindMaterial(frac_2d_lagrange_mult_id)) {
+//
+//                        if (frac_2d_target_dim == 2) {
+//                            auto lagrange_mult_mat = new TPZMat1dLin(frac_2d_lagrange_mult_id);
+//                            lagrange_mult_mat->SetMaterial(xk, xb, xc, xf);
+//                            pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
+//                        }
+//                    }
+//
+//                }
+//
+//
+//                TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
+//                TPZGeoMesh * gmesh = flux_cmesh->Reference();
+//                int dim = gmesh->Dimension()-1;
+//                gmesh->ResetReference();
+//                flux_cmesh->LoadReferences();
+//                int64_t nel = flux_cmesh->NElements();
+//                std::list<std::tuple<int64_t, int> > pressures;
+//                for (int64_t el = 0; el < nel; el++) {
+//                    TPZCompEl *cel = flux_cmesh->Element(el);
+//                    if (cel->Dimension() == dim + 1) {
+//                        continue;
+//                    }
+//                    TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+//
+//                    if (!intel || (intel->Reference()->Dimension() != dim)) {
+//                        continue;
+//                    }
+//
+//                    int gel_mat_id = cel->Material()->Id();
+//                    std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
+//                    bool fracture_not_detected_Q = it == m_fracture_ids.end();
+//                    if (fracture_not_detected_Q) {
+//                        continue;
+//                    }
+//
+//                    // loop over the side of dimension dim-1
+//                    TPZGeoEl *gel = intel->Reference();
+//                    for (int side = gel->NCornerNodes(); side < gel->NSides() - 1; side++) {
+//                        if (gel->SideDimension(side) != dim - 1) {
+//                            continue;
+//                        }
+//
+//                        TPZCompElSide celside(intel, side);
+//                        TPZCompElSide neighcomp = hybridizer.RightElement(intel, side); //it makes sense
+//                        if (neighcomp) {
+//                            pressures.push_back(dfn_hybridzer.DissociateConnects(frac_2d_flux_trace_id,frac_2d_lagrange_mult_id,celside, neighcomp, dfn_mixed_mesh_vec));
+//                        }
+//                    }
+//                }
+//                flux_cmesh->InitializeBlock();
+//                flux_cmesh->ComputeNodElCon();
+//
+//                TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
+//                gmesh->ResetReference();
+//                pressure_cmesh->SetDimModel(gmesh->Dimension()-1);
+//                for (auto pindex : pressures) {
+//                    int64_t elindex;
+//                    int order;
+//                    std::tie(elindex, order) = pindex;
+//                    TPZGeoEl *gel = gmesh->Element(elindex);
+//                    int64_t celindex;
+//                    TPZCompEl *cel = pressure_cmesh->ApproxSpace().CreateCompEl(gel, *pressure_cmesh, celindex);
+//                    TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+//                    TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
+//                    if (intel){
+//                        intel->PRefine(order);
+//                    } else if (intelDisc) {
+//                        intelDisc->SetDegree(order);
+//                        intelDisc->SetTrueUseQsiEta();
+//                    } else {
+//                        DebugStop();
+//                    }
+//                    int n_connects = cel->NConnects();
+//                    for (int i = 0; i < n_connects; ++i) {
+//                        cel->Connect(i).SetLagrangeMultiplier(3); /// third level of hybridization
+//                    }
+//                    gel->ResetReference();
+//                }
+//                pressure_cmesh->InitializeBlock();
+//                pressure_cmesh->SetDimModel(gmesh->Dimension());
+//
+//            }
+            
 #endif
-            
-            mp_cmesh->LoadReferences();
-            std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
-            mp_cmesh->Reference()->Print(file_geo_hybrid_txt);
-            
-            
-            /// ResconstrucMultiphysicsCMesh
-            
-            TPZGeoMesh *gmesh = mp_cmesh->Reference();
-            TPZMultiphysicsCompMesh * dfn_hybrid_cmesh = new TPZMultiphysicsCompMesh(gmesh);
-            TPZManVector<int,5> & active_approx_spaces = mp_cmesh->GetActiveApproximationSpaces();
-            {
-                
-                /// copy already inserted materials
-                {
-                    cmixedmesh->CopyMaterials(*dfn_hybrid_cmesh);
-                }
-                
-                /// Cleanup mp_cmesh
-                {
-                    cmixedmesh->CleanUp();
-                    cmixedmesh->SetReference(NULL);
-                }
-                
-                /// Insert fractures material objects
-                {
-                    
-                    TPZFNMatrix<1, STATE> xk(n_state, n_state, 0.), xb(n_state, n_state, 0.), xc(n_state, n_state, 0.), xf(n_state, 1, 0.);
-                    
-                    if (!dfn_hybrid_cmesh) {
-                        DebugStop();
-                    }
-                    if (!dfn_hybrid_cmesh->FindMaterial(flux_trace_id)) {
-                        
-                        if (target_dim == 2) {
-                            auto flux_trace_mat = new TPZMat1dLin(flux_trace_id);
-                            flux_trace_mat->SetMaterial(xk, xb, xc, xf);
-                            dfn_hybrid_cmesh->InsertMaterialObject(flux_trace_mat);
-                        }else if(target_dim == 3){
-                            auto flux_trace_mat = new TPZMat2dLin(flux_trace_id);
-                            flux_trace_mat->SetMaterial(xk, xc, xf);
-                            dfn_hybrid_cmesh->InsertMaterialObject(flux_trace_mat);
-                        }
-                    }
-                    
-                    if (!dfn_hybrid_cmesh->FindMaterial(lagrange_mult_id)) {
-                        
-                        if (target_dim == 2) {
-                            auto lagrange_mult_mat = new TPZMat1dLin(lagrange_mult_id);
-                            lagrange_mult_mat->SetMaterial(xk, xb, xc, xf);
-                            dfn_hybrid_cmesh->InsertMaterialObject(lagrange_mult_mat);
-                        }else if(target_dim == 3){
-                            auto lagrange_mult_mat = new TPZMat2dLin(lagrange_mult_id);
-                            lagrange_mult_mat->SetMaterial(xk, xc, xf);
-                            dfn_hybrid_cmesh->InsertMaterialObject(lagrange_mult_mat);
-                        }
-                    }
-                    
-                    if (!dfn_hybrid_cmesh->FindMaterial(truly_lagrange_mult_id)) {
-                        auto lagrange_multiplier = new TPZLagrangeMultiplier(truly_lagrange_mult_id, target_dim - 1, n_state);
-                        lagrange_multiplier->SetMultiplier(1.0);
-                        dfn_hybrid_cmesh->InsertMaterialObject(lagrange_multiplier);
-                    }
+        
                     
 #ifdef DFN_H_Q
                     
-                    for(auto fracture : fracture_data){
-                        int fracture_id = fracture.m_id;
-                        if (!dfn_hybrid_cmesh->FindMaterial(fracture_id)) {
-                            auto fracture_material = new TPZMixedPoisson(fracture_id, target_dim-1);
-                            fracture_material->SetPermeability(fracture.m_kappa_normal);
-                            dfn_hybrid_cmesh->InsertMaterialObject(fracture_material);
-                        }
-                    }
-#endif
-                    
-                }
-                dfn_hybrid_cmesh->SetDimModel(target_dim);
-                dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
-                
-                dfn_hybridzer.CreateInterfaceElements(truly_lagrange_mult_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
-                
-                dfn_hybrid_cmesh->InitializeBlock();
-                cmeshm=dfn_hybrid_cmesh;
-            
-                
-                {
-                    std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-                    dfn_hybrid_cmesh->MeshVector()[0]->Print(file_hybrid_mixed_q);
-                    std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-                    dfn_hybrid_cmesh->MeshVector()[1]->Print(file_hybrid_mixed_p);
-                }
-                
+        for(auto fracture : fracture_data){
+            int fracture_id = fracture.m_id;
+            if (!dfn_hybrid_cmesh->FindMaterial(fracture_id)) {
+                auto fracture_material = new TPZMixedPoisson(fracture_id, target_dim-1);
+                fracture_material->SetPermeability(fracture.m_kappa_normal);
+                dfn_hybrid_cmesh->InsertMaterialObject(fracture_material);
             }
-
         }
+#endif
+        cmeshm=cmixedmesh;
 
     }
     else{
@@ -1213,7 +1187,7 @@ TPZGeoMesh * PrettyCubemesh(){
     
     int fracture_id= 100;
     int dim = gmesh3d->Dimension();
-    /// Insert fractures by
+    /// Insert fractures
     {
         std::map<std::pair<int,int>,int> vol_to_vol_side_indexes;
         std::vector<int> sides = {20,21,22,23,24,25};
@@ -1246,11 +1220,7 @@ TPZGeoMesh * PrettyCubemesh(){
                 
                 vol_to_vol_side_indexes.insert(std::make_pair(std::make_pair(left, right),side));
                 
-                
             }
-            
-
-            
         }
         
         for (auto chunk : vol_to_vol_side_indexes) {
