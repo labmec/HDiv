@@ -475,8 +475,7 @@ void Pretty_cube(){
             {
                 TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
                 flux_cmesh->Reference()->ResetReference();
-                TPZGeoMesh * gmesh = flux_cmesh->Reference();
-                
+                flux_cmesh->LoadReferences();
                 
                 {
                     std::ofstream file_hybrid_mixed_q("b_mixed_cmesh_q.txt");
@@ -487,26 +486,48 @@ void Pretty_cube(){
                 std::vector<REAL> characteristics;
                 
                 std::set<int> fracture_set;
-                for(auto fracture_id : m_fracture_ids){
-//                    fracture_characteristics.insert(std::make_pair(fracture_id, <#_T2 &&__t2#>))
-//                    auto fracture_material = new TPZMixedPoisson(fracture_id, target_dim-1);
-//                    fracture_material->SetPermeability(fracture);
-//                    flux_cmesh->InsertMaterialObject(fracture_material);
-//                    fracture_set.insert(fracture_id);
+                for(auto fracture : fracture_data){
+                    int fracture_id = fracture.m_id;
+                    auto fracture_material = new TPZMixedPoisson(fracture_id, target_dim-1);
+                    fracture_material->SetPermeability(fracture.m_kappa_normal);
+                    flux_cmesh->InsertMaterialObject(fracture_material);
+                    fracture_set.insert(fracture_id);
                 }
-                
-                flux_cmesh->SetDimModel(target_dim-1);
-                flux_cmesh->AutoBuild(fracture_set);
+//                flux_cmesh->SetDefaultOrder(p_order);
+//                flux_cmesh->SetDimModel(target_dim-1);
+//                flux_cmesh->SetAllCreateFunctionsHDiv();
+//                flux_cmesh->AutoBuild(fracture_set);
+                    flux_cmesh->SetDimModel(target_dim-1);
+                    flux_cmesh->SetDefaultOrder(p_order);
+                    flux_cmesh->SetAllCreateFunctionsHDiv();
+                    flux_cmesh->AutoBuild(fracture_set);
+                    flux_cmesh->InitializeBlock();
                 
                 {
                     std::ofstream file_hybrid_mixed_q("a_mixed_cmesh_q.txt");
                     flux_cmesh->Print(file_hybrid_mixed_q);
                 }
+                flux_cmesh->SetDimModel(target_dim); ///  for coherence
                 
             }
             
+            /// insert material objects in pressure space
+            {
+                TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
+                pressure_cmesh->Reference()->ResetReference();
+                pressure_cmesh->LoadReferences();
+                for(auto fracture : fracture_data){
+                    int fracture_id = fracture.m_id;
+                    auto fracture_material = new TPZMixedPoisson(fracture_id, target_dim-1);
+                    fracture_material->SetPermeability(fracture.m_kappa_normal);
+                    pressure_cmesh->InsertMaterialObject(fracture_material);
+                }
+                
+            }
+            
+            mp_cmesh->LoadReferences();
             std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
-            cmeshm->Reference()->Print(file_geo_hybrid_txt);
+            mp_cmesh->Reference()->Print(file_geo_hybrid_txt);
             
             
             /// ResconstrucMultiphysicsCMesh
@@ -566,6 +587,16 @@ void Pretty_cube(){
                         lagrange_multiplier->SetMultiplier(1.0);
                         dfn_hybrid_cmesh->InsertMaterialObject(lagrange_multiplier);
                     }
+                    
+                    for(auto fracture : fracture_data){
+                        int fracture_id = fracture.m_id;
+                        if (!dfn_hybrid_cmesh->FindMaterial(fracture_id)) {
+                            auto fracture_material = new TPZMixedPoisson(fracture_id, target_dim-1);
+                            fracture_material->SetPermeability(fracture.m_kappa_normal);
+                            dfn_hybrid_cmesh->InsertMaterialObject(fracture_material);
+                        }
+                    }
+                    
                 }
                 dfn_hybrid_cmesh->SetDimModel(target_dim);
                 dfn_hybrid_cmesh->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
@@ -1609,14 +1640,14 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
         cmesh->ExpandSolution();
     }
     else{
-        TPZCompMeshTools::GroupElements(cmesh);
-        std::cout << "Created grouped elements\n";
-        bool keepmatrix = false;
-        bool keeponelagrangian = true;
-        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
-        std::cout << "Created condensed elements\n";
-        cmesh->CleanUpUnconnectedNodes();
-        cmesh->ExpandSolution();
+//        TPZCompMeshTools::GroupElements(cmesh);
+//        std::cout << "Created grouped elements\n";
+//        bool keepmatrix = false;
+//        bool keeponelagrangian = true;
+//        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
+//        std::cout << "Created condensed elements\n";
+//        cmesh->CleanUpUnconnectedNodes();
+//        cmesh->ExpandSolution();
     }
     
 #ifdef PZDEBUG

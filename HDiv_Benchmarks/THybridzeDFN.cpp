@@ -191,7 +191,7 @@ void THybridzeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh,
             TPZMultiphysicsInterfaceElement *intface = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, clarge);
             count++;
         }
-        if (count != 2 && count != 0) {
+        if (count != 3 && count != 0) {
             DebugStop();
         }
     }
