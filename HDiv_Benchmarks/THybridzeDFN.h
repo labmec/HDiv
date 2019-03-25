@@ -13,6 +13,7 @@
 #include "TPZMultiphysicsCompMesh.h"
 #include "pzstack.h"
 #include "pzintel.h"
+#include "TFracture.h"
 
 class THybridzeDFN : public TPZHybridizeHDiv {
     
@@ -27,7 +28,7 @@ public:
     ~THybridzeDFN();
     
     /// Construct a lagrange multiplier approximation space over the target dimension elements
-    void Hybridize(TPZCompMesh * mp_cmesh, int target_dim, TPZStack<int> & fracture_ids);
+    void Hybridize(TPZCompMesh * mp_cmesh, int target_dim, TPZStack<TFracture> & fracture_ids);
     
     /// Method that duplicate and dissociate the connect belonging to the right computational element side
     std::tuple<int, int> DissociateConnects(int flux_trace_id, int lagrange_mult_id, const TPZCompElSide &left, const TPZCompElSide &right, TPZVec<TPZCompMesh *> & mesh_vec);

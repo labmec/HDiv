@@ -18,7 +18,7 @@ THybridzeDFN::~THybridzeDFN(){
     
 }
 
-void THybridzeDFN::Hybridize(TPZCompMesh * mp_cmesh, int target_dim, TPZStack<int> & fracture_ids){
+void THybridzeDFN::Hybridize(TPZCompMesh * mp_cmesh, int target_dim, TPZStack<TFracture> & fracture_ids){
     
     
     

@@ -67,7 +67,7 @@
 #include "TPZMultiphysicsCompMesh.h"
 #include "TPZLagrangeMultiplier.h"
 
-
+#include "TFracture.h"
 #include "THybridzeDFN.h"
 #include "pzl2projection.h"
 #include "pzmat1dlin.h"
@@ -119,6 +119,10 @@ struct SimulationCase {
     
     SimulationCase &operator=(const SimulationCase &copy)
     {
+        /// check for self-assignment
+        if(&copy == this){
+            return *this;
+        }
         
         IsMHMQ = copy.IsMHMQ;
         IsHybrid = copy.IsHybrid;
@@ -145,6 +149,8 @@ struct SimulationCase {
         return *this;
     }
 };
+
+
 
 void InsertFrac(TPZGeoMesh *gmesh, TPZFMatrix<REAL> corners, int matids );
 TPZGeoMesh * case2mesh();
@@ -210,6 +216,15 @@ void Pretty_cube(){
     sim.vals.push_back(0.0);
     sim.vals.push_back(0.0);
     
+    /// Defining DFN data
+    
+    TPZStack<TFracture> fracture_data;
+    TFracture fracture;
+    fracture.m_id               = 100;
+    fracture.m_kappa_normal     = 0.01;
+    fracture.m_kappa_tangential = 0.01;
+    fracture.m_d_opening        = 1.0e-2;
+    fracture_data.push_back(fracture);
     
     TPZGmshReader Geometry;
     TPZGeoMesh *gmesh = PrettyCubemesh();
@@ -259,12 +274,17 @@ void Pretty_cube(){
         
         THybridzeDFN dfn_hybridzer;
         int target_dim = 3;
-        TPZStack<int> fracture_ids;
-        fracture_ids.Push(100);
-        dfn_hybridzer.Hybridize(cmixedmesh,target_dim,fracture_ids);
+        dfn_hybridzer.Hybridize(cmixedmesh,target_dim,fracture_data);
         
+
         std::set<int> m_fracture_ids;
-        m_fracture_ids.insert(100);
+        
+        /// Fill m_fracture_ids
+        for (auto fracture: fracture_data) {
+            m_fracture_ids.insert(fracture.m_id);
+        }
+        
+        
         {
             int material_id = 1; /// Material ids being hybridized
             TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmixedmesh);
@@ -405,6 +425,90 @@ void Pretty_cube(){
                 
             }
             
+            
+            /// Change lagrange multipliers identifiers to fractures identifiers
+            {
+                TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
+                pressure_cmesh->Reference()->ResetReference();
+                pressure_cmesh->LoadReferences();
+                TPZGeoMesh  * gmesh = pressure_cmesh->Reference();
+                for (auto gel : gmesh->ElementVec()) {
+                    
+                    if (!gel) {
+                        DebugStop();
+                    }
+                    
+                    if (gel->MaterialId() != lagrange_mult_id) {
+                        continue;
+                    }
+                    
+                    TPZCompEl * cel = gel->Reference();
+                    if (!cel) {
+                        DebugStop();
+                    }
+                    
+                    if (gel->MaterialId() == lagrange_mult_id) {
+                        int side = gel->NSides() - 1;
+                        TPZGeoElSide gel_side(gel,side);
+                        TPZStack<TPZGeoElSide> gelsides;
+                        gel_side.AllNeighbours(gelsides);
+                        
+                        for (auto iside : gelsides) {
+                            TPZGeoEl * neigh_gel = iside.Element();
+                            int gel_mat_id = neigh_gel->MaterialId();
+                            std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
+                            bool fracture_detected_Q = it != m_fracture_ids.end();
+                            if (fracture_detected_Q) {
+                                cel->Reference()->SetMaterialId(gel_mat_id);
+                            }
+                            
+                        }
+                        
+                    }
+                    
+                }
+                
+            }
+            
+            
+            /// create flux space
+            {
+                TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
+                flux_cmesh->Reference()->ResetReference();
+                TPZGeoMesh * gmesh = flux_cmesh->Reference();
+                
+                
+                {
+                    std::ofstream file_hybrid_mixed_q("b_mixed_cmesh_q.txt");
+                    flux_cmesh->Print(file_hybrid_mixed_q);
+                }
+                
+                std::map<int,std::vector<REAL>> fracture_characteristics;
+                std::vector<REAL> characteristics;
+                
+                std::set<int> fracture_set;
+                for(auto fracture_id : m_fracture_ids){
+//                    fracture_characteristics.insert(std::make_pair(fracture_id, <#_T2 &&__t2#>))
+//                    auto fracture_material = new TPZMixedPoisson(fracture_id, target_dim-1);
+//                    fracture_material->SetPermeability(fracture);
+//                    flux_cmesh->InsertMaterialObject(fracture_material);
+//                    fracture_set.insert(fracture_id);
+                }
+                
+                flux_cmesh->SetDimModel(target_dim-1);
+                flux_cmesh->AutoBuild(fracture_set);
+                
+                {
+                    std::ofstream file_hybrid_mixed_q("a_mixed_cmesh_q.txt");
+                    flux_cmesh->Print(file_hybrid_mixed_q);
+                }
+                
+            }
+            
+            std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
+            cmeshm->Reference()->Print(file_geo_hybrid_txt);
+            
+            
             /// ResconstrucMultiphysicsCMesh
             
             TPZGeoMesh *gmesh = mp_cmesh->Reference();
@@ -470,58 +574,7 @@ void Pretty_cube(){
                 
                 dfn_hybrid_cmesh->InitializeBlock();
                 cmeshm=dfn_hybrid_cmesh;
-                
-                std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
-                cmeshm->Reference()->Print(file_geo_hybrid_txt);
-                
-                /// Change lagrange multipliers identifiers to fractures identifiers
-                {
-//                    TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
-                    dfn_hybrid_cmesh->Reference()->BuildConnectivity();
-                    dfn_hybrid_cmesh->Reference()->ResetReference();
-                    dfn_hybrid_cmesh->LoadReferences();
-                    TPZGeoMesh  * gmesh = dfn_hybrid_cmesh->Reference();
-                    for (auto gel : gmesh->ElementVec()) {
-                
-                        if (!gel) {
-                            DebugStop();
-                        }
-                        
-                        if (gel->MaterialId() != lagrange_mult_id) {
-                            continue;
-                        }
-                        
-                        TPZCompEl * cel = gel->Reference();
-                        if (!cel) {
-                            DebugStop();
-                        }
-                        
-                        if (gel->MaterialId() == lagrange_mult_id) {
-                            int side = gel->NSides() - 1;
-                            TPZGeoElSide gel_side(gel,side);
-                            TPZStack<TPZGeoElSide> gelsides;
-                            gel_side.AllNeighbours(gelsides);
-                            
-                            for (auto iside : gelsides) {
-                                TPZGeoEl * neigh_gel = iside.Element();
-                                int gel_mat_id = neigh_gel->MaterialId();
-                                std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
-                                bool is_fracture_Q = it != m_fracture_ids.end();
-                                if (is_fracture_Q) {
-                                    int aka = 0;
-                                }
-
-                                
-                            }
-                            
-                        }
-                        
-                    }
-                    
-                }
-                
-                
-
+            
                 
                 {
                     std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
@@ -1160,183 +1213,183 @@ TPZGeoMesh * PrettyCubemesh(){
     return gmesh3d;
     
     
-    TPZFMatrix<REAL> frac1(3,4,0.0);
-    
-    frac1(0,0)=0.5;
-    frac1(1,0)=0.0;
-    frac1(2,0)=0.0;
-    
-    frac1(0,1)=0.5;
-    frac1(1,1)=0.0;
-    frac1(2,1)=1.0;
-    
-    frac1(0,2)=0.5;
-    frac1(1,2)=1.0;
-    frac1(2,2)=1.0;
-    
-    frac1(0,3)=0.5;
-    frac1(1,3)=1.0;
-    frac1(2,3)=0.0;
-    
-    TPZFMatrix<REAL> frac2(3,4,0.0);
-    
-    frac2(0,0) = 1.0;
-    frac2(1,0) = 0.5;
-    frac2(2,0) = 0.0;
-    
-    frac2(0,1) = 1.0;
-    frac2(1,1) = 0.5;
-    frac2(2,1) = 1.0;
-    
-    frac2(0,2) = 0.0;
-    frac2(1,2) = 0.5;
-    frac2(2,2) = 1.0;
-    
-    frac2(0,3) = 0.0;
-    frac2(1,3) = 0.5;
-    frac2(2,3) = 0.0;
-    
-    //frac3
-    TPZFMatrix<REAL> frac3(3,4,0.0);
-    frac3(0,0) = 0.75;
-    frac3(1,0) = 0.5;
-    frac3(2,0) = 0.5;
-    
-    frac3(0,1) = 0.75;
-    frac3(1,1) = 0.5;
-    frac3(2,1) = 1.0;
-    
-    frac3(0,2) = 0.75;
-    frac3(1,2) = 1.0;
-    frac3(2,2) = 1.0;
-    
-    frac3(0,3) = 0.75;
-    frac3(1,3) = 1.0;
-    frac3(2,3) = 0.5;
-    
-    
-    //Set Frac_4
-    TPZFMatrix<REAL> frac4(3,4,0.0);
-    frac4(0,0) = 1.0;
-    frac4(1,0) = 0.75;
-    frac4(2,0) = 0.5;
-    
-    frac4(0,1) = 1.0;
-    frac4(1,1) = 0.75;
-    frac4(2,1) = 1.0;
-    
-    frac4(0,2) = 0.5;
-    frac4(1,2)= 0.75;
-    frac4(2,2) = 1.0;
-    
-    frac4(0,3)= 0.50;
-    frac4(1,3) = 0.75;
-    frac4(2,3) = 0.50;
-    
-    
-    //Set Frac_5
-    TPZFMatrix<REAL> frac5(3,4,0.0);
-    frac5(0,0) = 0.675;
-    frac5(1,0) = 0.5;
-    frac5(2,0) = 0.5;
-    
-    frac5(0,1) = 0.675;
-    frac5(1,1) = 0.5;
-    frac5(2,1) = 0.75;
-    
-    frac5(0,2) = 0.675;
-    frac5(1,2) = 0.75;
-    frac5(2,2) = 0.75;
-    
-    frac5(0,3) = 0.675;
-    frac5(1,3) = 0.75;
-    frac5(2,3) = 0.5;
-    
-    
-    //Set Frac_6
-    TPZFMatrix<REAL> frac6(3,4,0.0);
-    frac6(0,0) = 0.75;
-    frac6(1,0) = 0.675;
-    frac6(2,0) = 0.5;
-    
-    frac6(0,1) = 0.75;
-    frac6(1,1) = 0.675;
-    frac6(2,1) = 0.75;
-    
-    frac6(0,2) = 0.5;
-    frac6(1,2) = 0.675;
-    frac6(2,2) = 0.75;
-    
-    frac6(0,3) = 0.50;
-    frac6(1,3) = 0.675;
-    frac6(2,3)= 0.50;
-    
-    TPZFMatrix<REAL> frac7(3,4,0.0);
-    
-    frac7(0,0) = 0.0;
-    frac7(1,0) = 0.0;
-    frac7(2,0) = 0.5;
-    
-    frac7(0,1) = 1.0;
-    frac7(1,1) = 0.0;
-    frac7(2,1) = 0.5;
-    
-    frac7(0,2) = 1.0;
-    frac7(1,2) = 1.0;
-    frac7(2,2) = 0.5;
-    
-    frac7(0,3) = 0.0;
-    frac7(1,3) = 1.0;
-    frac7(2,3)= 0.5;
-    
-    
-    TPZFMatrix<REAL> frac8(3,4,0.0);
-    frac8(0,0) = 0.75;
-    frac8(1,0) = 0.5;
-    frac8(2,0) = 0.675;
-    
-    frac8(0,1) = 0.75;
-    frac8(1,1) = 0.75;
-    frac8(2,1) = 0.675;
-    
-    frac8(0,2) = 0.5;
-    frac8(1,2) = 0.75;
-    frac8(2,2) = 0.675;
-    
-    frac8(0,3) = 0.50;
-    frac8(1,3) = 0.5;
-    frac8(2,3)= 0.675;
-    
-    //Set Frac_4
-    TPZFMatrix<REAL> frac9(3,4,0.0);
-    frac9(0,0) = 1.0;
-    frac9(1,0) = 0.5;
-    frac9(2,0) = 0.75;
-    
-    frac9(0,1) = 1.0;
-    frac9(1,1) = 1.0;
-    frac9(2,1) = 0.75;
-    
-    frac9(0,2) = 0.5;
-    frac9(1,2)= 1.0;
-    frac9(2,2) = 0.75;
-    
-    frac9(0,3)= 0.50;
-    frac9(1,3) = 0.50;
-    frac9(2,3) = 0.75;
-    
-    //  InsertFrac(mesh, corners, matid)
-    InsertFrac(gmesh3d,frac1,100);
-//    InsertFrac(gmesh3d,frac2,100);
-//    InsertFrac(gmesh3d,frac3,3);
-//    InsertFrac(gmesh3d,frac4,3);
-//    InsertFrac(gmesh3d,frac5,3);
-//    InsertFrac(gmesh3d,frac6,3);
-//    InsertFrac(gmesh3d,frac7,100);
-//    InsertFrac(gmesh3d,frac8,3);
-//    InsertFrac(gmesh3d,frac9,3);
-    gmesh3d->BuildConnectivity();
-    return gmesh3d;
+//    TPZFMatrix<REAL> frac1(3,4,0.0);
+//
+//    frac1(0,0)=0.5;
+//    frac1(1,0)=0.0;
+//    frac1(2,0)=0.0;
+//
+//    frac1(0,1)=0.5;
+//    frac1(1,1)=0.0;
+//    frac1(2,1)=1.0;
+//
+//    frac1(0,2)=0.5;
+//    frac1(1,2)=1.0;
+//    frac1(2,2)=1.0;
+//
+//    frac1(0,3)=0.5;
+//    frac1(1,3)=1.0;
+//    frac1(2,3)=0.0;
+//
+//    TPZFMatrix<REAL> frac2(3,4,0.0);
+//
+//    frac2(0,0) = 1.0;
+//    frac2(1,0) = 0.5;
+//    frac2(2,0) = 0.0;
+//
+//    frac2(0,1) = 1.0;
+//    frac2(1,1) = 0.5;
+//    frac2(2,1) = 1.0;
+//
+//    frac2(0,2) = 0.0;
+//    frac2(1,2) = 0.5;
+//    frac2(2,2) = 1.0;
+//
+//    frac2(0,3) = 0.0;
+//    frac2(1,3) = 0.5;
+//    frac2(2,3) = 0.0;
+//
+//    //frac3
+//    TPZFMatrix<REAL> frac3(3,4,0.0);
+//    frac3(0,0) = 0.75;
+//    frac3(1,0) = 0.5;
+//    frac3(2,0) = 0.5;
+//
+//    frac3(0,1) = 0.75;
+//    frac3(1,1) = 0.5;
+//    frac3(2,1) = 1.0;
+//
+//    frac3(0,2) = 0.75;
+//    frac3(1,2) = 1.0;
+//    frac3(2,2) = 1.0;
+//
+//    frac3(0,3) = 0.75;
+//    frac3(1,3) = 1.0;
+//    frac3(2,3) = 0.5;
+//
+//
+//    //Set Frac_4
+//    TPZFMatrix<REAL> frac4(3,4,0.0);
+//    frac4(0,0) = 1.0;
+//    frac4(1,0) = 0.75;
+//    frac4(2,0) = 0.5;
+//
+//    frac4(0,1) = 1.0;
+//    frac4(1,1) = 0.75;
+//    frac4(2,1) = 1.0;
+//
+//    frac4(0,2) = 0.5;
+//    frac4(1,2)= 0.75;
+//    frac4(2,2) = 1.0;
+//
+//    frac4(0,3)= 0.50;
+//    frac4(1,3) = 0.75;
+//    frac4(2,3) = 0.50;
+//
+//
+//    //Set Frac_5
+//    TPZFMatrix<REAL> frac5(3,4,0.0);
+//    frac5(0,0) = 0.675;
+//    frac5(1,0) = 0.5;
+//    frac5(2,0) = 0.5;
+//
+//    frac5(0,1) = 0.675;
+//    frac5(1,1) = 0.5;
+//    frac5(2,1) = 0.75;
+//
+//    frac5(0,2) = 0.675;
+//    frac5(1,2) = 0.75;
+//    frac5(2,2) = 0.75;
+//
+//    frac5(0,3) = 0.675;
+//    frac5(1,3) = 0.75;
+//    frac5(2,3) = 0.5;
+//
+//
+//    //Set Frac_6
+//    TPZFMatrix<REAL> frac6(3,4,0.0);
+//    frac6(0,0) = 0.75;
+//    frac6(1,0) = 0.675;
+//    frac6(2,0) = 0.5;
+//
+//    frac6(0,1) = 0.75;
+//    frac6(1,1) = 0.675;
+//    frac6(2,1) = 0.75;
+//
+//    frac6(0,2) = 0.5;
+//    frac6(1,2) = 0.675;
+//    frac6(2,2) = 0.75;
+//
+//    frac6(0,3) = 0.50;
+//    frac6(1,3) = 0.675;
+//    frac6(2,3)= 0.50;
+//
+//    TPZFMatrix<REAL> frac7(3,4,0.0);
+//
+//    frac7(0,0) = 0.0;
+//    frac7(1,0) = 0.0;
+//    frac7(2,0) = 0.5;
+//
+//    frac7(0,1) = 1.0;
+//    frac7(1,1) = 0.0;
+//    frac7(2,1) = 0.5;
+//
+//    frac7(0,2) = 1.0;
+//    frac7(1,2) = 1.0;
+//    frac7(2,2) = 0.5;
+//
+//    frac7(0,3) = 0.0;
+//    frac7(1,3) = 1.0;
+//    frac7(2,3)= 0.5;
+//
+//
+//    TPZFMatrix<REAL> frac8(3,4,0.0);
+//    frac8(0,0) = 0.75;
+//    frac8(1,0) = 0.5;
+//    frac8(2,0) = 0.675;
+//
+//    frac8(0,1) = 0.75;
+//    frac8(1,1) = 0.75;
+//    frac8(2,1) = 0.675;
+//
+//    frac8(0,2) = 0.5;
+//    frac8(1,2) = 0.75;
+//    frac8(2,2) = 0.675;
+//
+//    frac8(0,3) = 0.50;
+//    frac8(1,3) = 0.5;
+//    frac8(2,3)= 0.675;
+//
+//    //Set Frac_4
+//    TPZFMatrix<REAL> frac9(3,4,0.0);
+//    frac9(0,0) = 1.0;
+//    frac9(1,0) = 0.5;
+//    frac9(2,0) = 0.75;
+//
+//    frac9(0,1) = 1.0;
+//    frac9(1,1) = 1.0;
+//    frac9(2,1) = 0.75;
+//
+//    frac9(0,2) = 0.5;
+//    frac9(1,2)= 1.0;
+//    frac9(2,2) = 0.75;
+//
+//    frac9(0,3)= 0.50;
+//    frac9(1,3) = 0.50;
+//    frac9(2,3) = 0.75;
+//
+//    //  InsertFrac(mesh, corners, matid)
+//    InsertFrac(gmesh3d,frac1,100);
+////    InsertFrac(gmesh3d,frac2,100);
+////    InsertFrac(gmesh3d,frac3,3);
+////    InsertFrac(gmesh3d,frac4,3);
+////    InsertFrac(gmesh3d,frac5,3);
+////    InsertFrac(gmesh3d,frac6,3);
+////    InsertFrac(gmesh3d,frac7,100);
+////    InsertFrac(gmesh3d,frac8,3);
+////    InsertFrac(gmesh3d,frac9,3);
+//    gmesh3d->BuildConnectivity();
+//    return gmesh3d;
     
 }
 
