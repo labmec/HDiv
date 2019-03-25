@@ -158,12 +158,13 @@ void THybridzeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh,
                 TPZGeoElBC gbc(gelside, interface_id);
 
                 TPZCompEl *celneigh = celstackside.Element();
-                if (celneigh->NConnects() != 1) {
-                    DebugStop();
+                int n_connects = celneigh->NConnects();
+                if (n_connects == 1) {
+                    int64_t index;
+                    new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstackside);
+                    count++;
                 }
-                int64_t index;
-                new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstackside);
-                count++;
+
             }
         }
         if (count == 1)
@@ -191,7 +192,7 @@ void THybridzeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh,
             TPZMultiphysicsInterfaceElement *intface = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, clarge);
             count++;
         }
-        if (count != 3 && count != 0) {
+        if (count != 2 && count != 0) {
             DebugStop();
         }
     }
