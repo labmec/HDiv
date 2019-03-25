@@ -73,6 +73,7 @@
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
 
+
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
 #endif
@@ -1223,9 +1224,15 @@ TPZGeoMesh * PrettyCubemesh(){
         }
         
         for (auto chunk : vol_to_vol_side_indexes) {
-            TPZGeoEl * gel = gmesh3d->Element(chunk.first.first);
-            TPZGeoElSide gelside(gel, chunk.second);
-            TPZGeoElBC gbc(gelside, fracture_id);
+            TPZGeoEl * gel_l = gmesh3d->Element(chunk.first.first);
+            TPZGeoEl * gel_r = gmesh3d->Element(chunk.first.second);
+            TPZGeoElSide gelside(gel_l, chunk.second);
+            TPZManVector<REAL,2> qsi(2,0.0);
+            TPZManVector<REAL,3> normal(3);
+            gelside.Normal(qsi, gel_l, gel_r, normal);
+            if (fabs(fabs(normal[1]) - 1.0) <= 1.0e-8) {
+                TPZGeoElBC gbc(gelside, fracture_id);
+            }
         }
         
     }

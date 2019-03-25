@@ -18,6 +18,8 @@
 #include "pzl2projection.h"
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
+#include "mixedpoisson.h"
+
 
 class THybridizeDFN : public TPZHybridizeHDiv {
     
@@ -55,7 +57,7 @@ public:
     /// Set geometry dimension
     void SetDimension(int dimension);
     
-    void ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
+    void ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift = 0);
     
     void ApplyHibridizationOnInternalFaces(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id);
     
@@ -68,6 +70,10 @@ public:
     void CleanUpMultiphysicsCMesh(TPZCompMesh * cmesh);
     
     void InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
+    
+    void InsertMaterialsForMixedOperatorOnFractures(int target_dim, TPZCompMesh * cmesh);
+    
+    void BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
     
     /// Construct a lagrange multiplier approximation space over the target dimension elements
     TPZCompMesh * Hybridize(TPZCompMesh * cmesh, int target_dim);
