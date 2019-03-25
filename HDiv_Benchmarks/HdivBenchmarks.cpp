@@ -66,10 +66,13 @@
 #include "TPZHybridizeHDiv.h"
 #include "TPZMultiphysicsCompMesh.h"
 
+#include "TPZDarcyFlow.h"
+#include "TPZMixedDarcyFlow.h"
+
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
 #endif
-
+using namespace std;
 
 struct SimulationCase {
     bool            IsMHMQ;
@@ -162,10 +165,10 @@ void Case_2();
 void Pretty_cube();
 
 int main(){
-    Pretty_cube();
-//    Case_1();
+ //   Pretty_cube();
+ //     Case_1();
 //     Case_2();
-//    FractureTest();
+   FractureTest();
 }
 
 
@@ -280,7 +283,7 @@ void Case_1(){
     sim.vals.push_back(4.0);
     sim.vals.push_back(1.0);
     
-    
+    int order =2;
     
     TPZGmshReader Geometry;
     TPZGeoMesh *gmesh = new TPZGeoMesh;
@@ -292,9 +295,9 @@ void Case_1(){
 
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
-    cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
+    cmixedmesh = MPCMeshMixed(gmesh, order, sim, meshvec);
     std::ofstream filemixed("mixedMesh.txt");
-    cmixedmesh->Print(filemixed);
+  //  cmixedmesh->Print(filemixed);
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
@@ -309,7 +312,7 @@ void Case_1(){
         cmeshm=cmixedmesh;
         
     }
-    
+    std::cout<<"Num of materials: "<<cmeshm->NMaterials();
     TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
     
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
@@ -321,7 +324,7 @@ void Case_1(){
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("Flux");
     scalnames.Push("Pressure");
-    scalnames.Push("Permeability");
+   // scalnames.Push("Permeability");
     
     int div = 0;
     std::string fileresult("case_1_1k.vtk");
@@ -359,7 +362,7 @@ void Case_2(){
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
     std::ofstream filemixed("mixedMesh.txt");
-    cmixedmesh->Print(filemixed);
+  //  cmixedmesh->Print(filemixed);
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
@@ -914,17 +917,14 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     int dimension = geometry->Dimension();
     int nvols = sim_data.omega_ids.size();
     int nbound = sim_data.gamma_ids.size();
-   
-    
-    
-    
     
     TPZCompMesh *cmesh = new TPZCompMesh(geometry);
     
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
-        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+      TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+     //   TPZDarcyFlow * volume = new TPZDarcyFlow(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         
         TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
@@ -946,7 +946,7 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     cmesh->AutoBuild();
     cmesh->InitializeBlock();
     
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
     std::stringstream file_name;
     file_name   << sim_data.dump_folder << "/" << "q_cmesh" << ".txt";
     std::ofstream sout(file_name.str().c_str());
@@ -966,6 +966,7 @@ TPZCompMesh * PressureMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_
 
     for (int ivol=0; ivol < nvols; ivol++) {
         TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+     //   TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
     }
@@ -985,7 +986,7 @@ TPZCompMesh * PressureMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_
         newnod.SetLagrangeMultiplier(1);
     }
     
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
     std::stringstream file_name;
     file_name   << sim_data.dump_folder << "/" << "p_cmesh" << ".txt";
     std::ofstream sout(file_name.str().c_str());
@@ -1021,7 +1022,8 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
-        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dim);
+     //   TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dim);
+        TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dim);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1096,6 +1098,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     
     for (int ivol=0; ivol<nvols; ivol++) {
         TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+   //     TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1125,17 +1128,17 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
         cmesh->ExpandSolution();
     }
     else{
-        TPZCompMeshTools::GroupElements(cmesh);
-        std::cout << "Created grouped elements\n";
-        bool keepmatrix = false;
-        bool keeponelagrangian = true;
-        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
-        std::cout << "Created condensed elements\n";
+//        TPZCompMeshTools::GroupElements(cmesh);
+//        std::cout << "Created grouped elements\n";
+//        bool keepmatrix = false;
+//        bool keeponelagrangian = true;
+//        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
+//        std::cout << "Created condensed elements\n";
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
     }
     
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
     std::stringstream file_name;
     file_name   << sim_data.dump_folder << "/" << "Dual_cmesh" << ".txt";
     std::ofstream sout(file_name.str().c_str());
@@ -1207,30 +1210,17 @@ void FractureTest(){
     gengrid.SetBC(gmesh, 6, -3);
     gengrid.SetBC(gmesh, 7, -4);
     
-    TPZManVector<REAL,3> co(3,0.0);
-    co[0] = 0.5;
-    co[1] = 1.0;
+//    TPZExtendGridDimension extend(gmesh,1.0);
+//    extend.SetElType(1);
+//    TPZGeoMesh *gmesh3d = extend.ExtendedMesh(1,-5,-6);
+//    gmesh3d->BuildConnectivity();
+   
     
+    std::ofstream file2("gmesh.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file2);
     
-    TPZGeoNode * node = gmesh->FindNode(co);
-    int index_1 = gmesh->NodeIndex(node);
-    
-    co[0] = 0.5;
-    co[1] = 0.0;
-    
-    node = gmesh->FindNode(co);
-    int index_2 = gmesh->NodeIndex(node);
-    
-    TPZVec<int64_t> cords(2);
-    
-    cords[0]=index_1;
-    cords[1]=index_2;
-    int64_t Nels = gmesh->NElements();
-    gmesh->CreateGeoElement(EOned, cords, 2, Nels);
-    gmesh->BuildConnectivity();
-    std::ofstream file("test.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
-    
+    std::ofstream file3("gmesh.txt");
+    gmesh->Print(file3);
     
     //Flux Mesh
     SimulationCase casetest;
@@ -1245,25 +1235,27 @@ void FractureTest(){
     casetest.gamma_ids.push_back(-2);
     casetest.gamma_ids.push_back(-3);
     casetest.gamma_ids.push_back(-4);
-    
+//    casetest.gamma_ids.push_back(-5);
+//    casetest.gamma_ids.push_back(-6);
     //    d = 0;
     //    n = 1;
     casetest.type.push_back(1);
     casetest.type.push_back(0);
     casetest.type.push_back(1);
     casetest.type.push_back(0);
+//    casetest.type.push_back(0);
+//    casetest.type.push_back(0);
     
     casetest.vals.push_back(0.0);
-    casetest.vals.push_back(100.0);
+    casetest.vals.push_back(2.0);
     casetest.vals.push_back(0.0);
-    casetest.vals.push_back(10.0);
+    casetest.vals.push_back(1.0);
+//    casetest.vals.push_back(2.0);
+//    casetest.vals.push_back(1.0);
+    
     
     TPZCompMesh *cmeshq = FluxMesh(gmesh, 1, casetest);
-    std::ofstream filecomptxt("cmeshq.txt");
-    cmeshq->Print(filecomptxt);
-    SeparateConnectsByFracId(cmeshq, 2);
-    std::ofstream filecomptxt2("cmeshqq.txt");
-    cmeshq->Print(filecomptxt2);
+
     
     //
     TPZCompMesh *cmeshp = PressureMesh(gmesh, 1, casetest);
@@ -1271,9 +1263,9 @@ void FractureTest(){
     fmeshvec[0]=cmeshq;
     fmeshvec[1]=cmeshp;
     
-    TPZCompMesh *cmixedmesh = CMeshMixed(gmesh, 1, casetest, fmeshvec);
+    TPZCompMesh *cmixedmesh = MPCMeshMixed(gmesh, 1, casetest, fmeshvec);
     std::ofstream filemixed("mixedMesh.txt");
-    cmixedmesh->Print(filemixed);
+   // cmixedmesh->Print(filemixed);
     
     
     
@@ -1320,7 +1312,7 @@ void FractureTest(){
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("Flux");
     scalnames.Push("Pressure");
-    scalnames.Push("Permeability");
+  //  scalnames.Push("Permeability");
     
     int div = 0;
     int dim=gmesh->Dimension();
@@ -1397,4 +1389,42 @@ void InsertFractureMaterial(TPZCompMesh *cmesh){
     cmesh->LoadReferences();
     cmesh->AutoBuild();
     //
+}
+TPZGeoMesh *GenerateGeoMesh(){
+    // Creating the Geo mesh
+    int dimel=1;
+    TPZManVector<REAL,3> x0(3,0.),x1(3,1.0);
+    x1[2] = 0.;
+    TPZManVector<int,2> nelx(2,dimel);
+    TPZGenGrid gengrid(nelx,x0,x1);
+    gengrid.SetElementType(EQuadrilateral);
+    TPZGeoMesh *gmesh = new TPZGeoMesh;
+    gmesh->SetDimension(2);
+    gengrid.Read(gmesh);
+    gengrid.SetRefpatternElements(true);
+    gengrid.SetBC(gmesh, 4, -1);
+    gengrid.SetBC(gmesh, 5, -2);
+    gengrid.SetBC(gmesh, 6, -3);
+    gengrid.SetBC(gmesh, 7, -4);
+    
+    
+    TPZVec<TPZGeoEl *> sons;
+    const int nref = 1;
+    for (int iref = 0; iref < nref; iref++) {
+        int nel = gmesh->NElements();
+        for (int iel = 0; iel < nel; iel++) {
+            TPZGeoEl *gel = gmesh->ElementVec()[iel];
+            if(!gel->HasSubElement())
+            {
+                gel->Divide(sons);
+            }
+        }
+    }
+    gmesh->BuildConnectivity();
+    int n_layers = 1;
+    TPZExtendGridDimension extend(gmesh,1.0/n_layers);
+    extend.SetElType(1);
+    TPZGeoMesh *gmesh3d = extend.ExtendedMesh(n_layers,-5,-6);
+    gmesh3d->BuildConnectivity();
+    return gmesh3d;
 }
