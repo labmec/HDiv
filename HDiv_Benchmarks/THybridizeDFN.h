@@ -70,7 +70,7 @@ public:
     void InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
     
     /// Construct a lagrange multiplier approximation space over the target dimension elements
-    void Hybridize(TPZCompMesh * cmesh, int target_dim);
+    TPZCompMesh * Hybridize(TPZCompMesh * cmesh, int target_dim);
     
 };
 

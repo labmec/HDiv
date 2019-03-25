@@ -455,7 +455,7 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
     
 }
 
-void THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
+TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     
     /// Step one
     int flux_trace_id, lagrange_id, mp_nterface_id;
@@ -476,12 +476,10 @@ void THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
         if (!mp_dfn_mixed_mesh_vec) {
             DebugStop();
         }
-        dfn_hybrid_cmesh->SetDimModel(target_dim);
+        mp_dfn_mixed_mesh_vec->SetDimModel(target_dim);
         mp_dfn_mixed_mesh_vec->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
     }
     CreateInterfaceElements(mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     dfn_hybrid_cmesh->InitializeBlock();
-    
-    
-    cmesh = dfn_hybrid_cmesh;
+   return dfn_hybrid_cmesh;
 }
