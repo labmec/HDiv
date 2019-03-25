@@ -145,6 +145,8 @@ void THybridzeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh,
     }
     cmesh->Reference()->ResetReference();
     cmesh->LoadReferences();
+    
+    TPZManVector<int64_t,3> left_mesh_indexes(1,0), right_mesh_indexes(1,0);
     for (auto cel : celpressure) {
         if (!cel) continue;
         TPZStack<TPZCompElSide> celstack;
@@ -157,11 +159,22 @@ void THybridzeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh,
             if (celstackside.Reference().Element()->Dimension() == dim - 1) {
                 TPZGeoElBC gbc(gelside, interface_id);
 
-                TPZCompEl *celneigh = celstackside.Element();
-                int n_connects = celneigh->NConnects();
+                TPZCompEl *right_cel = celstackside.Element();
+                int n_connects = right_cel->NConnects();
                 if (n_connects == 1) {
                     int64_t index;
-                    new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstackside);
+                    TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstackside);
+                    
+                    TPZCompEl * left_cel = celside.Element();
+                    TPZMultiphysicsElement * left_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(left_cel);
+                    if(left_mp_cel){
+                        left_mesh_indexes[0]=1;
+                    }
+                    TPZMultiphysicsElement * right_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(right_cel);
+                    if(right_mp_cel){
+                        right_mesh_indexes[0]=1;
+                    }
+                    mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
                     count++;
                 }
 
@@ -189,7 +202,20 @@ void THybridzeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh,
             TPZGeoElBC gbc(gelside, interface_id);
             
             int64_t index;
-            TPZMultiphysicsInterfaceElement *intface = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, clarge);
+            TPZMultiphysicsInterfaceElement *mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, clarge);
+            TPZCompEl *right_cel = clarge.Element();
+            
+            TPZCompEl * left_cel = celside.Element();
+            TPZMultiphysicsElement * left_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(left_cel);
+            if(left_mp_cel){
+                left_mesh_indexes[0]=1;
+            }
+            TPZMultiphysicsElement * right_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(right_cel);
+            if(right_mp_cel){
+                right_mesh_indexes[0]=1;
+            }
+            mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
+            
             count++;
         }
         if (count != 2 && count != 0) {
