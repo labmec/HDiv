@@ -157,6 +157,7 @@ TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data);
 void forcing(const TPZVec<REAL> &p, TPZVec<STATE> &f);
 void SeparateConnectsByFracId(TPZCompMesh * mixed_cmesh,int fracid);
 void InsertFractureMaterial(TPZCompMesh *cmesh);
+TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e);
 void FractureTest();
 
 /// Executes case 1
@@ -470,6 +471,8 @@ void Pretty_cube(){
                 dfn_hybrid_cmesh->InitializeBlock();
                 cmeshm=dfn_hybrid_cmesh;
                 
+                std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
+                cmeshm->Reference()->Print(file_geo_hybrid_txt);
                 
                 /// Change lagrange multipliers identifiers to fractures identifiers
                 {
@@ -478,17 +481,13 @@ void Pretty_cube(){
                     dfn_hybrid_cmesh->Reference()->ResetReference();
                     dfn_hybrid_cmesh->LoadReferences();
                     TPZGeoMesh  * gmesh = dfn_hybrid_cmesh->Reference();
-                    int64_t n_cel = dfn_hybrid_cmesh->NElements();
                     for (auto gel : gmesh->ElementVec()) {
                 
                         if (!gel) {
                             DebugStop();
                         }
                         
-                        int gel_mat_id = gel->MaterialId();
-                        std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
-                        bool is_not_fracture_Q = it == m_fracture_ids.end();
-                        if (is_not_fracture_Q) {
+                        if (gel->MaterialId() != lagrange_mult_id) {
                             continue;
                         }
                         
@@ -497,7 +496,6 @@ void Pretty_cube(){
                             DebugStop();
                         }
                         
-                        
                         if (gel->MaterialId() == lagrange_mult_id) {
                             int side = gel->NSides() - 1;
                             TPZGeoElSide gel_side(gel,side);
@@ -505,18 +503,18 @@ void Pretty_cube(){
                             gel_side.AllNeighbours(gelsides);
                             
                             for (auto iside : gelsides) {
-                                if(iside.Element()->MaterialId() == material_id){
-                                    int side = iside.Side();
-                                    TPZGeoEl * gel = iside.Element();
-                                    TPZGeoElSide gel_side(gel,side);
-                                    TPZStack<TPZGeoElSide> vol_gelsides;
-                                    gel_side.AllNeighbours(vol_gelsides);
+                                TPZGeoEl * neigh_gel = iside.Element();
+                                int gel_mat_id = neigh_gel->MaterialId();
+                                std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
+                                bool is_fracture_Q = it != m_fracture_ids.end();
+                                if (is_fracture_Q) {
                                     int aka = 0;
                                 }
+
+                                
                             }
                             
                         }
-                        
                         
                     }
                     
@@ -710,51 +708,114 @@ void Case_2(){
 
 void InsertFrac(TPZGeoMesh *gmesh, TPZFMatrix<REAL> corners, int matid){
     
+
     //Set Frac_1
-    TPZManVector<REAL,3> co(3,0.0);
-    co[0] = corners(0,0);
-    co[1] = corners(1,0);
-    co[2] = corners(2,0);
+    TPZManVector<REAL,3> co1(3,0.0);
+    co1[0] = corners(0,0);
+    co1[1] = corners(1,0);
+    co1[2] = corners(2,0);
     
-    TPZGeoNode * node = gmesh->FindNode(co);
+    TPZGeoNode * node = gmesh->FindNode(co1);
     int index_1 = gmesh->NodeIndex(node);
     
-    co[0] = corners(0,1);
-    co[1] = corners(1,1);
-    co[2] = corners(2,1);
+    TPZManVector<REAL,3> co2(3,0.0);
+    co2[0] = corners(0,1);
+    co2[1] = corners(1,1);
+    co2[2] = corners(2,1);
     
-    node = gmesh->FindNode(co);
+    node = gmesh->FindNode(co2);
     int index_2 = gmesh->NodeIndex(node);
     
-    co[0] = corners(0,2);
-    co[1] = corners(1,2);
-    co[2] = corners(2,2);
+    TPZManVector<REAL,3> co3(3,0.0);
+    co3[0] = corners(0,2);
+    co3[1] = corners(1,2);
+    co3[2] = corners(2,2);
     
-    node = gmesh->FindNode(co);
+    node = gmesh->FindNode(co3);
     int index_3 = gmesh->NodeIndex(node);
     
-    co[0] = corners(0,3);
-    co[1] = corners(1,3);
-    co[2] = corners(2,3);
+    TPZManVector<REAL,3> co4(3,0.0);
+    co4[0] = corners(0,3);
+    co4[1] = corners(1,3);
+    co4[2] = corners(2,3);
     
-    node = gmesh->FindNode(co);
+    node = gmesh->FindNode(co4);
     int index_4 = gmesh->NodeIndex(node);
-    TPZVec<int64_t> cords(4);
     
-    cords[0]=index_1;
-    cords[1]=index_2;
-    cords[2]=index_3;
-    cords[3]=index_4;
+    int64_t n_nodes_base = gmesh->NNodes();
+    int64_t n_nodes = n_nodes_base + 5;
+    gmesh -> NodeVec().Resize(n_nodes);
+    gmesh->SetMaxNodeId(n_nodes-1);
     
-    int64_t Nels = gmesh->NElements();
-    gmesh->CreateGeoElement(EQuadrilateral, cords, matid, Nels);
+    TPZManVector<REAL,3> co5,co6,co7,co8,co9;
+    co5 = MidPoint(co1, co2);
+    co6 = MidPoint(co2, co3);
+    co7 = MidPoint(co3, co4);
+    co8 = MidPoint(co4, co1);
+    co9 = MidPoint(co8, co6);
     
-    gmesh->BuildConnectivity();
+    int64_t index_5 = n_nodes_base;
+    TPZGeoNode(index_5, co5, *gmesh);
+
+    int64_t index_6 = n_nodes_base + 1;
+    TPZGeoNode(index_6, co6, *gmesh);
     
-    TPZGeoEl * frac_gel = gmesh->Element(Nels);
-    TPZVec<TPZGeoEl *> sons;
-    frac_gel->Divide(sons);
+    int64_t index_7 = n_nodes_base + 2;
+    TPZGeoNode(index_7, co7, *gmesh);
+    
+    int64_t index_8 = n_nodes_base + 3;
+    TPZGeoNode(index_8, co8, *gmesh);
+    
+    int64_t index_9 = n_nodes_base + 4;
+    TPZGeoNode(index_9, co9, *gmesh);
+    
+
+    TPZVec<int64_t> node_index(4);
+    int64_t el_index;;
+    
+    node_index[0]=index_1;
+    node_index[1]=index_5;
+    node_index[2]=index_9;
+    node_index[3]=index_8;
+    el_index = gmesh->NElements();
+    gmesh->CreateGeoElement(EQuadrilateral, node_index, matid, el_index);
+    
+    node_index[0]=index_5;
+    node_index[1]=index_2;
+    node_index[2]=index_6;
+    node_index[3]=index_9;
+    el_index = gmesh->NElements();
+    gmesh->CreateGeoElement(EQuadrilateral, node_index, matid, el_index);
+
+    node_index[0]=index_8;
+    node_index[1]=index_9;
+    node_index[2]=index_7;
+    node_index[3]=index_4;
+    el_index = gmesh->NElements();
+    gmesh->CreateGeoElement(EQuadrilateral, node_index, matid, el_index);
+
+    node_index[0]=index_9;
+    node_index[1]=index_6;
+    node_index[2]=index_3;
+    node_index[3]=index_7;
+    el_index = gmesh->NElements();
+    gmesh->CreateGeoElement(EQuadrilateral, node_index, matid, el_index);
+    
 }
+
+TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e) {
+    
+    if (x_i.size()!=x_e.size()) {
+        DebugStop();
+    }
+    TPZVec<REAL> x(x_i.size());
+    for (int i = 0;  i < x_i.size(); i++) {
+        x[i] = x_i[i] + 0.5*(x_e[i] - x_i[i]);
+    }
+    
+    return x;
+}
+
 TPZGeoMesh * case2mesh(){
     // Creating the Geo mesh
     int dimel=1;
@@ -1039,11 +1100,65 @@ TPZGeoMesh * PrettyCubemesh(){
             }
         }
     }
-    
+    gmesh->BuildConnectivity();
     TPZExtendGridDimension extend(gmesh,1.0/2);
     extend.SetElType(1);
     TPZGeoMesh *gmesh3d = extend.ExtendedMesh(2,-5,-6);
     gmesh3d->BuildConnectivity();
+    
+    int fracture_id= 100;
+    int dim = gmesh3d->Dimension();
+    /// Insert fractures by
+    {
+        std::map<std::pair<int,int>,int> vol_to_vol_side_indexes;
+        std::vector<int> sides = {20,21,22,23,24,25};
+        for (auto gel : gmesh3d->ElementVec()) {
+            
+            if (!gel) continue;
+            if (gel->Dimension() != dim) continue;
+            
+            for (auto side: sides) {
+                TPZStack<TPZGeoElSide> all_neigh;
+                TPZGeoElSide gelside(gel, side);
+                gelside.AllNeighbours(all_neigh);
+                std::set<int> vols;
+                vols.insert(gel->Index());
+                for (auto gel_side : all_neigh) {
+                    if (gel_side.Element()->Dimension() == dim) {
+                        int vol_index = gel_side.Element()->Index();
+                        vols.insert(vol_index);
+                    }
+                }
+                if (vols.size()!=2) {
+                    continue;
+                }
+                
+                std::set<int>::iterator it;
+                it=vols.begin();
+                int left = *it;
+                ++it;
+                int right = *it;
+                
+                vol_to_vol_side_indexes.insert(std::make_pair(std::make_pair(left, right),side));
+                
+                
+            }
+            
+
+            
+        }
+        
+        for (auto chunk : vol_to_vol_side_indexes) {
+            TPZGeoEl * gel = gmesh3d->Element(chunk.first.first);
+            TPZGeoElSide gelside(gel, chunk.second);
+            TPZGeoElBC gbc(gelside, fracture_id);
+        }
+        
+    }
+    
+    gmesh3d->BuildConnectivity();
+    return gmesh3d;
+    
     
     TPZFMatrix<REAL> frac1(3,4,0.0);
     
@@ -1212,15 +1327,15 @@ TPZGeoMesh * PrettyCubemesh(){
     
     //  InsertFrac(mesh, corners, matid)
     InsertFrac(gmesh3d,frac1,100);
-    InsertFrac(gmesh3d,frac2,100);
+//    InsertFrac(gmesh3d,frac2,100);
 //    InsertFrac(gmesh3d,frac3,3);
 //    InsertFrac(gmesh3d,frac4,3);
 //    InsertFrac(gmesh3d,frac5,3);
 //    InsertFrac(gmesh3d,frac6,3);
-    InsertFrac(gmesh3d,frac7,100);
+//    InsertFrac(gmesh3d,frac7,100);
 //    InsertFrac(gmesh3d,frac8,3);
 //    InsertFrac(gmesh3d,frac9,3);
-    gmesh->BuildConnectivity();
+    gmesh3d->BuildConnectivity();
     return gmesh3d;
     
 }
