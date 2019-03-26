@@ -840,7 +840,7 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
                 
                 bool has_been_hybridize_Q = candidates.size() == 0;
                 bool needs_bc_Q = candidates.size() == 1;
-                bool needs_hybridization_Q = candidates.size() == 2;
+                bool needs_hybridization_Q = candidates.size() >= 2;
                 
             }
 
