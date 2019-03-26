@@ -45,7 +45,7 @@
 #include "mixedpoisson.h"
 
 #include "TPZPrimalPoisson.h"
-#include "TPZDualPoisson.h"
+#include "pzmatmixedpoisson3d.h"
 #include "pzbndcond.h"
 #include "pzbuildmultiphysicsmesh.h"
 
@@ -186,8 +186,6 @@ int main(){
 //    FractureTest();
 }
 
-//#define DFN_H_Q
-
 /// Executes cube
 void Pretty_cube(){
     
@@ -285,9 +283,7 @@ void Pretty_cube(){
         /// step 1 apply process on dimension 3 entities
         int target_dim = 3;
         cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
-        
 
-    
     }
     else{
         cmeshm=cmixedmesh;
@@ -325,6 +321,18 @@ void Pretty_cube(){
     std::string fileresult("cube.vtk");
     an->DefineGraphMesh(3,scalnames,vecnames,fileresult);
     an->PostProcess(div,3);
+    
+//    {
+//        TPZStack<std::string,10> scalnames, vecnames;
+//        vecnames.Push("Flux");
+//        scalnames.Push("Pressure");
+//        scalnames.Push("Permeability");
+//        
+//        int div = 0;
+//        std::string fileresult("frac.vtk");
+//        an->DefineGraphMesh(2,scalnames,vecnames,fileresult);
+//        an->PostProcess(div,2);
+//    }
     
 }
 
@@ -1108,16 +1116,13 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     int nvols = sim_data.omega_ids.size();
     int nbound = sim_data.gamma_ids.size();
    
-    
-    
-    
-    
+
     TPZCompMesh *cmesh = new TPZCompMesh(geometry);
     
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
-        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         
         TPZDummyFunction<STATE> * rhs_exact = new TPZDummyFunction<STATE>(forcing, 5);
@@ -1160,7 +1165,7 @@ TPZCompMesh * PressureMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
 
     for (int ivol=0; ivol < nvols; ivol++) {
-        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
     }
@@ -1216,7 +1221,7 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
-        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dim);
+        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dim);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1292,7 +1297,8 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     TPZFNMatrix<9,STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
-        TPZMixedPoisson * volume = new TPZMixedPoisson(sim_data.omega_ids[ivol],dimension);
+
+        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         

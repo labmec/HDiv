@@ -19,6 +19,9 @@
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
 #include "mixedpoisson.h"
+#include "pzmatmixedpoisson3d.h"
+#include "pzbndcond.h"
+#include "TPZVTKGeoMesh.h"
 
 
 class THybridizeDFN : public TPZHybridizeHDiv {
