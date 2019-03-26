@@ -282,7 +282,8 @@ void Pretty_cube(){
         
         /// step 1 apply process on dimension 3 entities
         int target_dim = 3;
-        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
+//        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
+        cmeshm = dfn_hybridzer.Hybridize_II(cmixedmesh,target_dim);
 
     }
     else{

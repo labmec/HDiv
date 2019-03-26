@@ -750,3 +750,161 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     dfn_hybrid_cmesh->InitializeBlock();
    return dfn_hybrid_cmesh;
 }
+
+void THybridizeDFN::LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim){
+
+#ifdef PZDEBUG
+    if (!flux_cmesh) {
+        DebugStop();
+    }
+#endif
+    
+    TPZGeoMesh * geometry = flux_cmesh->Reference();
+    geometry->ResetReference();
+#ifdef PZDEBUG
+    if (!geometry) {
+        DebugStop();
+    }
+#endif
+    
+    for (auto cel: flux_cmesh->ElementVec()) {
+        
+        if (!cel) {
+            continue;
+        }
+        
+        TPZGeoEl * gel = cel->Reference();
+        if (!gel) {
+            continue;
+        }
+        
+        bool check_vols = gel->Dimension() == dim && cel->NConnects() > 1; ///  Volumetric elements
+        bool check_bc = gel->Dimension() == dim - 1 && cel->NConnects() == 1; ///  Boundary elements
+        
+        if (check_vols || check_bc) {
+            cel->LoadElementReference();
+        }
+        
+    }
+    
+}
+
+
+/// Construct a lagrange multiplier approximation space over the target dimension elements
+TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
+    
+    TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
+    if (!mp_cmesh) {
+        DebugStop();
+    }
+    TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
+    
+    TPZCompMesh * q_cmesh = dfn_mixed_mesh_vec[0];
+    TPZCompMesh * p_cmesh = dfn_mixed_mesh_vec[1];
+    
+    if (!p_cmesh || !q_cmesh) {
+        DebugStop();
+    }
+    
+    LoadReferencesByDimension(q_cmesh,target_dim);
+    
+    /// AnalyzeSide
+    {
+        
+        
+        TPZGeoMesh * geometry = q_cmesh->Reference();
+        for (auto gel : geometry->ElementVec()) {
+            
+            if (!gel) {
+                continue;
+            }
+            
+            bool check = gel->Dimension() == target_dim;
+            if (!check) {
+                continue;
+            }
+            
+            TPZCompEl * cel = gel->Reference();
+            if (!cel) {
+                DebugStop();
+            }
+            
+            int n_sides = gel->NSides();
+            for (int is = 0; is < n_sides; is++) {
+                if(gel->SideDimension(is) != target_dim - 1){
+                    continue;
+                }
+                
+                /// AnalyzeSide
+                TPZStack<TPZCompElSide> candidates = AnalyzeSide(target_dim, gel, is);
+                
+                bool has_been_hybridize_Q = candidates.size() == 0;
+                bool needs_bc_Q = candidates.size() == 1;
+                bool needs_hybridization_Q = candidates.size() == 2;
+                
+            }
+
+        }
+    
+    }
+    
+    
+
+    
+}
+
+TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * gel, int side){
+    
+    if (!gel) {
+        DebugStop();
+    }
+    
+    int n_sides = gel->NSides();
+    
+    TPZCompEl * cel = gel->Reference();
+    if (!cel) {
+        DebugStop();
+    }
+    
+    /// Append the volumetric cel side on the stack
+    TPZCompElSide cel_side(cel,n_sides-1);
+    
+    TPZStack<TPZCompElSide> candidates;
+    candidates.push_back(cel_side);
+    
+    /// Scattering for dim and dim-1 data
+    TPZStack<TPZCompElSide> cel_side_vec_dim;
+    TPZStack<TPZCompElSide> cel_side_vec_dim_m_1;
+    
+    TPZGeoElSide gel_side(gel,side);
+    gel_side.EqualLevelCompElementList(candidates, 1, 1);
+    
+    
+    for (auto cel_side: candidates) {
+        TPZGeoEl * gel_side = cel_side.Element()->Reference();
+        if (!gel_side) {
+            DebugStop();
+        }
+        
+        bool is_volumetric_Q = gel_side->Dimension() == target_dim;
+        bool is_bc_Q = gel_side->Dimension() == target_dim - 1;
+        
+        if (is_volumetric_Q) {
+            cel_side_vec_dim.push_back(cel_side);
+        }else if (is_bc_Q){
+            cel_side_vec_dim_m_1.push_back(cel_side);
+        }
+    }
+    
+    int n_dim_m_1_sides = cel_side_vec_dim_m_1.size();
+    bool has_been_hybridize_Q = cel_side_vec_dim.size() == cel_side_vec_dim_m_1.size();
+    if (has_been_hybridize_Q) {
+        return candidates;
+    }else if(n_dim_m_1_sides){
+        DebugStop(); /// Nothing to say!
+        return candidates;
+    }
+    
+    return candidates;
+    
+}

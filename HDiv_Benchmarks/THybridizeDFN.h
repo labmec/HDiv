@@ -9,6 +9,8 @@
 #define THybridizeDFN_h
 
 #include <stdio.h>
+#include <tuple>
+
 #include "TPZHybridizeHDiv.h"
 #include "TPZMultiphysicsCompMesh.h"
 #include "pzstack.h"
@@ -24,15 +26,26 @@
 #include "TPZVTKGeoMesh.h"
 
 
+/// This class is dedicated for conformal geometrical partitions and mixed meshes.
 class THybridizeDFN : public TPZHybridizeHDiv {
     
 public: /// turn to private when is complete and implement access methods
     
-    /// Set of fractures identifiers
-    std::set<int> m_fracture_ids;
+    
+    /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
+    std::set<std::tuple<int,int,int>> m_bc_ids_2d;
+    
+    /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
+    std::set<std::tuple<int,int,int>> m_bc_ids_1d;
+    
+    /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
+    std::set<std::tuple<int,int,int>> m_bc_ids_0d;
     
     /// List of fracture characteristics
     TPZStack<TFracture> m_fracture_data;
+    
+    /// Set of fractures identifiers
+    std::set<int> m_fracture_ids;
     
     /// stands for base geometry
     TPZGeoMesh * m_geometry;
@@ -60,6 +73,8 @@ public:
     /// Set geometry dimension
     void SetDimension(int dimension);
     
+    void LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim);
+    
     void ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift = 0);
     
     void ApplyHibridizationOnInternalFaces(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id);
@@ -80,6 +95,11 @@ public:
     
     /// Construct a lagrange multiplier approximation space over the target dimension elements
     TPZCompMesh * Hybridize(TPZCompMesh * cmesh, int target_dim);
+    
+    /// Construct a lagrange multiplier approximation space over the target dimension elements
+    TPZCompMesh * Hybridize_II(TPZCompMesh * cmesh, int target_dim);
+    
+    TPZStack<TPZCompElSide> AnalyzeSide(int target_dim, TPZGeoEl * gel, int side);
     
 };
 
