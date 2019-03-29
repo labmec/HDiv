@@ -217,7 +217,7 @@ void Pretty_cube(){
     sim.vals.push_back(0.0);
     sim.vals.push_back(0.0);
     sim.vals.push_back(0.0);
-    sim.vals.push_back(1.0);
+    sim.vals.push_back(2.0);
     sim.vals.push_back(1.0);
     
     /// Defining DFN data
@@ -310,6 +310,12 @@ void Pretty_cube(){
     
     std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
     cmeshm->Reference()->Print(file_geo_hybrid_txt);
+
+    std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+    mesh_vec[0]->Print(file_hybrid_mixed_q);
+    
+    std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+    mesh_vec[1]->Print(file_hybrid_mixed_p);
     
     std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
     cmeshm->Print(file_hybrid_mixed);
@@ -933,8 +939,11 @@ TPZGeoMesh * PrettyCubemesh(){
             TPZManVector<REAL,2> qsi(2,0.0);
             TPZManVector<REAL,3> normal(3);
             gelside.Normal(qsi, gel_l, gel_r, normal);
-//            if (fabs(fabs(normal[1]) - 1.0) <= 1.0e-8) {
+            if (fabs(fabs(normal[1]) - 1.0) <= 1.0e-8) {
                 TPZGeoElBC gbc(gelside, fracture_id);
+            }
+//            if (fabs(fabs(normal[0]) - 1.0) <= 1.0e-8) {
+//                TPZGeoElBC gbc(gelside, fracture_id);
 //            }
         }
         

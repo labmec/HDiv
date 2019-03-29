@@ -1070,6 +1070,11 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
         BuildMixedOperatorOnFractures(p_order, target_dim-1, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
         
         {
+            std::ofstream frac_file("frac_flux_cmesh.txt");
+            q_cmesh->Print(frac_file);
+        }
+        
+        {
             
             LoadReferencesByDimension(q_cmesh,target_dim-1);
             
