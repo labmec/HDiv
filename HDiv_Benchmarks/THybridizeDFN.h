@@ -20,8 +20,7 @@
 #include "pzl2projection.h"
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
-#include "mixedpoisson.h"
-#include "pzmatmixedpoisson3d.h"
+#include "TPZMixedDarcyFlow.h"
 #include "pzbndcond.h"
 #include "TPZVTKGeoMesh.h"
 

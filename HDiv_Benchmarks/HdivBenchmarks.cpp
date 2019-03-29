@@ -194,7 +194,7 @@ void Pretty_cube(){
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
     sim.omega_ids.push_back(1);
-    sim.permeabilities.push_back(0.5);
+    sim.permeabilities.push_back(1.0);
     
     sim.gamma_ids.push_back(-1);
     sim.gamma_ids.push_back(-2);
@@ -281,7 +281,7 @@ void Pretty_cube(){
             
             /// step 1 apply process on dimension 3 entities
             int target_dim = 3;
-            //        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
+//            cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
             cmeshm = dfn_hybridzer.Hybridize_II(cmixedmesh,target_dim);
         }
 
@@ -318,9 +318,13 @@ void Pretty_cube(){
     scalnames.Push("p");
     
     int div = 0;
-    std::string fileresult("cube.vtk");
-    an->DefineGraphMesh(3,scalnames,vecnames,fileresult);
+    std::string file_reservoir("cube.vtk");
+    an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
+    
+//    std::string file_frac("fracture.vtk");
+//    an->DefineGraphMesh(2,scalnames,vecnames,file_frac);
+//    an->PostProcess(div,2);
     
 }
 
@@ -1287,7 +1291,6 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     for (int ivol=0; ivol<nvols; ivol++) {
 
         TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dimension);
-//        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1297,8 +1300,8 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
                 int condType=sim_data.type[ibound];
                 TPZMaterial * face = volume->CreateBC(volume,sim_data.gamma_ids[ibound],condType,val1,val2);
                 cmesh->InsertMaterialObject(face);
-//                TPZMaterial * face_1d = volume->CreateBC(volume,1000*sim_data.gamma_ids[ibound],condType,val1,val2);
-//                cmesh->InsertMaterialObject(face_1d);
+                TPZMaterial * face_1d = volume->CreateBC(volume,1000*sim_data.gamma_ids[ibound],condType,val1,val2);
+                cmesh->InsertMaterialObject(face_1d);
             }
         }
     }
