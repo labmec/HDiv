@@ -732,9 +732,28 @@ void THybridizeDFN::LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim)
         
         if (check_vols || check_bc) {
             cel->LoadElementReference();
+            
+#ifdef LOG4CXX
+            if(dfn_logger->isDebugEnabled())
+            {
+                std::stringstream sout;
+                sout << " LoadReferencesByDimension:: ";
+                sout << " gel index =  " << gel->Index();
+                sout << " connect indexes =  ";
+                int n_connects = cel->NConnects();
+                for (int i =0; i < n_connects; i++) {
+                    sout << cel->ConnectIndex(i) << " ";
+                }
+                LOGPZ_DEBUG(dfn_logger,sout.str())
+            }
+#endif
+            
         }
         
     }
+    
+
+    
     
 }
 
@@ -763,9 +782,30 @@ TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * ge
     TPZStack<TPZCompElSide> cel_side_vec_dim_m_1;
     
     TPZGeoElSide gel_side(gel,side);
-    gel_side.EqualLevelCompElementList(candidates, 1, 1);
+    gel_side.EqualLevelCompElementList(candidates, 1, 0);
     
-    
+#ifdef LOG4CXX
+    if(dfn_logger->isDebugEnabled())
+    {
+        int64_t n_candidates = candidates.size();
+        std::stringstream sout;
+        sout << "BEFORE FILTERING ******\n";
+        sout << " gel index = " << gel->Index() << " side " << side;
+        sout << " target_dim - 1 = " << target_dim - 1;
+        TPZInterpolatedElement * intcel = dynamic_cast<TPZInterpolatedElement *>(candidates[0].Element());
+        sout << " connect index = " << intcel->SideConnectIndex(0, side);
+        sout << " Candidates (index, connectindex, side) = ";
+        for (int i = 0 ; i < n_candidates; i++) {
+            sout <<  candidates[i].Reference().Element()->Index() << " ";
+            TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *>(candidates[i].Element());
+            int side = candidates[i].Side();
+            sout << intel->SideConnectIndex(0, side) << " ";
+            sout <<  candidates[i].Side() << " * ";
+        }
+        LOGPZ_DEBUG(dfn_logger,sout.str())
+    }
+#endif
+
     for (auto cel_side: candidates) {
         TPZGeoEl * gel_side = cel_side.Element()->Reference();
         if (!gel_side) {
@@ -785,8 +825,9 @@ TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * ge
     int n_dim_m_1_sides = cel_side_vec_dim_m_1.size();
     bool has_been_hybridize_Q = cel_side_vec_dim.size() == cel_side_vec_dim_m_1.size();
     if (has_been_hybridize_Q) {
+        candidates.Resize(0);
         return candidates;
-    }else if(n_dim_m_1_sides){
+    }else if(n_dim_m_1_sides != 0){
         DebugStop(); /// Nothing to say!
         return candidates;
     }
@@ -796,121 +837,88 @@ TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * ge
 }
 
 
-std::pair<int,int> THybridizeDFN::HybridizeInSide(const TPZCompElSide &cel_side_l, const TPZCompElSide &cel_side_r, TPZCompMesh * flux_cmesh, int & flux_trace_id, int & lagrange_id){
+std::pair<int,int> THybridizeDFN::HybridizeInSide(const TPZVec<TPZCompElSide> &candidates, TPZCompMesh * flux_cmesh, int & flux_trace_id, int & lagrange_id){
     
-    TPZGeoElSide gel_l(cel_side_l.Reference());
-    TPZGeoElSide gel_r(cel_side_r.Reference());
-    TPZInterpolatedElement *int_cel_l = dynamic_cast<TPZInterpolatedElement *> (cel_side_l.Element());
-    TPZInterpolatedElement *int_cel_r = dynamic_cast<TPZInterpolatedElement *> (cel_side_r.Element());
+    if(candidates.size() < 2) DebugStop();
+    TPZGeoElSide gel_first(candidates[0].Reference());
+    TPZInterpolatedElement *int_cel_first = dynamic_cast<TPZInterpolatedElement *> (candidates[0].Element());
     
-    if (!int_cel_l || !int_cel_r) {
-        DebugStop();
+    int_cel_first->SetSideOrient(candidates[0].Side(), 1);
+    
+    for (auto it: candidates) {
+        it.Element()->Reference()->ResetReference();
     }
-    
-    int_cel_l->SetSideOrient(cel_side_l.Side(), 1);
-    int_cel_r->SetSideOrient(cel_side_r.Side(), 1);
-    
-    
-    TPZConnect & connect_l = int_cel_l->SideConnect(0, cel_side_l.Side());
-    
-    TPZStack<TPZCompElSide> cel_r_neighbours;
-    if (connect_l.HasDependency()) { /// Case for connect with dependency (non-conformal case) experiemntal version
-        
-        gel_r.EqualLevelCompElementList(cel_r_neighbours,1,0);
-        
-        // only one wrap element should exist
-#ifdef PZDEBUG
-        if(cel_r_neighbours.size() > 1)
-        {
-            DebugStop();
-        }
-        if(cel_r_neighbours.size()==1)
-        {
-            TPZGeoEl * gel = cel_r_neighbours[0].Element()->Reference();
-            if(gel->Dimension() != flux_cmesh->Dimension()-1)
-            {
-                DebugStop();
-            }
-        }
-#endif
-        // reset the reference of the right flux trace element
-        if(cel_r_neighbours.size()) {
-            cel_r_neighbours[0].Element()->Reference()->ResetReference();
-            connect_l.RemoveDepend();
-        }
-    }
-    else
+    TPZStack<TPZCompEl *> element_to_load;
+    size_t ncand = candidates.size();
+    int connect_order = -1;
+    int64_t connect_index = -1;
     {
-        int64_t index = flux_cmesh->AllocateNewConnect(connect_l);
-        TPZConnect &newcon = flux_cmesh->ConnectVec()[index];
-        connect_l.DecrementElConnected();
-        
-        newcon.ResetElConnected();
-        newcon.IncrementElConnected();
-        newcon.SetSequenceNumber(flux_cmesh->NConnects() - 1);
-        
-        int local_connect_index = int_cel_r->SideConnectLocId(0, cel_side_r.Side());
-        int_cel_r->SetConnectIndex(local_connect_index, index);
+        int side = candidates[0].Side();
+        int_cel_first->SetSideOrient(side, 1);
+        TPZConnect & connect = int_cel_first->SideConnect(0, side);
+        connect_index = int_cel_first->SideConnectIndex(0, side);
+        if(connect.HasDependency()) DebugStop();
+        connect_order = connect.Order();
     }
-    
-    int connect_order_l = connect_l.Order();
-    
-    TPZCompEl * flux_trace_cel_l, * flux_trace_cel_r;
-    
-    { /// Create a computational element for the left side of flux trace
-        int_cel_r->Reference()->ResetReference();
-        int_cel_l->LoadElementReference();
-        int_cel_l->SetPreferredOrder(connect_order_l);
-        TPZGeoElBC gbc(gel_l, flux_trace_id);
-        int64_t index;
-        flux_trace_cel_l = flux_cmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *flux_cmesh, index);
-        if(connect_l.Order() != connect_order_l)
+
+    for (int i=0; i<ncand; i++) {
+        
+        TPZInterpolatedElement *int_cel = dynamic_cast<TPZInterpolatedElement *> (candidates[i].Element());
+        int side = candidates[i].Side();
+        int_cel->SetSideOrient(side, 1);
+        TPZConnect & connect = int_cel->SideConnect(0, side);
+        if(i>0)
+        {
+            int64_t global_index = flux_cmesh->AllocateNewConnect(connect);
+            TPZConnect &newcon = flux_cmesh->ConnectVec()[global_index];
+            connect.DecrementElConnected();
+            
+            newcon.ResetElConnected();
+            newcon.IncrementElConnected();
+            newcon.SetSequenceNumber(flux_cmesh->NConnects() - 1);
+            
+            int local_connect_index = int_cel->SideConnectLocId(0, side);
+            int_cel->SetConnectIndex(local_connect_index, global_index);
+            
+            // create the HDiv bound element
+            int_cel->LoadElementReference();
+
+            int_cel->SetPreferredOrder(connect_order);
+            connect_index = global_index;
+        }
+        TPZGeoElBC gbc(candidates[i].Reference(), flux_trace_id);
+        int64_t compel_index;
+        int_cel->LoadElementReference();
+        TPZCompEl *flux_trace_cel = flux_cmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *flux_cmesh, compel_index);
+        if(flux_trace_cel->Connect(0).Order() != connect_order)
         {
             DebugStop();
         }
-        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (flux_trace_cel_l);
+        if(flux_trace_cel->ConnectIndex(0) != connect_index)
+        {
+            DebugStop();
+        }
+        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (flux_trace_cel);
         int flux_trace_side = gbc.CreatedElement()->NSides() - 1;
         intel->SetSideOrient(flux_trace_side, 1);
-        int_cel_l->Reference()->ResetReference();
-        flux_trace_cel_l->Reference()->ResetReference();
+        int_cel->Reference()->ResetReference();
+        flux_trace_cel->Reference()->ResetReference();
+
+        element_to_load.Push(flux_trace_cel);
+        element_to_load.Push(int_cel);
     }
     
-    if(cel_r_neighbours.size() == 0)
-    {   /// Create a computational element for the left side of flux trace
-        int_cel_l->Reference()->ResetReference();
-        int_cel_r->LoadElementReference();
-        TPZConnect & connec_r = int_cel_r->SideConnect(0,cel_side_r.Side());
-        int connect_order_r = connec_r.Order();
-        int_cel_r->SetPreferredOrder(connect_order_r);
-        TPZGeoElBC gbc(gel_r, flux_trace_id);
-        int64_t index;
-        flux_trace_cel_r = flux_cmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *flux_cmesh, index);
-        if(connec_r.Order() != connect_order_r)
-        {
-            DebugStop();
-        }
-        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (flux_trace_cel_r);
-        int flux_trace_side = gbc.CreatedElement()->NSides() - 1;
-        intel->SetSideOrient(flux_trace_side, 1);
-        int_cel_r->Reference()->ResetReference();
-        flux_trace_cel_r->Reference()->ResetReference();
-    }
-    else
-    {
-        flux_trace_cel_r = cel_r_neighbours[0].Element();
-    }
     
-    flux_trace_cel_l->LoadElementReference();
-    flux_trace_cel_r->LoadElementReference();
     int64_t lambda_index;
     int lambda_order;
     {
-        TPZGeoElBC gbc(gel_l, lagrange_id);
+        TPZGeoElBC gbc(gel_first, lagrange_id);
         lambda_index = gbc.CreatedElement()->Index();
-        lambda_order = connect_order_l;
+        lambda_order = connect_order;
     }
-    int_cel_l->LoadElementReference();
-    int_cel_r->LoadElementReference();
+    for (auto cel:element_to_load) {
+        cel->LoadElementReference();
+    }
     
     return std::make_pair(lambda_index, lambda_order);
 }
@@ -960,7 +968,7 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
                 continue;
             }
             
-            bool itself_and_bc_Q;
+            bool itself_and_bc_Q = false;
             if (n_candidates == 2) {
                 TPZGeoEl * gel_bc = candidates[1].Element()->Reference(); ///  The first one is the element itself
                 itself_and_bc_Q = gel_bc->Dimension() == target_dim - 1;
@@ -970,12 +978,26 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
                 continue;
             }
             
+#ifdef LOG4CXX
+            if(dfn_logger->isDebugEnabled())
+            {
+                std::stringstream sout;
+                sout << " gel index = " << gel->Index();
+                sout << " target_dim - 1 = " << target_dim - 1;
+                TPZInterpolatedElement * intcel = dynamic_cast<TPZInterpolatedElement *>(candidates[0].Element());
+                sout << " connect index = " << intcel->SideConnectIndex(0, is);
+                sout << " Candidates = ";
+                for (int i = 0 ; i < n_candidates; i++) {
+                    sout <<  candidates[i].Reference().Element()->Index() << " ";
+                    sout <<  candidates[i].Reference().Side() << " * ";
+                }
+                LOGPZ_DEBUG(dfn_logger,sout.str())
+            }
+#endif
+            
             bool needs_hybridization_Q = n_candidates >= 2;
             if (needs_hybridization_Q) {
-                if (n_candidates != 2) {
-                    DebugStop();
-                }
-                gel_index_and_order = HybridizeInSide(candidates[0], candidates[1], flux_cmesh, flux_trace_id, lagrange_id);
+                gel_index_and_order = HybridizeInSide(candidates, flux_cmesh, flux_trace_id, lagrange_id);
                 gel_index_and_order_lagrange_mult.push_back(gel_index_and_order);
                 continue;
             }
@@ -986,7 +1008,7 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
     
     std::ofstream file("geometry_after_classify.txt");
     geometry->Print(file);
-    
+
     std::ofstream file_geo("geometry_after_classify.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(geometry, file_geo);
     
@@ -1069,6 +1091,7 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
         int p_order = 1;
         BuildMixedOperatorOnFractures(p_order, target_dim-1, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
         
+        q_cmesh->ComputeNodElCon();
         {
             std::ofstream frac_file("frac_flux_cmesh.txt");
             q_cmesh->Print(frac_file);

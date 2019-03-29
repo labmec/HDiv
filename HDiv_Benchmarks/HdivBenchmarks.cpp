@@ -1,4 +1,5 @@
 
+#include "path.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -179,7 +180,15 @@ void Pretty_cube();
 
 int main(){
     
-    InitializePZLOG();
+    std::string source_dir = SOURCE_DIR;
+#ifdef LOG4CXX
+    std::string log_file = source_dir;
+    log_file += "/dfn.cfg";
+    InitializePZLOG(log_file);
+//    InitializePZLOG();
+#endif
+    
+
     
     Pretty_cube();
 //    Case_1();
@@ -290,6 +299,23 @@ void Pretty_cube(){
         cmeshm=cmixedmesh;
         
     }
+    TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
+    TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
+
+    {
+        std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+        mesh_vec[0]->ComputeNodElCon();
+        mesh_vec[0]->Print(file_hybrid_mixed_q);
+        
+        std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+        mesh_vec[1]->ComputeNodElCon();
+        mesh_vec[1]->Print(file_hybrid_mixed_p);
+        
+        std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+        cmeshm->ComputeNodElCon();
+        cmeshm->Print(file_hybrid_mixed);
+    }
+
     
     TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
     
@@ -301,8 +327,6 @@ void Pretty_cube(){
     std::cout << "Solution of the system" << std::endl;
     an->Solve();
     
-    TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
-    TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
     TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(mesh_vec, cmeshm);
     
     std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
@@ -942,9 +966,9 @@ TPZGeoMesh * PrettyCubemesh(){
             if (fabs(fabs(normal[1]) - 1.0) <= 1.0e-8) {
                 TPZGeoElBC gbc(gelside, fracture_id);
             }
-//            if (fabs(fabs(normal[0]) - 1.0) <= 1.0e-8) {
-//                TPZGeoElBC gbc(gelside, fracture_id);
-//            }
+            if (fabs(fabs(normal[0]) - 1.0) <= 1.0e-8) {
+                TPZGeoElBC gbc(gelside, fracture_id);
+            }
         }
         
     }

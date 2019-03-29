@@ -25,6 +25,10 @@
 #include "TPZVTKGeoMesh.h"
 
 
+#ifdef LOG4CXX
+static LoggerPtr dfn_logger(Logger::getLogger("DFN"));
+#endif
+
 /// This class is dedicated for conformal geometrical partitions and mixed meshes.
 class THybridizeDFN : public TPZHybridizeHDiv {
     
@@ -100,7 +104,7 @@ public:
     
     TPZStack<TPZCompElSide> AnalyzeSide(int target_dim, TPZGeoEl * gel, int side);
     
-    std::pair<int,int> HybridizeInSide(const TPZCompElSide &cel_side_l, const TPZCompElSide &cel_side_r, TPZCompMesh * flux_cmesh, int & flux_trace_id, int & lagrange_id);
+    std::pair<int,int> HybridizeInSide(const TPZVec<TPZCompElSide> &candidates, TPZCompMesh * flux_cmesh, int & flux_trace_mat_id, int & lagrange_mat_id);
     
     int CreateBCGeometricalElement(const TPZCompElSide & cel_side, TPZCompMesh * flux_cmesh,int & bc_impervious_id);
     
