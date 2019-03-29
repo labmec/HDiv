@@ -101,6 +101,8 @@ public:
     
     TPZStack<TPZCompElSide> AnalyzeSide(int target_dim, TPZGeoEl * gel, int side);
     
+    std::pair<int,int> HybridizeInSide(const TPZCompElSide &cel_side_l, const TPZCompElSide &cel_side_r, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id);
+    
 };
 
 #endif /* THybridizeDFN_h */
