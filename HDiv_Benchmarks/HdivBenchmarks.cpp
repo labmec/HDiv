@@ -72,6 +72,7 @@
 #include "pzl2projection.h"
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
+#include "TPZMixedDarcyFlow.h"
 
 
 #ifdef USING_BOOST
@@ -193,7 +194,7 @@ void Pretty_cube(){
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
     sim.omega_ids.push_back(1);
-    sim.permeabilities.push_back(1.0);
+    sim.permeabilities.push_back(0.5);
     
     sim.gamma_ids.push_back(-1);
     sim.gamma_ids.push_back(-2);
@@ -271,19 +272,18 @@ void Pretty_cube(){
                 std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_old_p.txt");
                 meshvector_Hybrid[1]->Print(file_hybrid_mixed_p);
             }
-            return;
+            cmeshm = cmesh_m_Hybrid;
+        }else{
+            int dimension = 3;
+            THybridizeDFN dfn_hybridzer;
+            dfn_hybridzer.SetFractureData(fracture_data);
+            dfn_hybridzer.SetDimension(dimension);
+            
+            /// step 1 apply process on dimension 3 entities
+            int target_dim = 3;
+            //        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
+            cmeshm = dfn_hybridzer.Hybridize_II(cmixedmesh,target_dim);
         }
-        
-        
-        int dimension = 3;
-        THybridizeDFN dfn_hybridzer;
-        dfn_hybridzer.SetFractureData(fracture_data);
-        dfn_hybridzer.SetDimension(dimension);
-        
-        /// step 1 apply process on dimension 3 entities
-        int target_dim = 3;
-//        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
-        cmeshm = dfn_hybridzer.Hybridize_II(cmixedmesh,target_dim);
 
     }
     else{
@@ -299,7 +299,6 @@ void Pretty_cube(){
     std::cout << "Solution of the system" << std::endl;
     an->Solve();
     
-    
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
     TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(mesh_vec, cmeshm);
@@ -314,26 +313,14 @@ void Pretty_cube(){
     cmeshm->Print(file_hybrid_mixed);
     
     TPZStack<std::string,10> scalnames, vecnames;
-    vecnames.Push("Flux");
-    scalnames.Push("Pressure");
-    scalnames.Push("Permeability");
+    vecnames.Push("q");
+    vecnames.Push("kappa");
+    scalnames.Push("p");
     
     int div = 0;
     std::string fileresult("cube.vtk");
     an->DefineGraphMesh(3,scalnames,vecnames,fileresult);
     an->PostProcess(div,3);
-    
-//    {
-//        TPZStack<std::string,10> scalnames, vecnames;
-//        vecnames.Push("Flux");
-//        scalnames.Push("Pressure");
-//        scalnames.Push("Permeability");
-//        
-//        int div = 0;
-//        std::string fileresult("frac.vtk");
-//        an->DefineGraphMesh(2,scalnames,vecnames,fileresult);
-//        an->PostProcess(div,2);
-//    }
     
 }
 
@@ -1299,7 +1286,8 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     
     for (int ivol=0; ivol<nvols; ivol++) {
 
-        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dimension);
+        TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dimension);
+//        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1309,8 +1297,8 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
                 int condType=sim_data.type[ibound];
                 TPZMaterial * face = volume->CreateBC(volume,sim_data.gamma_ids[ibound],condType,val1,val2);
                 cmesh->InsertMaterialObject(face);
-                TPZMaterial * face_1d = volume->CreateBC(volume,1000*sim_data.gamma_ids[ibound],condType,val1,val2);
-                cmesh->InsertMaterialObject(face_1d);
+//                TPZMaterial * face_1d = volume->CreateBC(volume,1000*sim_data.gamma_ids[ibound],condType,val1,val2);
+//                cmesh->InsertMaterialObject(face_1d);
             }
         }
     }

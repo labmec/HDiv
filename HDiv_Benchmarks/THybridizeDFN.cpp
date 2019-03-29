@@ -132,21 +132,24 @@ std::tuple<int, int> THybridizeDFN::DissociateConnects(int flux_trace_id, int la
     
 }
 
-void THybridizeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh, TPZVec<TPZCompMesh *> & mesh_vec) {
+void THybridizeDFN::CreateInterfaceElements(int target_dim, int interface_id, TPZCompMesh *cmesh, TPZVec<TPZCompMesh *> & mesh_vec) {
 
     TPZCompMesh * pressure_cmesh = mesh_vec[1];
-    int dim = pressure_cmesh->Dimension();
     TPZVec<TPZCompEl *> celpressure(pressure_cmesh->NElements(), 0);
     for (int64_t el = 0; el < pressure_cmesh->NElements(); el++) {
         TPZCompEl *cel = pressure_cmesh->Element(el);
-        if (cel && cel->Reference() && cel->Reference()->Dimension() == dim - 1) {
+        if (cel && cel->Reference() && cel->Reference()->Dimension() == target_dim - 1) {
             celpressure[el] = cel;
         }
     }
     cmesh->Reference()->ResetReference();
-    cmesh->LoadReferences();
+    for (auto &cel :cmesh->ElementVec()) {
+        if(cel->Reference()->Dimension() == target_dim -1){
+            cel->LoadElementReference();
+        }
+    }
     
-    TPZManVector<int64_t,3> left_mesh_indexes(1,1), right_mesh_indexes(1,0);
+    TPZManVector<int64_t,2> left_mesh_indexes(1,1), right_mesh_indexes(1,0);
     for (auto cel : celpressure) {
         if (!cel) continue;
         TPZStack<TPZCompElSide> celstack;
@@ -156,7 +159,7 @@ void THybridizeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh
         gelside.EqualLevelCompElementList(celstack, 0, 0);
         int count = 0;
         for (auto &celstackside : celstack) {
-            if (celstackside.Reference().Element()->Dimension() == dim - 1) {
+            if (celstackside.Reference().Element()->Dimension() == target_dim - 1) {
                 TPZGeoElBC gbc(gelside, interface_id);
 
                 TPZCompEl * right_cel = celstackside.Element();
@@ -164,19 +167,6 @@ void THybridizeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh
                 if (n_connects == 1) {
                     int64_t index;
                     TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstackside);
-                    
-//                    TPZCompEl * left_cel = celside.Element();
-//
-//                    TPZMultiphysicsElement * left_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(left_cel);
-//                    if(left_cel->Reference()->MaterialId() == 100){
-//                        left_mesh_indexes[0]=1;
-//                    }
-//                    TPZMultiphysicsElement * right_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(right_cel);
-//                    if(right_cel->Reference()->MaterialId() == 100){
-//                        right_mesh_indexes[0]=1;
-//                    }
-                    
-//                    int index_left = left_cel->Index();
                     mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
                     count++;
                 }
@@ -188,11 +178,11 @@ void THybridizeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh
             TPZCompElSide clarge = gelside.LowerLevelCompElementList2(false);
             if(!clarge) DebugStop();
             TPZGeoElSide glarge = clarge.Reference();
-            if (glarge.Element()->Dimension() == dim) {
+            if (glarge.Element()->Dimension() == target_dim) {
                 TPZGeoElSide neighbour = glarge.Neighbour();
                 while(neighbour != glarge)
                 {
-                    if (neighbour.Element()->Dimension() < dim) {
+                    if (neighbour.Element()->Dimension() < target_dim) {
                         break;
                     }
                     neighbour = neighbour.Neighbour();
@@ -206,18 +196,6 @@ void THybridizeDFN::CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh
             
             int64_t index;
             TPZMultiphysicsInterfaceElement *mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, clarge);
-
-            //            TPZCompEl *right_cel = clarge.Element();
-            
-//            TPZCompEl * left_cel = celside.Element();
-//            TPZMultiphysicsElement * left_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(left_cel);
-//            if(left_cel->Reference()->MaterialId() == 100){
-//                left_mesh_indexes[0]=1;
-//            }
-//            TPZMultiphysicsElement * right_mp_cel = dynamic_cast<TPZMultiphysicsElement *>(right_cel);
-//            if(right_cel->Reference()->MaterialId() == 100){
-//                right_mesh_indexes[0]=1;
-//            }
             mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
             
             count++;
@@ -291,7 +269,6 @@ void THybridizeDFN::ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmes
             lagrange_mult_mat->SetScaleFactor(0.0);
             pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
         }
-        
     }
 }
 
@@ -417,8 +394,6 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
     
     int n_state = 1;
     TPZVec<STATE> sol(1,0);
-//    TPZFNMatrix<1, STATE> xk(n_state, n_state, 0.), xb(n_state, n_state, 0.), xc(n_state, n_state, 0.), xf(n_state, 1, 0.);
-    
     if (!cmesh) {
         DebugStop();
     }
@@ -741,7 +716,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
         mp_dfn_mixed_mesh_vec->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
     }
     dfn_mixed_mesh_vec[1]->SetDimModel(target_dim);
-    CreateInterfaceElements(mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
+    CreateInterfaceElements(target_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     
 //    dfn_mixed_mesh_vec[1]->SetDimModel(target_dim-1);
 //    CreateInterfaceElements(mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
@@ -790,78 +765,13 @@ void THybridizeDFN::LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim)
 }
 
 
-/// Construct a lagrange multiplier approximation space over the target dimension elements
-TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
-    
-    TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
-    if (!mp_cmesh) {
-        DebugStop();
-    }
-    TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
-    
-    TPZCompMesh * q_cmesh = dfn_mixed_mesh_vec[0];
-    TPZCompMesh * p_cmesh = dfn_mixed_mesh_vec[1];
-    
-    if (!p_cmesh || !q_cmesh) {
-        DebugStop();
-    }
-    
-    LoadReferencesByDimension(q_cmesh,target_dim);
-    
-    /// Duplicating Hdiv mesh
-    {
-        
-        
-        TPZGeoMesh * geometry = q_cmesh->Reference();
-        for (auto gel : geometry->ElementVec()) {
-            
-            if (!gel) {
-                continue;
-            }
-            
-            bool check = gel->Dimension() == target_dim;
-            if (!check) {
-                continue;
-            }
-            
-            TPZCompEl * cel = gel->Reference();
-            if (!cel) {
-                DebugStop();
-            }
-            
-            int n_sides = gel->NSides();
-            for (int is = 0; is < n_sides; is++) {
-                if(gel->SideDimension(is) != target_dim - 1){
-                    continue;
-                }
-                
-                /// AnalyzeSide
-                TPZStack<TPZCompElSide> candidates = AnalyzeSide(target_dim, gel, is);
-                
-                bool has_been_hybridize_Q = candidates.size() == 0;
-                bool needs_bc_Q = candidates.size() == 1;
-                bool needs_hybridization_Q = candidates.size() >= 2;
-                
-                
-                
-            }
-
-        }
-    
-    }
-    
-    
-
-    
-}
 
 TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * gel, int side){
     
     if (!gel) {
         DebugStop();
     }
-    
-    int n_sides = gel->NSides();
+
     
     TPZCompEl * cel = gel->Reference();
     if (!cel) {
@@ -869,7 +779,7 @@ TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * ge
     }
     
     /// Append the volumetric cel side on the stack
-    TPZCompElSide cel_side(cel,n_sides-1);
+    TPZCompElSide cel_side(cel,side);
     
     TPZStack<TPZCompElSide> candidates;
     candidates.push_back(cel_side);
@@ -912,11 +822,11 @@ TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * ge
 }
 
 
-std::pair<int,int> THybridizeDFN::HybridizeInSide(const TPZCompElSide &cel_side_l, const TPZCompElSide &cel_side_r, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id){
+std::pair<int,int> THybridizeDFN::HybridizeInSide(const TPZCompElSide &cel_side_l, const TPZCompElSide &cel_side_r, TPZCompMesh * flux_cmesh, int & flux_trace_id, int & lagrange_id){
     
     TPZGeoElSide gel_l(cel_side_l.Reference());
     TPZGeoElSide gel_r(cel_side_r.Reference());
-    TPZInterpolatedElement *int_cel_l = dynamic_cast<TPZInterpolatedElement *> (cel_side_r.Element());
+    TPZInterpolatedElement *int_cel_l = dynamic_cast<TPZInterpolatedElement *> (cel_side_l.Element());
     TPZInterpolatedElement *int_cel_r = dynamic_cast<TPZInterpolatedElement *> (cel_side_r.Element());
     
     if (!int_cel_l || !int_cel_r) {
@@ -943,7 +853,7 @@ std::pair<int,int> THybridizeDFN::HybridizeInSide(const TPZCompElSide &cel_side_
         if(cel_r_neighbours.size()==1)
         {
             TPZGeoEl * gel = cel_r_neighbours[0].Element()->Reference();
-            if(gel->Dimension() != cmesh->Dimension()-1)
+            if(gel->Dimension() != flux_cmesh->Dimension()-1)
             {
                 DebugStop();
             }
@@ -957,13 +867,13 @@ std::pair<int,int> THybridizeDFN::HybridizeInSide(const TPZCompElSide &cel_side_
     }
     else
     {
-        int64_t index = cmesh->AllocateNewConnect(connect_l);
-        TPZConnect &newcon = cmesh->ConnectVec()[index];
+        int64_t index = flux_cmesh->AllocateNewConnect(connect_l);
+        TPZConnect &newcon = flux_cmesh->ConnectVec()[index];
         connect_l.DecrementElConnected();
         
         newcon.ResetElConnected();
         newcon.IncrementElConnected();
-        newcon.SetSequenceNumber(cmesh->NConnects() - 1);
+        newcon.SetSequenceNumber(flux_cmesh->NConnects() - 1);
         
         int local_connect_index = int_cel_r->SideConnectLocId(0, cel_side_r.Side());
         int_cel_r->SetConnectIndex(local_connect_index, index);
@@ -973,23 +883,234 @@ std::pair<int,int> THybridizeDFN::HybridizeInSide(const TPZCompElSide &cel_side_
     
     TPZCompEl * flux_trace_cel_l, * flux_trace_cel_r;
     
-    {
+    { /// Create a computational element for the left side of flux trace
         int_cel_r->Reference()->ResetReference();
         int_cel_l->LoadElementReference();
         int_cel_l->SetPreferredOrder(connect_order_l);
-        TPZGeoElBC gbc(gel_l, HDivWrapMatid);
+        TPZGeoElBC gbc(gel_l, flux_trace_id);
         int64_t index;
-        wrap1 = fluxmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *fluxmesh, index);
-        if(cleft.Order() != sideorder)
+        flux_trace_cel_l = flux_cmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *flux_cmesh, index);
+        if(connect_l.Order() != connect_order_l)
         {
             DebugStop();
         }
-        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (wrap1);
-        int wrapside = gbc.CreatedElement()->NSides() - 1;
-        intel->SetSideOrient(wrapside, 1);
-        intelleft->Reference()->ResetReference();
-        wrap1->Reference()->ResetReference();
+        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (flux_trace_cel_l);
+        int flux_trace_side = gbc.CreatedElement()->NSides() - 1;
+        intel->SetSideOrient(flux_trace_side, 1);
+        int_cel_l->Reference()->ResetReference();
+        flux_trace_cel_l->Reference()->ResetReference();
     }
+    
+    if(cel_r_neighbours.size() == 0)
+    {   /// Create a computational element for the left side of flux trace
+        int_cel_l->Reference()->ResetReference();
+        int_cel_r->LoadElementReference();
+        TPZConnect & connec_r = int_cel_r->SideConnect(0,cel_side_r.Side());
+        int connect_order_r = connec_r.Order();
+        int_cel_r->SetPreferredOrder(connect_order_r);
+        TPZGeoElBC gbc(gel_r, flux_trace_id);
+        int64_t index;
+        flux_trace_cel_r = flux_cmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *flux_cmesh, index);
+        if(connec_r.Order() != connect_order_r)
+        {
+            DebugStop();
+        }
+        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (flux_trace_cel_r);
+        int flux_trace_side = gbc.CreatedElement()->NSides() - 1;
+        intel->SetSideOrient(flux_trace_side, 1);
+        int_cel_r->Reference()->ResetReference();
+        flux_trace_cel_r->Reference()->ResetReference();
+    }
+    else
+    {
+        flux_trace_cel_r = cel_r_neighbours[0].Element();
+    }
+    
+    flux_trace_cel_l->LoadElementReference();
+    flux_trace_cel_r->LoadElementReference();
+    int64_t lambda_index;
+    int lambda_order;
+    {
+        TPZGeoElBC gbc(gel_l, lagrange_id);
+        lambda_index = gbc.CreatedElement()->Index();
+        lambda_order = connect_order_l;
+    }
+    int_cel_l->LoadElementReference();
+    int_cel_r->LoadElementReference();
+    
+    return std::make_pair(lambda_index, lambda_order);
+}
+
+int THybridizeDFN::CreateBCGeometricalElement(const TPZCompElSide & cel_side, TPZCompMesh * flux_cmesh,int & bc_impervious_id){
+    int bc_gel_index;
+    TPZGeoElSide gel_side(cel_side.Reference());
+    TPZGeoElBC gbc(gel_side, bc_impervious_id);
+    bc_gel_index = gbc.CreatedElement()->Index();
+    return bc_gel_index;
+}
+
+
+void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, TPZStack<TPZStack<TPZCompElSide>> & candidates_for_impervious_bc, int & flux_trace_id, int & lagrange_id){
+    
+    std::pair<int, int> gel_index_and_order;
+    TPZGeoMesh * geometry = flux_cmesh->Reference();
+    for (auto gel : geometry->ElementVec()) {
+        
+        if (!gel) {
+            continue;
+        }
+        
+        bool check = gel->Dimension() == target_dim;
+        if (!check) {
+            continue;
+        }
+        
+        TPZCompEl * cel = gel->Reference();
+        if (!cel) {
+            DebugStop();
+        }
+        
+        int n_sides = gel->NSides();
+        for (int is = 0; is < n_sides; is++) {
+            if(gel->SideDimension(is) != target_dim - 1){
+                continue;
+            }
+            
+            /// AnalyzeSide
+            TPZStack<TPZCompElSide> candidates = AnalyzeSide(target_dim, gel, is);
+            int n_candidates = candidates.size();
+            
+            bool needs_bc_Q = n_candidates == 1;
+            if (needs_bc_Q) {
+                candidates_for_impervious_bc.push_back(candidates);
+                continue;
+            }
+            
+            bool itself_and_bc_Q;
+            if (n_candidates == 2) {
+                TPZGeoEl * gel_bc = candidates[1].Element()->Reference(); ///  The first one is the element itself
+                itself_and_bc_Q = gel_bc->Dimension() == target_dim - 1;
+            }
+            bool has_been_hybridize_Q = n_candidates == 0;
+            if (has_been_hybridize_Q  || itself_and_bc_Q) {
+                continue;
+            }
+            
+            bool needs_hybridization_Q = n_candidates >= 2;
+            if (needs_hybridization_Q) {
+                if (n_candidates != 2) {
+                    DebugStop();
+                }
+                gel_index_and_order = HybridizeInSide(candidates[0], candidates[1], flux_cmesh, flux_trace_id, lagrange_id);
+                gel_index_and_order_lagrange_mult.push_back(gel_index_and_order);
+                continue;
+            }
+            
+        }
+        
+    }
+    
+    std::ofstream file("geometry_after_classify.txt");
+    geometry->Print(file);
+    
+    std::ofstream file_geo("geometry_after_classify.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(geometry, file_geo);
+    
+    flux_cmesh->InitializeBlock();
+    flux_cmesh->ComputeNodElCon();
+        
     
 }
 
+/// Construct a lagrange multiplier approximation space over the target dimension elements
+TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
+    
+    TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
+    if (!mp_cmesh) {
+        DebugStop();
+    }
+    TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
+    
+    TPZCompMesh * q_cmesh = dfn_mixed_mesh_vec[0];
+    TPZCompMesh * p_cmesh = dfn_mixed_mesh_vec[1];
+    
+    if (!p_cmesh || !q_cmesh) {
+        DebugStop();
+    }
+    int flux_trace_id, lagrange_id, mp_nterface_id;
+    ComputeAndInsertMaterials(target_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id); /// split functionalities ...
+    int bc_impervious_id = -1942;
+    
+    LoadReferencesByDimension(q_cmesh,target_dim);
+    
+    
+    /// ClassifyCompelSides
+    TPZStack<std::pair<int, int>> gel_index_and_order_lagrange_mult;
+    TPZStack<TPZStack<TPZCompElSide>> candidates_for_impervious_bc;
+    ClassifyCompelSides(target_dim, q_cmesh, gel_index_and_order_lagrange_mult, candidates_for_impervious_bc, flux_trace_id, lagrange_id);
+    
+    /// Create Impervious boundary elements
+    TPZStack<int> bc_gel_indexes;
+    for (auto candidates: candidates_for_impervious_bc) {
+        int bc_index = CreateBCGeometricalElement(candidates[0], q_cmesh, bc_impervious_id);
+        bc_gel_indexes.push_back(bc_index);
+    }
+    
+    bool is_DFN_Hybridaze_Q = false;
+    if (is_DFN_Hybridaze_Q) {
+        DebugStop();
+    }else{ /// Case for hybridization
+        
+        TPZGeoMesh * geometry = p_cmesh->Reference();
+        geometry->ResetReference();
+        
+        p_cmesh->SetDimModel(target_dim-1);
+        for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
+            
+            int gel_index = gel_index_and_order.first;
+            int cel_order = gel_index_and_order.second;
+            
+            TPZGeoEl * gel = geometry->Element(gel_index);
+            int64_t cel_index;
+            TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
+            TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+            TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
+            if (intel){
+                intel->PRefine(cel_order);
+            } else if (intelDisc) {
+                intelDisc->SetDegree(cel_order);
+                intelDisc->SetTrueUseQsiEta();
+            } else {
+                DebugStop();
+            }
+            int n_connects = cel->NConnects();
+            for (int i = 0; i < n_connects; ++i) {
+                cel->Connect(i).SetLagrangeMultiplier(2);
+            }
+            gel->ResetReference();
+        }
+        p_cmesh->InitializeBlock();
+        p_cmesh->SetDimModel(geometry->Dimension());
+        
+    }
+    
+    /// Step three reconstruct computational mesh
+    TPZManVector<int,5> & active_approx_spaces = ExtractActiveApproxSpaces(cmesh);
+    TPZCompMesh * dfn_hybrid_cmesh = DuplicateMultiphysicsCMeshMaterials(cmesh);
+    CleanUpMultiphysicsCMesh(cmesh);
+    InsertMaterialsForHibridization(target_dim, dfn_hybrid_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
+    
+    //    InsertMaterialsForMixedOperatorOnFractures(target_dim,dfn_hybrid_cmesh);
+    
+    {
+        TPZMultiphysicsCompMesh  * mp_dfn_mixed_mesh_vec = dynamic_cast<TPZMultiphysicsCompMesh * >(dfn_hybrid_cmesh);
+        if (!mp_dfn_mixed_mesh_vec) {
+            DebugStop();
+        }
+        mp_dfn_mixed_mesh_vec->SetDimModel(target_dim);
+        mp_dfn_mixed_mesh_vec->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
+    }
+    CreateInterfaceElements(target_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
+    dfn_hybrid_cmesh->InitializeBlock();
+    return dfn_hybrid_cmesh;
+}

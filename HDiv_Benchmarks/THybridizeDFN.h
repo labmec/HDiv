@@ -65,7 +65,7 @@ public:
     std::tuple<int, int> DissociateConnects(int flux_trace_id, int lagrange_mult_id, const TPZCompElSide &left, const TPZCompElSide &right, TPZVec<TPZCompMesh *> & mesh_vec);
     
     /// Create interface multiphysics elements
-    void CreateInterfaceElements(int interface_id, TPZCompMesh *cmesh_Hybrid, TPZVec<TPZCompMesh *> &meshvec_Hybrid);
+    void CreateInterfaceElements(int target_dim, int interface_id, TPZCompMesh *cmesh, TPZVec<TPZCompMesh *> & mesh_vec);
     
     /// Set fracture data
     void SetFractureData(TPZStack<TFracture> & fracture_data);
@@ -101,7 +101,11 @@ public:
     
     TPZStack<TPZCompElSide> AnalyzeSide(int target_dim, TPZGeoEl * gel, int side);
     
-    std::pair<int,int> HybridizeInSide(const TPZCompElSide &cel_side_l, const TPZCompElSide &cel_side_r, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id);
+    std::pair<int,int> HybridizeInSide(const TPZCompElSide &cel_side_l, const TPZCompElSide &cel_side_r, TPZCompMesh * flux_cmesh, int & flux_trace_id, int & lagrange_id);
+    
+    int CreateBCGeometricalElement(const TPZCompElSide & cel_side, TPZCompMesh * flux_cmesh,int & bc_impervious_id);
+    
+    void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, TPZStack<TPZStack<TPZCompElSide>> & candidates_for_impervious_bc, int & flux_trace_id, int & lagrange_id);
     
 };
 
