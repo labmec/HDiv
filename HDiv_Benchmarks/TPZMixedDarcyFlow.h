@@ -53,6 +53,9 @@ public:
     /** @brief return the euclidean dimension of the weak statement */
     int Dimension() const;
     
+    /** @brief Sets material dimension */
+    void SetDimension(int dim) { m_dim = dim; }
+    
     /** @brief return the number of state variables associated with each trial function */
     int NStateVariables();
     
@@ -123,7 +126,7 @@ public:
         int n_data = m_kappa.Rows();
         m_kappa.Zero();
         m_kappa_inv.Zero();
-        for (int i = 0; i < n_data; i++) {
+        for (int i = 0; i < 3; i++) {
             m_kappa(i,i) = kappa;
             m_kappa_inv(i,i) = 1.0/kappa;
         }
@@ -132,7 +135,7 @@ public:
     /// @TODO:: JV document me please
     void SetPermeability(TPZFNMatrix<9,REAL> & kappa){
         
-        if (kappa.Rows() != m_dim && kappa.Cols() != m_dim) {
+        if (kappa.Rows() != 3 && kappa.Cols() != 3) {
             DebugStop();
         }
         

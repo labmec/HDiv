@@ -200,9 +200,9 @@ void THybridizeDFN::CreateInterfaceElements(int target_dim, int interface_id, TP
             
             count++;
         }
-        if (count != 2 && count != 0) {
-            DebugStop();
-        }
+//        if (count != 2 && count != 0) {
+//            DebugStop();
+//        }
     }
     pressure_cmesh->InitializeBlock();
 }

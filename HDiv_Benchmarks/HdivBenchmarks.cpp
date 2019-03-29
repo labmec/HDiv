@@ -217,7 +217,7 @@ void Pretty_cube(){
     sim.vals.push_back(0.0);
     sim.vals.push_back(0.0);
     sim.vals.push_back(0.0);
-    sim.vals.push_back(2.0);
+    sim.vals.push_back(1.0);
     sim.vals.push_back(1.0);
     
     /// Defining DFN data
@@ -225,8 +225,8 @@ void Pretty_cube(){
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
     fracture.m_id               = 100;
-    fracture.m_kappa_normal     = 1.0;
-    fracture.m_kappa_tangential = 1.0;
+    fracture.m_kappa_normal     = 0.001;
+    fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
     
@@ -296,6 +296,8 @@ void Pretty_cube(){
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
     an->Assemble();
     
+//    an->Rhs().Print("r = ",std::cout,EMathematicaInput);
+    
     std::cout << "Solution of the system" << std::endl;
     an->Solve();
     
@@ -322,9 +324,29 @@ void Pretty_cube(){
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
-//    std::string file_frac("fracture.vtk");
-//    an->DefineGraphMesh(2,scalnames,vecnames,file_frac);
-//    an->PostProcess(div,2);
+    { /// fracture postprocessor
+        TPZStack<std::string,10> scalnames, vecnames;
+        scalnames.Push("state");
+        std::string file_frac("fracture.vtk");
+        auto material = mesh_vec[1]->FindMaterial(100);
+        TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
+        fract_2d->SetDimension(2);
+        TPZAnalysis frac_an(mesh_vec[1],false);
+        frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
+        frac_an.PostProcess(div,2);
+    }
+
+    { /// lagrange postprocessor
+        TPZStack<std::string,10> scalnames, vecnames;
+        scalnames.Push("state");
+        std::string file_frac("lagrange_1d.vtk");
+        auto material = mesh_vec[1]->FindMaterial(100);
+        TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
+        fract_2d->SetDimension(1);
+        TPZAnalysis frac_an(mesh_vec[1],false);
+        frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
+        frac_an.PostProcess(div,1);
+    }
     
 }
 
@@ -911,9 +933,9 @@ TPZGeoMesh * PrettyCubemesh(){
             TPZManVector<REAL,2> qsi(2,0.0);
             TPZManVector<REAL,3> normal(3);
             gelside.Normal(qsi, gel_l, gel_r, normal);
-            if (fabs(fabs(normal[1]) - 1.0) <= 1.0e-8) {
+//            if (fabs(fabs(normal[1]) - 1.0) <= 1.0e-8) {
                 TPZGeoElBC gbc(gelside, fracture_id);
-            }
+//            }
         }
         
     }

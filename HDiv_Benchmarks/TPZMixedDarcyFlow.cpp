@@ -21,8 +21,8 @@ TPZMixedDarcyFlow::~TPZMixedDarcyFlow(){
 }
 
 TPZMixedDarcyFlow::TPZMixedDarcyFlow(int mat_id, int dim) :  TPZMaterial(mat_id){
-    m_kappa.Resize(dim, dim);
-    m_kappa_inv.Resize(dim, dim);
+    m_kappa.Resize(3, 3);
+    m_kappa_inv.Resize(3, 3);
     m_d = 0.0;
     m_dim = dim;
 }
@@ -122,13 +122,13 @@ void TPZMixedDarcyFlow::Contribute(TPZVec<TPZMaterialData> &datavec,REAL weight,
     TPZManVector<STATE,3> q  = datavec[qb].sol[0];
     STATE p                  = datavec[pb].sol[0][0];
     
-    TPZFNMatrix<3,STATE> phi_q_i(3,1), kappa_inv_phi_q_j(3,1), kappa_inv_q(m_dim,1);
+    TPZFNMatrix<3,STATE> phi_q_i(3,1,0.0), kappa_inv_phi_q_j(3,1,0.0), kappa_inv_q(3,1,0.0);
     
     int s_i, s_j;
     int v_i, v_j;
     
-    for (int i = 0; i < m_dim; i++) {
-        for (int j = 0; j < m_dim; j++) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
             kappa_inv_q(i,0) += m_kappa_inv(i,j)*q[j];
         }
     }
@@ -140,7 +140,7 @@ void TPZMixedDarcyFlow::Contribute(TPZVec<TPZMaterialData> &datavec,REAL weight,
         s_i = datavec[qb].fVecShapeIndex[iq].second;
         
         STATE kappa_inv_q_dot_phi_q_i = 0.0;
-        for (int i = 0; i < m_dim; i++) {
+        for (int i = 0; i < 3; i++) {
             phi_q_i(i,0) = phi_qs(s_i,0) * datavec[qb].fNormalVec(i,v_i);
             kappa_inv_q_dot_phi_q_i        += kappa_inv_q(i,0)*phi_q_i(i,0);
         }
@@ -154,14 +154,14 @@ void TPZMixedDarcyFlow::Contribute(TPZVec<TPZMaterialData> &datavec,REAL weight,
             s_j = datavec[qb].fVecShapeIndex[jq].second;
             
             kappa_inv_phi_q_j.Zero();
-            for (int i = 0; i < m_dim; i++) {
-                for (int j = 0; j < m_dim; j++) {
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
                     kappa_inv_phi_q_j(i,0) += m_kappa_inv(i,j) * phi_qs(s_j,0) * datavec[qb].fNormalVec(j,v_j);
                 }
             }
             
             STATE kappa_inv_phi_q_j_dot_phi_q_i = 0.0;
-            for (int j = 0; j < m_dim; j++) {
+            for (int j = 0; j < 3; j++) {
                 kappa_inv_phi_q_j_dot_phi_q_i += kappa_inv_phi_q_j(j,0)*phi_q_i(j,0);
             }
             
@@ -283,7 +283,7 @@ void TPZMixedDarcyFlow::Solution(TPZVec<TPZMaterialData> &datavec, int var, TPZV
     REAL div_q = datavec[qb].divsol[0][0];
     
     if(var == 1){
-        for (int i=0; i < m_dim; i++)
+        for (int i=0; i < 3; i++)
         {
             Solout[i] = q[i];
         }
@@ -301,7 +301,7 @@ void TPZMixedDarcyFlow::Solution(TPZVec<TPZMaterialData> &datavec, int var, TPZV
     }
     
     if(var == 4){
-        for (int i  = 0; i < m_dim; i++) {
+        for (int i  = 0; i < 3; i++) {
             Solout[i] = m_kappa(i,i);
         }
         return;
