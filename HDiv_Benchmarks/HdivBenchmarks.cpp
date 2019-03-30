@@ -977,7 +977,7 @@ TPZGeoMesh * PrettyCubemesh(){
     }
     gmesh3d->BuildConnectivity();
     
-    bool insert_fractrures_intersection_Q = false;
+    bool insert_fractrures_intersection_Q = true;
     if(insert_fractrures_intersection_Q){
         /// Insert fractures intersections
         {

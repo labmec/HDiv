@@ -1065,7 +1065,7 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
     }
     
     bool is_DFN_Hybridaze_Q = true;
-    bool is_1d_DFN_Hybridaze_Q = false;
+    bool is_1d_DFN_Hybridaze_Q = true; /// tototototototo
     if (is_DFN_Hybridaze_Q) { /// Case for lagrange multiplier method on dfn
         
         {
