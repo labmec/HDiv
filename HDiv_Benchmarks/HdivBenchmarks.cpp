@@ -975,6 +975,54 @@ TPZGeoMesh * PrettyCubemesh(){
         }
         
     }
+    gmesh3d->BuildConnectivity();
+    
+    bool insert_fractrures_intersection_Q = false;
+    if(insert_fractrures_intersection_Q){
+        /// Insert fractures intersections
+        {
+            std::map<std::pair<int,int>,int> vol_to_vol_side_indexes;
+            std::vector<int> sides = {4,5,6,7};
+            for (auto gel : gmesh3d->ElementVec()) {
+                
+                if (!gel) continue;
+                if (gel->Dimension() != dim-1 || gel->MaterialId() != 100) continue;
+                
+                for (auto side: sides) {
+                    TPZStack<TPZGeoElSide> all_neigh;
+                    TPZGeoElSide gelside(gel, side);
+                    gelside.AllNeighbours(all_neigh);
+                    std::set<int> vols;
+                    vols.insert(gel->Index());
+                    for (auto gel_side : all_neigh) {
+                        if (gel_side.Element()->Dimension() == dim-1 && gel_side.Element()->MaterialId() == 100) {
+                            int vol_index = gel_side.Element()->Index();
+                            vols.insert(vol_index);
+                        }
+                    }
+                    if (vols.size()!=4) {
+                        continue;
+                    }
+                    
+                    std::set<int>::iterator it;
+                    it=vols.begin();
+                    int left = *it;
+                    ++it;
+                    int right = *it;
+                    
+                    vol_to_vol_side_indexes.insert(std::make_pair(std::make_pair(left, right),side));
+                    
+                }
+            }
+            
+            for (auto chunk : vol_to_vol_side_indexes) {
+                TPZGeoEl * gel_l = gmesh3d->Element(chunk.first.first);
+                TPZGeoElSide gelside(gel_l, chunk.second);
+                TPZGeoElBC gbc(gelside, fracture_id);
+            }
+            
+        }
+    }
     
     gmesh3d->BuildConnectivity();
     return gmesh3d;
