@@ -912,7 +912,7 @@ TPZGeoMesh * PrettyCubemesh(){
         }
     }
     gmesh->BuildConnectivity();
-    int n_layers = 1;
+    int n_layers = 2;
     TPZExtendGridDimension extend(gmesh,1.0/n_layers);
     extend.SetElType(1);
     TPZGeoMesh *gmesh3d = extend.ExtendedMesh(n_layers,-5,-6);
@@ -963,6 +963,9 @@ TPZGeoMesh * PrettyCubemesh(){
             TPZManVector<REAL,2> qsi(2,0.0);
             TPZManVector<REAL,3> normal(3);
             gelside.Normal(qsi, gel_l, gel_r, normal);
+            if (fabs(fabs(normal[2]) - 1.0) <= 1.0e-8) {
+                TPZGeoElBC gbc(gelside, fracture_id);
+            }
             if (fabs(fabs(normal[1]) - 1.0) <= 1.0e-8) {
                 TPZGeoElBC gbc(gelside, fracture_id);
             }

@@ -429,22 +429,26 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
     }
     TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
     
-    /// insert material objects in pressure space
-    {
-        TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
-        pressure_cmesh->Reference()->ResetReference();
-        pressure_cmesh->LoadReferences();
-        for(auto fracture : m_fracture_data){
-            int fracture_id = fracture.m_id;
-            auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim-1);
-            fracture_material->SetPermeability(fracture.m_kappa_normal);
-            pressure_cmesh->InsertMaterialObject(fracture_material);
-        }
-        
-    }
     
     /// Change lagrange multipliers identifiers to fractures identifiers
     {
+        
+        /// insert material objects in pressure space
+        {
+            TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
+            pressure_cmesh->Reference()->ResetReference();
+            pressure_cmesh->LoadReferences();
+            for(auto fracture : m_fracture_data){
+                int fracture_id = fracture.m_id;
+                auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim-1);
+                fracture_material->SetPermeability(fracture.m_kappa_normal);
+                if (!pressure_cmesh->FindMaterial(fracture_id)) {
+                    pressure_cmesh->InsertMaterialObject(fracture_material);
+                }
+            }
+            
+        }
+        
         TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
         pressure_cmesh->Reference()->ResetReference();
         pressure_cmesh->LoadReferences();
@@ -468,7 +472,7 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
             
             TPZCompEl * cel = gel->Reference();
             if (!cel) {
-                DebugStop();
+                continue;
             }
             
             if (gel->MaterialId() == lagrange_id) {
@@ -509,7 +513,9 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
             int fracture_id = fracture.m_id;
             auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim-1);
             fracture_material->SetPermeability(fracture.m_kappa_normal);
-            flux_cmesh->InsertMaterialObject(fracture_material);
+            if (!flux_cmesh->FindMaterial(fracture_id)) {
+                flux_cmesh->InsertMaterialObject(fracture_material);
+            }
             fracture_set.insert(fracture_id);
         }
         
@@ -1053,6 +1059,7 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
     }
     
     bool is_DFN_Hybridaze_Q = true;
+    bool is_1d_DFN_Hybridaze_Q = true;
     if (is_DFN_Hybridaze_Q) { /// Case for lagrange multiplier method on dfn
         
         {
@@ -1113,7 +1120,67 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
                 bc_gel_indexes.push_back(bc_index);
             }
             
-            {
+            
+            if (is_1d_DFN_Hybridaze_Q) {
+                {
+                    TPZGeoMesh * geometry = p_cmesh->Reference();
+                    geometry->ResetReference();
+                    
+                    p_cmesh->SetDimModel(target_dim-2);
+                    for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
+                        
+                        int gel_index = gel_index_and_order.first;
+                        int cel_order = gel_index_and_order.second;
+                        
+                        TPZGeoEl * gel = geometry->Element(gel_index);
+                        int64_t cel_index;
+                        TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
+                        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+                        TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
+                        if (intel){
+                            intel->PRefine(cel_order);
+                        } else if (intelDisc) {
+                            intelDisc->SetDegree(cel_order);
+                            intelDisc->SetTrueUseQsiEta();
+                        } else {
+                            DebugStop();
+                        }
+                        int n_connects = cel->NConnects();
+                        for (int i = 0; i < n_connects; ++i) {
+                            cel->Connect(i).SetLagrangeMultiplier(3);
+                        }
+                        gel->ResetReference();
+                    }
+                    p_cmesh->InitializeBlock();
+                    p_cmesh->SetDimModel(geometry->Dimension());
+                }
+                
+                int p_order = 1;
+                BuildMixedOperatorOnFractures(p_order, target_dim-2, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
+                
+                q_cmesh->ComputeNodElCon();
+                {
+                    std::ofstream frac_file("frac_flux_cmesh.txt");
+                    q_cmesh->Print(frac_file);
+                }
+                
+                {
+                    LoadReferencesByDimension(q_cmesh,target_dim-2);
+                    
+                    /// ClassifyCompelSides
+                    TPZStack<std::pair<int, int>> gel_index_and_order_lagrange_mult;
+                    TPZStack<TPZStack<TPZCompElSide>> candidates_for_impervious_bc;
+                    ClassifyCompelSides(target_dim-2, q_cmesh, gel_index_and_order_lagrange_mult, candidates_for_impervious_bc, flux_trace_id, lagrange_id);
+                    
+                    /// Create Impervious boundary elements
+                    TPZStack<int> bc_gel_indexes;
+                    for (auto candidates: candidates_for_impervious_bc) {
+                        int bc_index = CreateBCGeometricalElement(candidates[0], q_cmesh, bc_impervious_id);
+                        bc_gel_indexes.push_back(bc_index);
+                    }
+                }
+                
+            }else{
                 TPZGeoMesh * geometry = p_cmesh->Reference();
                 geometry->ResetReference();
                 
