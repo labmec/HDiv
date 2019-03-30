@@ -527,7 +527,13 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
                 TPZGeoMesh * geometry = flux_cmesh->Reference();
                 int dim = geometry->Dimension();
                 std::map<std::pair<int,int>,std::pair<int,int>> surf_to_surf_side_indexes;
-                std::vector<int> sides = {4,5,6,7};
+                std::vector<int> sides;
+                if (target_dim-1==1) {
+                    sides = {4,5,6,7};
+                }else if (target_dim-1==0){
+                    sides = {0,1};
+                }
+                
                 std::set<int> bc_indexes = {-1,-2,-3,-4,-5,-6};
                 std::set<int> bc_indexes_1d = {-1000,-2000,-3000,-4000,-5000,-6000};
                 for (auto gel : geometry->ElementVec()) {
