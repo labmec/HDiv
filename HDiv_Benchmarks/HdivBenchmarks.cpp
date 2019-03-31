@@ -196,7 +196,7 @@ int main(){
     
 
     
-//    Pretty_cube();
+    Pretty_cube();
     Case_1();
     
 //     Case_2();
