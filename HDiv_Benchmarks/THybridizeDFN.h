@@ -95,9 +95,6 @@ public:
     /// Construct a lagrange multiplier approximation space over the target dimension elements
     TPZCompMesh * Hybridize(TPZCompMesh * cmesh, int target_dim);
     
-    /// Construct a lagrange multiplier approximation space over the target dimension elements
-    TPZCompMesh * Hybridize_II(TPZCompMesh * cmesh, int target_dim);
-    
     TPZStack<TPZCompElSide> AnalyzeSide(int target_dim, TPZGeoEl * gel, int side);
     
     std::pair<int,int> HybridizeInSide(const TPZVec<TPZCompElSide> &candidates, TPZCompMesh * flux_cmesh, int & flux_trace_mat_id, int & lagrange_mat_id);

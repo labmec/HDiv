@@ -312,43 +312,14 @@ void Pretty_cube(){
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
-        TPZCompMesh * cmesh_m_Hybrid;
         
-        TPZHybridizeHDiv hybridizer;
+        int dimension = 3;
+        THybridizeDFN dfn_hybridzer;
+        dfn_hybridzer.SetFractureData(fracture_data);
+        dfn_hybridzer.SetDimension(dimension);
         
-        bool old_version_Q = false;
-        
-        if(old_version_Q)
-        {
-            TPZManVector<TPZCompMesh*, 2> meshvector_Hybrid(2);
-            std::ofstream file_txt("geometry_cube_base_before_Hybridize.txt");
-            cmixedmesh->Reference()->Print(file_txt);
-            tie(cmesh_m_Hybrid, meshvector_Hybrid) = hybridizer.Hybridize(cmixedmesh, meshvec, true, -1.);
-            cmesh_m_Hybrid->InitializeBlock();
-            
-            std::ofstream file_geo_hybrid("geometry_cube_hybrid_old.vtk");
-            TPZVTKGeoMesh::PrintGMeshVTK(cmesh_m_Hybrid->Reference(), file_geo_hybrid);
-            
-            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh_old.txt");
-            cmesh_m_Hybrid->Print(file_hybrid_mixed);
-            {
-                std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_old_q.txt");
-                meshvector_Hybrid[0]->Print(file_hybrid_mixed_q);
-                std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_old_p.txt");
-                meshvector_Hybrid[1]->Print(file_hybrid_mixed_p);
-            }
-            cmeshm = cmesh_m_Hybrid;
-        }else{
-            int dimension = 3;
-            THybridizeDFN dfn_hybridzer;
-            dfn_hybridzer.SetFractureData(fracture_data);
-            dfn_hybridzer.SetDimension(dimension);
-            
-            /// step 1 apply process on dimension 3 entities
-            int target_dim = 3;
-//            cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,target_dim);
-            cmeshm = dfn_hybridzer.Hybridize_II(cmixedmesh,target_dim);
-        }
+        /// step 1 apply process on dimension 3 entities
+        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
 
     }
     else{
@@ -356,11 +327,9 @@ void Pretty_cube(){
     }
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
-
     AdjustMaterialIdBoundary(mp_cmesh);
 
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
-
     {
         std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
         mesh_vec[0]->ComputeNodElCon();
@@ -377,11 +346,8 @@ void Pretty_cube(){
 
     
     TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
-    
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
     an->Assemble();
-    
-//    an->Rhs().Print("r = ",std::cout,EMathematicaInput);
     
     std::cout << "Solution of the system" << std::endl;
     an->Solve();
