@@ -106,6 +106,8 @@ public:
     
     void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int impervious_bc_id, int & flux_trace_id, int & lagrange_id);
     
+    void CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
+    
 };
 
 #endif /* THybridizeDFN_h */

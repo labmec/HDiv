@@ -1115,38 +1115,8 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
     // create the 2D pressure interfaces
     if (is_DFN_Hybridize_Q) { /// Case for lagrange multiplier method on dfn
         
-        {
-            TPZGeoMesh * geometry = p_cmesh->Reference();
-            geometry->ResetReference();
-            
-            p_cmesh->SetDimModel(target_dim-1);
-            for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
-                
-                int gel_index = gel_index_and_order.first;
-                int cel_order = gel_index_and_order.second;
-                
-                TPZGeoEl * gel = geometry->Element(gel_index);
-                int64_t cel_index;
-                TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
-                TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-                TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-                if (intel){
-                    intel->PRefine(cel_order);
-                } else if (intelDisc) {
-                    intelDisc->SetDegree(cel_order);
-                    intelDisc->SetTrueUseQsiEta();
-                } else {
-                    DebugStop();
-                }
-                int n_connects = cel->NConnects();
-                for (int i = 0; i < n_connects; ++i) {
-                    cel->Connect(i).SetLagrangeMultiplier(2);
-                }
-                gel->ResetReference();
-            }
-            p_cmesh->InitializeBlock();
-            p_cmesh->SetDimModel(geometry->Dimension());
-        }
+        /// Creates the lagrange mulplier approximation space
+        CreareLagrangeMultiplierSpace(p_cmesh,gel_index_and_order_lagrange_mult);
         
         int p_order = 1;
         // switch the material id of the pressure elements if they are neighbour of 2d fracture elements
@@ -1176,39 +1146,9 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
             }
             
             if (is_1d_DFN_Hybridize_Q) {
-                // create the 1 dimensional pressure space
-                {
-                    TPZGeoMesh * geometry = p_cmesh->Reference();
-                    geometry->ResetReference();
-                    
-                    p_cmesh->SetDimModel(target_dim-2);
-                    for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
-                        
-                        int gel_index = gel_index_and_order.first;
-                        int cel_order = gel_index_and_order.second;
-                        
-                        TPZGeoEl * gel = geometry->Element(gel_index);
-                        int64_t cel_index;
-                        TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
-                        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-                        TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-                        if (intel){
-                            intel->PRefine(cel_order);
-                        } else if (intelDisc) {
-                            intelDisc->SetDegree(cel_order);
-                            intelDisc->SetTrueUseQsiEta();
-                        } else {
-                            DebugStop();
-                        }
-                        int n_connects = cel->NConnects();
-                        for (int i = 0; i < n_connects; ++i) {
-                            cel->Connect(i).SetLagrangeMultiplier(3);
-                        }
-                        gel->ResetReference();
-                    }
-                    p_cmesh->InitializeBlock();
-                    p_cmesh->SetDimModel(geometry->Dimension());
-                }
+                
+                /// Creates the lagrange mulplier approximation space
+                CreareLagrangeMultiplierSpace(p_cmesh,gel_index_and_order_lagrange_mult);
                 
                 int p_order = 1;
                 // switch the material id of the pressure elements if they are neighbour of 1d fracture elements
@@ -1229,73 +1169,14 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
                     TPZStack<std::pair<int, int>> gel_index_and_order_lagrange_mult;
                     ClassifyCompelSides(target_dim-2, q_cmesh, gel_index_and_order_lagrange_mult, bc_impervious_id, flux_trace_id, lagrange_id);
                     
-                
-                // create the 0 dimensional pressure space
-                    {
-                        TPZGeoMesh * geometry = p_cmesh->Reference();
-                        geometry->ResetReference();
-                        
-                        p_cmesh->SetDimModel(target_dim-2);
-                        for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
-                            
-                            int gel_index = gel_index_and_order.first;
-                            int cel_order = gel_index_and_order.second;
-                            
-                            TPZGeoEl * gel = geometry->Element(gel_index);
-                            int64_t cel_index;
-                            TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
-                            TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-                            TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-                            if (intel){
-                                intel->PRefine(cel_order);
-                            } else if (intelDisc) {
-                                intelDisc->SetDegree(cel_order);
-                                intelDisc->SetTrueUseQsiEta();
-                            } else {
-                                DebugStop();
-                            }
-                            int n_connects = cel->NConnects();
-                            for (int i = 0; i < n_connects; ++i) {
-                                cel->Connect(i).SetLagrangeMultiplier(4);
-                            }
-                            gel->ResetReference();
-                        }
-                        p_cmesh->InitializeBlock();
-                        p_cmesh->SetDimModel(geometry->Dimension());
-                    }
+                    /// Creates the lagrange mulplier approximation space
+                    CreareLagrangeMultiplierSpace(p_cmesh,gel_index_and_order_lagrange_mult);
                 }
 
             }else{
-                TPZGeoMesh * geometry = p_cmesh->Reference();
-                geometry->ResetReference();
                 
-                p_cmesh->SetDimModel(target_dim-2);
-                for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
-                    
-                    int gel_index = gel_index_and_order.first;
-                    int cel_order = gel_index_and_order.second;
-                    
-                    TPZGeoEl * gel = geometry->Element(gel_index);
-                    int64_t cel_index;
-                    TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
-                    TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-                    TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-                    if (intel){
-                        intel->PRefine(cel_order);
-                    } else if (intelDisc) {
-                        intelDisc->SetDegree(cel_order);
-                        intelDisc->SetTrueUseQsiEta();
-                    } else {
-                        DebugStop();
-                    }
-                    int n_connects = cel->NConnects();
-                    for (int i = 0; i < n_connects; ++i) {
-                        cel->Connect(i).SetLagrangeMultiplier(3);
-                    }
-                    gel->ResetReference();
-                }
-                p_cmesh->InitializeBlock();
-                p_cmesh->SetDimModel(geometry->Dimension());
+                /// Creates the lagrange mulplier approximation space
+                CreareLagrangeMultiplierSpace(p_cmesh,gel_index_and_order_lagrange_mult);
             }
             
         }
@@ -1363,4 +1244,38 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
     
     dfn_hybrid_cmesh->InitializeBlock();
     return dfn_hybrid_cmesh;
+}
+
+void THybridizeDFN::CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack){
+    
+    TPZGeoMesh * geometry = p_cmesh->Reference();
+    geometry->ResetReference();
+    
+    for (auto gel_index_and_order : gel_index_and_order_stack) {
+        
+        int gel_index = gel_index_and_order.first;
+        int cel_order = gel_index_and_order.second;
+        
+        TPZGeoEl * gel = geometry->Element(gel_index);
+        int64_t cel_index;
+        TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
+        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+        TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
+        if (intel){
+            intel->PRefine(cel_order);
+        } else if (intelDisc) {
+            intelDisc->SetDegree(cel_order);
+            intelDisc->SetTrueUseQsiEta();
+        } else {
+            DebugStop();
+        }
+        int n_connects = cel->NConnects();
+        for (int i = 0; i < n_connects; ++i) {
+            cel->Connect(i).SetLagrangeMultiplier(1);
+        }
+        gel->ResetReference();
+    }
+    p_cmesh->InitializeBlock();
+    p_cmesh->SetDimModel(geometry->Dimension());
+    
 }
