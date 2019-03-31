@@ -593,8 +593,8 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
                         for (auto gel_side : all_neigh) {
                             if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
                             {
-                                std::cout << "Inserted a boundary element of dimension " << gelside.Dimension() <<
-                                " matid " << bcmatid*1000 << std::endl;
+//                                std::cout << "Inserted a boundary element of dimension " << gelside.Dimension() <<
+//                                " matid " << bcmatid*1000 << std::endl;
                                 TPZGeoElBC gbc(gelside,bcmatid*1000);
                                 break;
                             }
@@ -1094,6 +1094,8 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
     ComputeAndInsertMaterials(target_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id); /// split functionalities ...
     int bc_impervious_id = -1942;
     
+    
+    /// load elements with dimension target_dim and target_dim - 1
     LoadReferencesByDimension(q_cmesh,target_dim);
     
     
@@ -1228,38 +1230,39 @@ TPZCompMesh * THybridizeDFN::Hybridize_II(TPZCompMesh * cmesh, int target_dim){
                     ClassifyCompelSides(target_dim-2, q_cmesh, gel_index_and_order_lagrange_mult, bc_impervious_id, flux_trace_id, lagrange_id);
                     
                 
-                // create the 1 dimensional pressure space
-                
-                    TPZGeoMesh * geometry = p_cmesh->Reference();
-                    geometry->ResetReference();
-                    
-                    p_cmesh->SetDimModel(target_dim-2);
-                    for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
+                // create the 0 dimensional pressure space
+                    {
+                        TPZGeoMesh * geometry = p_cmesh->Reference();
+                        geometry->ResetReference();
                         
-                        int gel_index = gel_index_and_order.first;
-                        int cel_order = gel_index_and_order.second;
-                        
-                        TPZGeoEl * gel = geometry->Element(gel_index);
-                        int64_t cel_index;
-                        TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
-                        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-                        TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-                        if (intel){
-                            intel->PRefine(cel_order);
-                        } else if (intelDisc) {
-                            intelDisc->SetDegree(cel_order);
-                            intelDisc->SetTrueUseQsiEta();
-                        } else {
-                            DebugStop();
+                        p_cmesh->SetDimModel(target_dim-2);
+                        for (auto gel_index_and_order : gel_index_and_order_lagrange_mult) {
+                            
+                            int gel_index = gel_index_and_order.first;
+                            int cel_order = gel_index_and_order.second;
+                            
+                            TPZGeoEl * gel = geometry->Element(gel_index);
+                            int64_t cel_index;
+                            TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
+                            TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+                            TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
+                            if (intel){
+                                intel->PRefine(cel_order);
+                            } else if (intelDisc) {
+                                intelDisc->SetDegree(cel_order);
+                                intelDisc->SetTrueUseQsiEta();
+                            } else {
+                                DebugStop();
+                            }
+                            int n_connects = cel->NConnects();
+                            for (int i = 0; i < n_connects; ++i) {
+                                cel->Connect(i).SetLagrangeMultiplier(4);
+                            }
+                            gel->ResetReference();
                         }
-                        int n_connects = cel->NConnects();
-                        for (int i = 0; i < n_connects; ++i) {
-                            cel->Connect(i).SetLagrangeMultiplier(4);
-                        }
-                        gel->ResetReference();
+                        p_cmesh->InitializeBlock();
+                        p_cmesh->SetDimModel(geometry->Dimension());
                     }
-                    p_cmesh->InitializeBlock();
-                    p_cmesh->SetDimModel(geometry->Dimension());
                 }
 
             }else{
