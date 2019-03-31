@@ -34,10 +34,10 @@ public: /// turn to private when is complete and implement access methods
     /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
     std::set<std::tuple<int,int,int>> m_bc_ids_2d;
     
-    /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
+    /// Set of boundary material ids - boundary condition type - boundary data associated to 1D elements
     std::set<std::tuple<int,int,int>> m_bc_ids_1d;
     
-    /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
+    /// Set of boundary material ids - boundary condition type - boundary data associated to 0D elements
     std::set<std::tuple<int,int,int>> m_bc_ids_0d;
     
     /// List of fracture characteristics
@@ -74,7 +74,9 @@ public:
     
     void LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim);
     
-    void ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift = 0);
+    void ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift = 0);
+    
+    void InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
     
     void ApplyHibridizationOnInternalFaces(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id);
     
@@ -104,6 +106,8 @@ public:
     void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int impervious_bc_id, int & flux_trace_id, int & lagrange_id);
     
     void CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
+    
+    void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
     
 };
 

@@ -196,8 +196,9 @@ int main(){
     
 
     
-    Pretty_cube();
-//    Case_1();
+//    Pretty_cube();
+    Case_1();
+    
 //     Case_2();
 //    FractureTest();
 }
@@ -230,6 +231,7 @@ void Pretty_cube(){
     sim.gamma_dim.push_back(3);
     sim.gamma_ids.push_back(-6);
     sim.gamma_dim.push_back(3);
+    
     //    D = 0;
     //    N = 1;
     sim.type.push_back(1);
@@ -295,7 +297,6 @@ void Pretty_cube(){
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
 
-    TPZGmshReader Geometry;
     TPZGeoMesh *gmesh = PrettyCubemesh();
     std::ofstream file("geometry_cube.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
@@ -318,7 +319,6 @@ void Pretty_cube(){
         dfn_hybridzer.SetFractureData(fracture_data);
         dfn_hybridzer.SetDimension(dimension);
         
-        /// step 1 apply process on dimension 3 entities
         cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
 
     }
@@ -410,73 +410,159 @@ void Case_1(){
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
-    sim.IsHybrid=false;
+    sim.IsHybrid=true;
+    sim.n_threads = 12;
+    
     sim.omega_ids.push_back(1);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0e-3);
+    
     sim.omega_ids.push_back(2);
-    sim.permeabilities.push_back(1.0);
-    sim.permeabilities.push_back(0.1);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0e-3);
+    
     
     sim.gamma_ids.push_back(4);
-    sim.gamma_ids.push_back(5);
-    sim.gamma_ids.push_back(6);
+    sim.gamma_dim.push_back(3);
     
-    //    d = 0;
-    //    n = 1;
+    sim.gamma_ids.push_back(5);
+    sim.gamma_dim.push_back(3);
+    
+    sim.gamma_ids.push_back(6);
+    sim.gamma_dim.push_back(3);
+    
+    //    D = 0;
+    //    N = 1;
     sim.type.push_back(1);
     sim.type.push_back(0);
     sim.type.push_back(0);
     
     sim.vals.push_back(0.0);
-    sim.vals.push_back(4.0);
+    sim.vals.push_back(2.0);
     sim.vals.push_back(1.0);
     
+    /// Fracture data
+    TPZStack<TFracture> fracture_data;
+    TFracture fracture;
+    fracture.m_id               = 3;
+    fracture.m_dim              = 2;
+    fracture.m_kappa_normal     = 1.0e-3;
+    fracture.m_kappa_tangential = 1.0e-3;
+    fracture.m_d_opening        = 1.0e-2;
+    fracture_data.push_back(fracture);
     
     
     TPZGmshReader Geometry;
+    std::string source_dir = SOURCE_DIR;
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
-    Geometry.SetFormatVersion("3");
-    gmesh = Geometry.GeometricGmshMesh("case_1_1k.msh");
+    Geometry.SetFormatVersion("4");
+    gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
-    std::ofstream file("geometry_case_1.vtk");
+  
+    std::ofstream file("geometry_cube.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
-
+    
+    std::ofstream file_txt("geometry_cube_base.txt");
+    gmesh->Print(file_txt);
+    
+    int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
-    cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
+    cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
+    
+#ifdef PZDEBUG
+    
     std::ofstream filemixed("mixedMesh.txt");
     cmixedmesh->Print(filemixed);
     
+#endif
+    
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
-        TPZCompMesh * cmesh_m_Hybrid;
-        TPZManVector<TPZCompMesh*, 3> meshvector_Hybrid(3);
-        TPZHybridizeHDiv hybridizer;
-        tie(cmesh_m_Hybrid, meshvector_Hybrid) = hybridizer.Hybridize(cmixedmesh, meshvec, true, -1.);
-        cmesh_m_Hybrid->InitializeBlock();
-        cmeshm=cmesh_m_Hybrid;
+        
+        int dimension = 3;
+        THybridizeDFN dfn_hybridzer;
+        dfn_hybridzer.SetFractureData(fracture_data);
+        dfn_hybridzer.SetDimension(dimension);
+        
+        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
+        
     }
     else{
         cmeshm=cmixedmesh;
-        
     }
     
-    TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
+    TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
+    AdjustMaterialIdBoundary(mp_cmesh);
     
+    TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
+    
+#ifdef PZDEBUG
+    {
+        std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+        mesh_vec[0]->ComputeNodElCon();
+        mesh_vec[0]->Print(file_hybrid_mixed_q);
+        
+        std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+        mesh_vec[1]->ComputeNodElCon();
+        mesh_vec[1]->Print(file_hybrid_mixed_p);
+        
+        std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+        cmeshm->ComputeNodElCon();
+        cmeshm->Print(file_hybrid_mixed);
+    }
+#endif
+    
+    TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
     an->Assemble();
     
     std::cout << "Solution of the system" << std::endl;
     an->Solve();
     
+    TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(mesh_vec, cmeshm);
+    
+#ifdef PZDEBUG
+    
+    std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
+    
+    std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
+    cmeshm->Reference()->Print(file_geo_hybrid_txt);
+    
+    std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+    mesh_vec[0]->Print(file_hybrid_mixed_q);
+    
+    std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+    mesh_vec[1]->Print(file_hybrid_mixed_p);
+    
+    std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+    cmeshm->Print(file_hybrid_mixed);
+    
+#endif
+    
     TPZStack<std::string,10> scalnames, vecnames;
-    vecnames.Push("Flux");
-    scalnames.Push("Pressure");
-    scalnames.Push("Permeability");
+    vecnames.Push("q");
+    vecnames.Push("kappa");
+    scalnames.Push("p");
     
     int div = 0;
-    std::string fileresult("case_1_1k.vtk");
-    an->DefineGraphMesh(3,scalnames,vecnames,fileresult);
+    std::string file_reservoir("case_1.vtk");
+    an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
+    
+    if(1){ /// fracture postprocessor
+        TPZStack<std::string,10> scalnames, vecnames;
+        scalnames.Push("state");
+        std::string file_frac("fracture.vtk");
+        auto material = mesh_vec[1]->FindMaterial(3);
+        TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
+        fract_2d->SetDimension(2);
+        TPZAnalysis frac_an(mesh_vec[1],false);
+        frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
+        frac_an.PostProcess(div,2);
+    }
     
 }
 
@@ -1271,17 +1357,18 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
-        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],sim_data.omega_dim[ivol]);
+        TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],sim_data.omega_dim[ivol]);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         
         cmesh->InsertMaterialObject(volume);
-        
-        for (int ibound=0; ibound<nbound; ibound++) {
-            if(sim_data.gamma_dim[ibound] != sim_data.omega_dim[ivol]) continue;
-            val2(0,0)=sim_data.vals[ibound];
-            int condType=sim_data.type[ibound];
-            TPZMaterial * face = volume->CreateBC(volume,sim_data.gamma_ids[ibound],condType,val1,val2);
-            cmesh->InsertMaterialObject(face);
+        if (ivol==0) {
+            for (int ibound=0; ibound<nbound; ibound++) {
+                if(sim_data.gamma_dim[ibound] != sim_data.omega_dim[ivol]) continue;
+                val2(0,0)=sim_data.vals[ibound];
+                int condType=sim_data.type[ibound];
+                TPZMaterial * face = volume->CreateBC(volume,sim_data.gamma_ids[ibound],condType,val1,val2);
+                cmesh->InsertMaterialObject(face);
+            }
         }
     }
     

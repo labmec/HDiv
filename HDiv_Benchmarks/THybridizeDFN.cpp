@@ -206,9 +206,6 @@ void THybridizeDFN::CreateInterfaceElements(int target_dim, int interface_id, TP
             
             count++;
         }
-//        if (count != 2 && count != 0) {
-//            DebugStop();
-//        }
     }
     pressure_cmesh->InitializeBlock();
 }
@@ -227,15 +224,14 @@ void THybridizeDFN::SetDimension(int dimension){
     m_geometry_dim = dimension;
 }
 
-void THybridizeDFN::ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift){
+
+void THybridizeDFN::ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift){
     
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
     if (!mp_cmesh) {
         DebugStop();
     }
     TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
-    
-    int n_state = 1;
     
     /// Computes maximum material identifier
     {
@@ -252,6 +248,18 @@ void THybridizeDFN::ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmes
         lagrange_id = maxMatId + 2 + shift;
         mp_nterface_id = maxMatId + 3 + shift;
     }
+    
+}
+
+void THybridizeDFN::InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id){
+    
+    int n_state = 1;
+    
+    TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
+    if (!mp_cmesh) {
+        DebugStop();
+    }
+    TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
     
     /// Insert LM and flux_trace materials
     {
@@ -276,8 +284,8 @@ void THybridizeDFN::ComputeAndInsertMaterials(int target_dim, TPZCompMesh * cmes
             pressure_cmesh->InsertMaterialObject(lagrange_mult_mat);
         }
     }
+    
 }
-
 
 
 void THybridizeDFN::ApplyHibridizationOnInternalFaces(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id){
@@ -427,6 +435,8 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
     
 }
 
+//#define PrettyCube_Q
+
 void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id) {
     
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
@@ -444,10 +454,12 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
             TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
             pressure_cmesh->Reference()->ResetReference();
             pressure_cmesh->LoadReferences();
+            int n_state = 1;
+            TPZVec<STATE> sol(1,0);
             for(auto fracture : m_fracture_data){
                 int fracture_id = fracture.m_id;
-                auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim-1);
-                fracture_material->SetPermeability(fracture.m_kappa_normal);
+                auto fracture_material = new TPZL2Projection(fracture_id, target_dim-1, n_state, sol);
+                fracture_material->SetScaleFactor(0);
                 if (!pressure_cmesh->FindMaterial(fracture_id)) {
                     pressure_cmesh->InsertMaterialObject(fracture_material);
                 }
@@ -507,18 +519,21 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
     {
         TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
         flux_cmesh->Reference()->ResetReference();
-        
+        int n_state = 1;
+        TPZVec<STATE> sol(1,0);
         // insert the material objects if needed
         std::set<int> fracture_set;
         for(auto fracture : m_fracture_data){
             int fracture_id = fracture.m_id;
-            auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim-1);
-            fracture_material->SetPermeability(fracture.m_kappa_normal);
+            auto fracture_material = new TPZL2Projection(fracture_id, target_dim-1, n_state, sol);
+            fracture_material->SetScaleFactor(0.0);
             if (!flux_cmesh->FindMaterial(fracture_id)) {
                 flux_cmesh->InsertMaterialObject(fracture_material);
             }
         }
         
+        
+#ifdef PrettyCube_Q
         
         /// Adding bc elements (This method must provide the correct material ids.) for the fractures that have boundary neighbours
         if(target_dim == 2)
@@ -601,40 +616,54 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
             fracture_set.insert(-4000);
             fracture_set.insert(-5000);
             fracture_set.insert(-6000);
-        
-        
+            
             LoadReferencesByDimension(flux_cmesh, target_dim);
             flux_cmesh->SetDimModel(target_dim);
             flux_cmesh->SetDefaultOrder(p_order);
             flux_cmesh->SetAllCreateFunctionsHDiv();
             flux_cmesh->AutoBuild(fracture_set);
             
+        }
+#else
+        
+            fracture_set.insert(3);
+            /// nothing to do
+            LoadReferencesByDimension(flux_cmesh, target_dim);
+            flux_cmesh->SetDimModel(target_dim);
+            flux_cmesh->SetDefaultOrder(p_order);
+            flux_cmesh->SetAllCreateFunctionsHDiv();
+            flux_cmesh->AutoBuild(fracture_set);
+            
+#endif
 
-            int sideorient = 1;
-            for (auto gel : flux_cmesh->Reference()->ElementVec()) {
-                if (!gel->Reference()) {
+        
+
+        
+        
+        int sideorient = 1;
+        for (auto gel : flux_cmesh->Reference()->ElementVec()) {
+            if (!gel->Reference()) {
+                continue;
+            }
+            
+            int n_sides = gel->NSides();
+            
+            for (int is = 0 ; is < n_sides; is++) {
+                if (gel->SideDimension(is) != target_dim-1) {
                     continue;
                 }
                 
-                int n_sides = gel->NSides();
+                TPZInterpolatedElement * intel = dynamic_cast<TPZInterpolatedElement *>(gel->Reference());
                 
-                for (int is = 0 ; is < n_sides; is++) {
-                    if (gel->SideDimension(is) != target_dim-1) {
-                        continue;
-                    }
-                    
-                    TPZInterpolatedElement * intel = dynamic_cast<TPZInterpolatedElement *>(gel->Reference());
-                
-                    if (!intel) {
-                        DebugStop();
-                    }
-                    
-                    intel->SetSideOrient(is, sideorient);
+                if (!intel) {
+                    DebugStop();
                 }
+                
+                intel->SetSideOrient(is, sideorient);
             }
-            
-            flux_cmesh->InitializeBlock();
         }
+        
+        flux_cmesh->InitializeBlock();
     
         flux_cmesh->SetDimModel(target_dim); ///  for coherence
         
@@ -993,12 +1022,6 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
         
     }
     
-    std::ofstream file("geometry_after_classify.txt");
-    geometry->Print(file);
-
-    std::ofstream file_geo("geometry_after_classify.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(geometry, file_geo);
-    
     flux_cmesh->InitializeBlock();
     flux_cmesh->ComputeNodElCon();
         
@@ -1021,16 +1044,20 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
         DebugStop();
     }
     
+    int bc_impervious_id = -1942; /// TODO:: Candidate for deletion
+    
     int p_order = 1;
     int flux_trace_id = 0, lagrange_id = 0, mp_nterface_id = 0;
-    int bc_impervious_id = -1942;
+    
     int matrix_dim = target_dim;
     
-    ComputeAndInsertMaterials(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id); /// split functionalities ...
+    /// Computes available material identifiers
+    ComputeMaterialIds(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
     
+    /// Insert material identifiers for flux trace, lagrange multiplier and multiphysics interface
+    InsertMaterials(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
     
     /// Hybridization for 3D elements
-    
     /// load elements with dimension target_dim and target_dim - 1
     LoadReferencesByDimension(q_cmesh,matrix_dim);
     
@@ -1054,7 +1081,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     
     
     /// Hybridization for 2D  fracture elements
-    
     /// load elements with dimension target_dim and target_dim - 1
     LoadReferencesByDimension(q_cmesh,fractures_dim);
     
@@ -1075,7 +1101,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     
     
     /// Hybridization for 1D fracture intersection elements
-    
     /// load elements with dimension target_dim and target_dim - 1
     LoadReferencesByDimension(q_cmesh,fractures_intersections_dim);
     
@@ -1088,21 +1113,15 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
 
     
-    /// Step three reconstruct computational mesh
+    /// Computational multiphysics mesh reconstruction
     TPZManVector<int,5> & active_approx_spaces = ExtractActiveApproxSpaces(cmesh);
     TPZCompMesh * dfn_hybrid_cmesh = DuplicateMultiphysicsCMeshMaterials(cmesh);
     CleanUpMultiphysicsCMesh(cmesh);
     InsertMaterialsForHibridization(target_dim, dfn_hybrid_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
     InsertMaterialsForMixedOperatorOnFractures(target_dim,dfn_hybrid_cmesh);
-    {
-        TPZMultiphysicsCompMesh  * mp_dfn_mixed_mesh_vec = dynamic_cast<TPZMultiphysicsCompMesh * >(dfn_hybrid_cmesh);
-        if (!mp_dfn_mixed_mesh_vec) {
-            DebugStop();
-        }
-        mp_dfn_mixed_mesh_vec->SetDimModel(target_dim);
-        mp_dfn_mixed_mesh_vec->BuildMultiphysicsSpace(active_approx_spaces, dfn_mixed_mesh_vec);
-    }
-    CreateInterfaceElements(target_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
+    BuildMultiphysicsCMesh(matrix_dim,dfn_hybrid_cmesh,active_approx_spaces,dfn_mixed_mesh_vec);
+    
+    CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     
@@ -1142,4 +1161,15 @@ void THybridizeDFN::CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStac
     p_cmesh->InitializeBlock();
     p_cmesh->SetDimModel(geometry->Dimension());
     
+}
+
+void THybridizeDFN::BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec){
+    
+    TPZMultiphysicsCompMesh  * mp_hybrid_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(hybrid_cmesh);
+    if (!mp_hybrid_cmesh) {
+        DebugStop();
+    }
+    
+    mp_hybrid_cmesh->SetDimModel(dim);
+    mp_hybrid_cmesh->BuildMultiphysicsSpace(approx_spaces, mesh_vec);
 }
