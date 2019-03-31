@@ -172,6 +172,8 @@ void SeparateConnectsByFracId(TPZCompMesh * mixed_cmesh,int fracid);
 void InsertFractureMaterial(TPZCompMesh *cmesh);
 TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e);
 void AdjustMaterialIdBoundary(TPZMultiphysicsCompMesh *cmesh);
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
+void InsertInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 
 void FractureTest();
 
@@ -1793,4 +1795,143 @@ void InsertFractureMaterial(TPZCompMesh *cmesh){
     cmesh->LoadReferences();
     cmesh->AutoBuild();
     //
+}
+
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
+{
+    TPZCompMesh *flux_mesh = cmesh->MeshVector()[0];
+    TPZCompMesh *pressure_mesh = cmesh->MeshVector()[1];
+    TPZCompMesh *transport_mesh = new TPZCompMesh(flux_mesh->Reference());
+    flux_mesh->CopyMaterials(*transport_mesh);
+    
+    cmesh->Reference()->ResetReference();
+
+    for (int dim=1; dim<=3; dim++) {
+        transport_mesh->SetDimModel(dim);
+        transport_mesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+        int64_t nel = flux_mesh->NElements();
+        for (int64_t el =0; el<nel; el++) {
+            TPZCompEl *cel = flux_mesh->Element(el);
+            if (!cel) {
+                continue;
+            }
+            TPZGeoEl *gel = cel->Reference();
+            if (!gel) {
+                DebugStop();
+            }
+            if(gel->Dimension() == dim && cel->NConnects() > 1)
+            {
+                int64_t index;
+                transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+            }
+            if(gel->Dimension() == dim-1 && cel->NConnects() == 1 && gel->MaterialId() < 0)
+            {
+                int64_t index;
+                transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+            }
+        }
+    }
+    transport_mesh->SetDimModel(0);
+    transport_mesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+    cmesh->Reference()->ResetReference();
+    cmesh->LoadReferences();
+    std::set<int64_t> pointgel;
+    int64_t nel = pressure_mesh->NElements();
+    for (int64_t el=0; el<nel; el++) {
+        TPZCompEl *cel = pressure_mesh->Element(el);
+        if(!cel) continue;
+        TPZGeoEl *gel = cel->Reference();
+        if(!gel) DebugStop();
+        if(gel->Dimension() != 0) continue;
+        TPZCompEl *mfcel = gel->Reference();
+        if(!mfcel) DebugStop();
+        if(mfcel->NConnects() != 1) DebugStop();
+        if(mfcel->Connect(0).NElConnected() > 2)
+        {
+            int64_t index;
+            transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+        }
+    }
+    return transport_mesh;
+}
+
+void InsertInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
+{
+    // tototototototo
+    // the multiphysics interface element needs to be aware of active approximation spaces!!!
+    // one should call SetActive on each newly created interface element
+    
+    // totototototo
+    int transport_matid = 200;
+    TPZCompMesh *transport_mesh = cmesh->MeshVector()[2];
+    cmesh->Reference()->ResetReference();
+    transport_mesh->LoadReferences();
+    int mesh_dim = cmesh->Dimension();
+    int64_t nel = transport_mesh->NElements();
+    TPZManVector<int64_t,3> left_mesh_indexes(2,0),right_mesh_indexes(1,2);
+    left_mesh_indexes[1] = 2;
+    for (int64_t el = 0; el<nel; el++) {
+        TPZCompEl *cel = transport_mesh->Element(el);
+        if(!cel) DebugStop();
+        TPZGeoEl *gel = cel->Reference();
+        if(!gel) DebugStop();
+        int nsides = gel->NSides();
+        int geldim = gel->Dimension();
+        for (int side = 0; side<nsides; side++) {
+            int sidedim = gel->SideDimension(side);
+            if(sidedim < geldim-1) continue;
+            TPZStack<TPZCompElSide> celstack;
+            TPZCompElSide celside(cel,side);
+            TPZGeoElSide gelside(gel,side);
+            gelside.EqualLevelCompElementList(celstack, 0, 0);
+            if(celstack.size() == 0 && sidedim < mesh_dim)
+            {
+                DebugStop();
+            }
+            if(sidedim == geldim-1)
+            {
+                if(celstack.size() > 1)
+                {
+                    // there must be a lower dimensional transport element to equate the fluxes
+                    continue;
+                }
+                TPZGeoEl *neighgel = celstack[0].Element()->Reference();
+                if(geldim > neighgel->Dimension())
+                {
+                    // we only create interfaces from lower to higher dimensional elements
+                    // neighgel must be a boundary element
+                    continue;
+                }
+                if(geldim == neighgel->Dimension() && gel->Id() > neighgel->Id())
+                {
+                    // the interface is created from the lower id to the higher id
+                    continue;
+                }
+                {
+                    // we need to create the interface
+                    TPZGeoElBC gbc(gelside,transport_matid);
+                    int64_t index;
+                    TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstack[0]);
+                    mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
+                }
+            }
+            else // sidedim == geldim
+            {
+                // we create interfaces between the element and all the neighbours
+                int num_interface = celstack.size();
+                for (int intface = 0; intface<num_interface; intface++) {
+                    int matid = transport_matid;
+                    if (gel->MaterialId() < 0) {
+                        // if the element is a boundary condition, use the material for interface material id
+                        matid = gel->MaterialId();
+                    }
+                    TPZGeoElBC gbc(gelside,matid);
+                    int64_t index;
+                    // the neighbour always on the left -> the neighbour will compute the transport
+                    TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celstack[intface], celside);
+                    mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
+                }
+            }
+        }
+    }
 }
