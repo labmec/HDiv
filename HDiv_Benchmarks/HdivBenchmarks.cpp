@@ -194,13 +194,12 @@ int main(){
 //    InitializePZLOG();
 #endif
     
-
+    Pretty_cube();
     
-//    Pretty_cube();
-    Case_1();
+//    Case_1();
     
 //     Case_2();
-//    FractureTest();
+
 }
 
 /// Executes cube
@@ -299,9 +298,9 @@ void Pretty_cube(){
 
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_1/cube.msh";
+    std::string file_gmsh = source_dir + "/meshes/the_cuttest_cube/cube.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
-    Geometry.SetFormatVersion("4");
+    Geometry.SetFormatVersion("4.1");
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
