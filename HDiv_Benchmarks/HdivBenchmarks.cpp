@@ -1921,13 +1921,9 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     
         std::vector<std::pair<int,int>> set_pair_index_mat_id;
         for (auto cel : q_cmesh->ElementVec()) {
+            
             if (!cel) {
                 DebugStop();
-            }
-
-            int n_connect = cel->NConnects();
-            if (n_connect == 1) {
-                continue;
             }
 
             TPZGeoEl * gel = cel->Reference();
@@ -1939,14 +1935,14 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
             bool bc_cel = gel->Dimension() == dim-1 && cel->NConnects() == 1;
             if (matrix_cel || fracture_cel || bc_cel) {
                 set_pair_index_mat_id.push_back(std::make_pair(gel_index, mat_id));
+                
+                if (!s_cmesh->FindMaterial(mat_id)) {
+                    int dim = gel->Dimension();
+                    auto material = new TPZL2Projection(mat_id, dim, nstate, sol);
+                    s_cmesh->InsertMaterialObject(material);
+                }
             }
-            
-            if (!s_cmesh->FindMaterial(mat_id)) {
-                int dim = gel->Dimension();
-                auto material = new TPZL2Projection(mat_id, dim, nstate, sol);
-                s_cmesh->InsertMaterialObject(material);
-            }
-            
+    
         }
     
         geometry->ResetReference();
