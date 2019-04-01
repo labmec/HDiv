@@ -198,12 +198,13 @@ int main(){
 //    InitializePZLOG();
 #endif
     
-
-    // Pretty_cube();
-    Case_1();
+     Pretty_cube();
+    
+    
+//    Case_1();
     
 //     Case_2();
-//   FractureTest();
+//   FractureTest(); /// to deletion
 }
 
 /// Executes cube
@@ -300,12 +301,15 @@ void Pretty_cube(){
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
 
+    
     TPZGeoMesh *gmesh = PrettyCubemesh();
     std::ofstream file("geometry_cube.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     
     std::ofstream file_txt("geometry_cube_base.txt");
     gmesh->Print(file_txt);
+    
+    
     
     int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
