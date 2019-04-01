@@ -80,6 +80,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #endif
 
+using namespace std;
 
 struct SimulationCase {
     bool            IsMHMQ;
@@ -166,6 +167,7 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data, 
 TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int p, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
 TPZCompMesh * FluxMesh(TPZGeoMesh * gmesh, int order, SimulationCase sim);
 TPZCompMesh * PressureMesh(TPZGeoMesh * gmesh, int order,SimulationCase sim);
+TPZCompMesh * SaturationMesh(TPZVec<TPZCompMesh *> &meshvec, int order, SimulationCase sim);
 TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data);
 void forcing(const TPZVec<REAL> &p, TPZVec<STATE> &f);
 void SeparateConnectsByFracId(TPZCompMesh * mixed_cmesh,int fracid);
@@ -1846,4 +1848,82 @@ void InsertFractureMaterial(TPZCompMesh *cmesh){
     cmesh->LoadReferences();
     cmesh->AutoBuild();
     //
+}
+TPZCompMesh * SaturationMesh(TPZMultiphysicsCompMesh *mpcompmesh, int order, SimulationCase sim){
+    
+    TPZManVector<TPZCompMesh * > mesh_vec = mpcompmesh->MeshVector();
+    TPZCompMesh *qMesh = mesh_vec[0];
+    TPZCompMesh *pMesh = mesh_vec[1];
+    mpcompmesh->MeshVector().Resize(3);
+    
+    int dim =3;
+    pMesh->LoadReferences();
+    
+    TPZGeoMesh *gmesh = pMesh->Reference();
+    TPZCompMesh *smesh = new TPZCompMesh(gmesh);
+    int mat_id_s = 1;
+   
+    
+    int nel = pMesh->NElements();
+    TPZStack<TPZCompElSide> el_oned_connec;
+    for(int iel =0; iel<nel; iel++){
+        TPZGeoEl *gel = pMesh->Element(iel)->Reference();
+        if (gel->Dimension()==0) {
+            TPZGeoElSide gelside(gel,0);
+            TPZStack<TPZCompElSide> elsidevec;
+            int onlyinterpolated =0;
+            int removeduplicates =0;
+            gelside.EqualLevelCompElementList(elsidevec, onlyinterpolated,  removeduplicates);
+            int nelconnect = elsidevec.size();
+            for (int ioned=0; ioned<nelconnect; ioned++) {
+                if (nelconnect>2) {
+                    int64_t index;
+                    gel->SetMaterialId(mat_id_s);
+                    smesh->CreateCompEl(gel, index);
+                }
+            }
+        }
+    }
+    
+    qMesh->LoadReferences();
+    qMesh->SetDimModel(dim);
+    
+    int nelq = qMesh->NElements();
+    for (int Dims=3; Dims<1; Dims++) {
+        for (int iel =0; iel<nelq; iel++) {
+            TPZGeoEl *gel = qMesh->Element(iel)->Reference();
+            if (!gel->Reference()) {
+                continue;
+            }
+            int dimel = gel->Dimension();
+            int nconnecs = gel->Reference()->NConnects();
+            if (dimel == Dims && nconnecs ==1) {
+                int64_t index;
+                gel->SetMaterialId(mat_id_s);
+                smesh->CreateCompEl(gel, index);
+                
+            }
+        }
+    }
+    
+    
+    smesh->SetDimModel(dim);
+    smesh->SetDefaultOrder(order);
+    
+    smesh->SetAllCreateFunctionsDiscontinuous();
+    //smesh->AutoBuild();
+    
+    smesh->AdjustBoundaryElements();
+    smesh->CleanUpUnconnectedNodes();
+    
+    mpcompmesh->MeshVector()[2]=smesh;
+    
+    return smesh;
+}
+void CreateInterfaces(TPZMultiphysicsCompMesh *mpcompmesh){
+    TPZCompMesh *qmesh = mpcompmesh->MeshVector()[0];
+    TPZCompMesh *Swmesh = mpcompmesh->MeshVector()[2];
+    
+    mpcompmesh->LoadReferences();
+    
 }
