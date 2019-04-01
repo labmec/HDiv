@@ -625,12 +625,18 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
             
         }
 #else
-        
-            fracture_set.insert(3);
+//           fracture_set.insert(5);
+//           fracture_set.insert(6);
+            fracture_set.insert(10);
+            fracture_set.insert(20);
+            fracture_set.insert(30);
+//        fracture_set.insert(6);
+//        fracture_set.insert(6);
             /// nothing to do
             LoadReferencesByDimension(flux_cmesh, target_dim);
             flux_cmesh->SetDimModel(target_dim);
-            flux_cmesh->SetDefaultOrder(p_order);
+
+        flux_cmesh->SetDefaultOrder(p_order);
             flux_cmesh->SetAllCreateFunctionsHDiv();
             flux_cmesh->AutoBuild(fracture_set);
             

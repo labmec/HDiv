@@ -3,6 +3,6 @@
 
 // version variable that will be substituted by cmake
 // This shows an example using the @ variable type
-const char * SOURCE_DIR = "/Users/omar/Documents/GitHub/HDiv/HDiv_Benchmarks";
+const char * SOURCE_DIR = "/Users/jose/Documents/GitHub/HDiv/HDiv_Benchmarks";
 
 #endif

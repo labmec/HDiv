@@ -201,10 +201,12 @@ int main(){
      Pretty_cube();
     
     
+//    Pretty_cube();
+
 //    Case_1();
-    
+
 //     Case_2();
-//   FractureTest(); /// to deletion
+
 }
 
 /// Executes cube
@@ -391,7 +393,7 @@ void Pretty_cube(){
         scalnames.Push("Pressure");
         std::string file_frac("fracture.vtk");
         auto material = mesh_vec[1]->FindMaterial(100);
-        TPZMatMixedPoisson3D * fract_2d = dynamic_cast<TPZMatMixedPoisson3D *>(material);
+        TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
         fract_2d->SetDimension(2);
         TPZAnalysis frac_an(mesh_vec[1],false);
         frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
@@ -403,7 +405,7 @@ void Pretty_cube(){
         scalnames.Push("Pressure");
         std::string file_frac("lagrange_1d.vtk");
         auto material = mesh_vec[1]->FindMaterial(101);
-        TPZMatMixedPoisson3D * fract_2d = dynamic_cast<TPZMatMixedPoisson3D *>(material);
+        TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
         fract_2d->SetDimension(1);
         TPZAnalysis frac_an(mesh_vec[1],false);
         frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
@@ -415,27 +417,78 @@ void Pretty_cube(){
 
 void Case_1(){
     
+//    SimulationCase sim;
+//    sim.UsePardisoQ=true;
+//    sim.IsHybrid=true;
+//    sim.n_threads = 12;
+//
+//    sim.omega_ids.push_back(1);
+//    sim.omega_dim.push_back(3);
+//    sim.permeabilities.push_back(1.0e-3);
+//
+//    sim.omega_ids.push_back(2);
+//    sim.omega_dim.push_back(3);
+//    sim.permeabilities.push_back(1.0e-3);
+//
+//
+//    sim.gamma_ids.push_back(4);
+//    sim.gamma_dim.push_back(3);
+//
+//    sim.gamma_ids.push_back(5);
+//    sim.gamma_dim.push_back(3);
+//
+//    sim.gamma_ids.push_back(6);
+//    sim.gamma_dim.push_back(3);
+//
+//    //    D = 0;
+//    //    N = 1;
+//    sim.type.push_back(1);
+//    sim.type.push_back(0);
+//    sim.type.push_back(0);
+//
+//    sim.vals.push_back(0.0);
+//    sim.vals.push_back(2.0);
+//    sim.vals.push_back(1.0);
+//
+//    /// Fracture data
+//    TPZStack<TFracture> fracture_data;
+//    TFracture fracture;
+//    fracture.m_id               = 3;
+//    fracture.m_dim              = 2;
+//    fracture.m_kappa_normal     = 1.0e-3;
+//    fracture.m_kappa_tangential = 1.0e-3;
+//    fracture.m_d_opening        = 1.0e-2;
+//    fracture_data.push_back(fracture);
+//
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
     sim.n_threads = 8;
     
-    sim.omega_ids.push_back(1);
+    sim.omega_ids.push_back(4);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-3);
+    sim.permeabilities.push_back(1.0);
     
-    sim.omega_ids.push_back(2);
-    sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-3);
+    sim.omega_ids.push_back(5);
+    sim.omega_dim.push_back(2);
+    sim.permeabilities.push_back(1.0);
+    
+    sim.omega_ids.push_back(6);
+    sim.omega_dim.push_back(1);
+    sim.permeabilities.push_back(1.0);
+//
+//    sim.omega_ids.push_back(2);
+//    sim.omega_dim.push_back(3);
+//    sim.permeabilities.push_back(1.0e-3);
     
     
-    sim.gamma_ids.push_back(4);
+    sim.gamma_ids.push_back(3);
     sim.gamma_dim.push_back(3);
     
-    sim.gamma_ids.push_back(5);
+    sim.gamma_ids.push_back(1);
     sim.gamma_dim.push_back(3);
     
-    sim.gamma_ids.push_back(6);
+    sim.gamma_ids.push_back(2);
     sim.gamma_dim.push_back(3);
     
     //    D = 0;
@@ -448,22 +501,52 @@ void Case_1(){
     sim.vals.push_back(2.0);
     sim.vals.push_back(1.0);
     
+    //
+    sim.gamma_ids.push_back(30);
+    sim.gamma_dim.push_back(2);
+    
+    sim.gamma_ids.push_back(10);
+    sim.gamma_dim.push_back(2);
+    
+    sim.gamma_ids.push_back(20);
+    sim.gamma_dim.push_back(2);
+    
+    //    D = 0;
+    //    N = 1;
+    sim.type.push_back(1);
+    sim.type.push_back(0);
+    sim.type.push_back(0);
+    
+    sim.vals.push_back(0.0);
+    sim.vals.push_back(2.0);
+    sim.vals.push_back(1.0);
+    //
+    
+    sim.gamma_ids.push_back(-1942);
+    sim.gamma_dim.push_back(1);
+    sim.type.push_back(1);
+    sim.vals.push_back(0.0);
     /// Fracture data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 3;
+    fracture.m_id               = 5;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 1.0e-3;
-    fracture.m_kappa_tangential = 1.0e-3;
+    fracture.m_kappa_normal     = 1.0;
+    fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
-    
-    
+    fracture.m_id               = 6;
+    fracture.m_dim              = 1;
+    fracture.m_kappa_normal     = 0.001;
+    fracture.m_kappa_tangential = 0.001;
+    fracture.m_d_opening        = 1.0e-2;
+    fracture_data.push_back(fracture);
+
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/cube.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
-    Geometry.SetFormatVersion("4");
+    Geometry.SetFormatVersion("3");
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
   
