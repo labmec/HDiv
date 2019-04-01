@@ -297,7 +297,14 @@ void Pretty_cube(){
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
 
-    TPZGeoMesh *gmesh = PrettyCubemesh();
+    TPZGmshReader Geometry;
+    std::string source_dir = SOURCE_DIR;
+    std::string file_gmsh = source_dir + "/meshes/Case_1/cube.msh";
+    TPZGeoMesh *gmesh = new TPZGeoMesh;
+    Geometry.SetFormatVersion("4");
+    gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
+    Geometry.PrintPartitionSummary(std::cout);
+    
     std::ofstream file("geometry_cube.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     

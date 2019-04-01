@@ -282,14 +282,16 @@ Surface Loop(8) = {20, 8, 15, 31, 27, 36};
 //+
 Volume(8) = {8};
 //+
-Physical Volume("Domain") = {8, 3, 4, 7, 2, 6, 1, 5};
+Physical Volume("RockMatrix") = {8, 3, 4, 7, 2, 6, 1, 5};
 
 //+
 Physical Surface("Fractures") = {33, 34, 35, 36, 26, 28, 25, 27, 32, 31, 30, 29};
-Physical Curve("Fracture1D") = {45, 28, 9, 46, 27, 10};
+Physical Curve("FracturesIntersections") = {45, 28, 9, 46, 27, 10};
+Physical Point("CrossingIntresections") = {14};
 
 Transfinite Line "*" = 2 Using Bump 1;
 Transfinite Surface "*";
 Recombine Surface "*";
 Transfinite Volume "*";//+
 
+Coherence;
