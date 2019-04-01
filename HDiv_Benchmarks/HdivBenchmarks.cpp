@@ -74,7 +74,7 @@
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
 #include "TPZMixedDarcyFlow.h"
-
+#include "pzelchdivbound2.h"
 
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -198,7 +198,8 @@ int main(){
     
 
     
-    Pretty_cube();
+//    Pretty_cube();
+    
     Case_1();
     
 //     Case_2();
@@ -493,6 +494,176 @@ void Case_1(){
     }
     else{
         cmeshm=cmixedmesh;
+    }
+    
+    /// Create Saturation elements without interfaces
+    {
+        TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
+        if (!mp_cmesh) {
+            DebugStop();
+        }
+        
+        TPZManVector<TPZCompMesh * , 3 > mesh_vector = mp_cmesh->MeshVector();
+        
+        TPZCompMesh * q_cmesh = mesh_vector[0];
+        if (!q_cmesh) {
+            DebugStop();
+        }
+        
+        TPZGeoMesh * geometry = q_cmesh->Reference();
+        if (!geometry) {
+            DebugStop();
+        }
+        
+        geometry->ResetReference();
+        q_cmesh->LoadReferences();
+        
+        std::vector<std::pair<int,int>> set_pair_index_mat_id;
+        for (auto cel : q_cmesh->ElementVec()) {
+            if (!cel) {
+                DebugStop();
+            }
+            
+            int n_connect = cel->NConnects();
+            if (n_connect == 1) {
+                continue;
+            }
+            
+            TPZGeoEl * gel = cel->Reference();
+            int gel_index = gel->Index();
+            int mat_id    = gel->MaterialId();
+            set_pair_index_mat_id.push_back(std::make_pair(gel_index, mat_id));
+        }
+        
+        geometry->ResetReference();
+        TPZCompMesh * s_cmesh = new TPZCompMesh(geometry);
+        
+        
+        int nstate = 1;
+        TPZVec<STATE> sol;
+        std::set<int> material_set_3d;
+        std::set<int> material_set_2d;
+        std::set<int> material_set_1d;
+        for (auto pair : set_pair_index_mat_id) {
+            int mat_id = pair.second;
+            if (!s_cmesh->FindMaterial(mat_id)) {
+                int gel_index = pair.first;
+                TPZGeoEl * gel = geometry->Element(gel_index);
+                int dim = gel->Dimension();
+                switch (dim) {
+                    case 3:
+                    {
+                        material_set_3d.insert(mat_id);
+                    }
+                        break;
+                    case 2:
+                    {
+                        material_set_2d.insert(mat_id);
+                    }
+                        break;
+                    case 1:
+                    {
+                        material_set_1d.insert(mat_id);
+                    }
+                        break;
+                    default:
+                        break;
+                }
+                
+                auto material = new TPZL2Projection(mat_id, dim, nstate, sol);
+                s_cmesh->InsertMaterialObject(material);
+            }
+        }
+
+        int dim = geometry->Dimension();
+        s_cmesh->SetDefaultOrder(0);
+        s_cmesh->SetAllCreateFunctionsDiscontinuous();
+        s_cmesh->SetDimModel(dim);
+        s_cmesh->AutoBuild(material_set_3d);
+        
+        geometry->ResetReference();
+        s_cmesh->SetDimModel(dim-1);
+        s_cmesh->AutoBuild(material_set_2d);
+
+//        s_cmesh->SetDimModel(dim-2);
+//        s_cmesh->AutoBuild(material_set_1d);
+        
+//        int cel_order = 0;
+//        for (auto pair : set_pair_index_mat_id) {
+//            int gel_index = pair.first;
+//
+//            TPZGeoEl * gel = geometry->Element(gel_index);
+//
+//            if (gel->Dimension() == 2) {
+//                int aka = 0;
+//            }
+//
+//            int64_t cel_index;
+//            int dimension = gel->Dimension();
+//            s_cmesh->SetDimModel(dimension);
+//            TPZCompEl * cel = s_cmesh->ApproxSpace().CreateCompEl(gel, *s_cmesh, cel_index);
+//            TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+//            TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
+//            if (intel){
+//                intel->PRefine(cel_order);
+//            } else if (intelDisc) {
+//                intelDisc->SetDegree(cel_order);
+//                intelDisc->SetTrueUseQsiEta();
+//                cel->Print();
+//            } else {
+//                DebugStop();
+//            }
+//            gel->ResetReference();
+//        }
+    
+        s_cmesh->InitializeBlock();
+        
+        
+        std::ofstream s_file("s_cmesh.txt");
+        s_cmesh->Print(s_file);
+        
+        int n_dof = s_cmesh->Solution().Rows();
+        for (int i = 0; i < n_dof; i++) {
+            s_cmesh->Solution()(i,0) = M_PI;
+        }
+        
+        if(1){ /// saturation 3D
+            int div = 0;
+            TPZStack<std::string,10> scalnames, vecnames;
+            scalnames.Push("state");
+            std::string file_frac("saturation_3d.vtk");
+            {
+                auto material = s_cmesh->FindMaterial(1);
+                TPZL2Projection * s_3d = dynamic_cast<TPZL2Projection *>(material);
+                s_3d->SetDimension(3);
+            }
+            {
+                auto material = s_cmesh->FindMaterial(2);
+                TPZL2Projection * s_3d = dynamic_cast<TPZL2Projection *>(material);
+                s_3d->SetDimension(3);
+            }
+            TPZAnalysis s_an(s_cmesh,false);
+            s_an.DefineGraphMesh(3,scalnames,vecnames,file_frac);
+            s_an.PostProcess(div,3);
+        }
+        
+        if(1){ /// saturation 2D
+            int div = 0;
+            TPZStack<std::string,10> scalnames, vecnames;
+            scalnames.Push("state");
+            
+            {
+                auto material = s_cmesh->FindMaterial(3);
+                TPZL2Projection * s_2d = dynamic_cast<TPZL2Projection *>(material);
+                s_2d->SetDimension(2);
+            }            
+            std::string file_frac("saturation_2d.vtk");
+            TPZAnalysis s_an(s_cmesh,false);
+            s_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
+            s_an.PostProcess(div,2);
+        }
+        
+        int aka = 0;
     }
     
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
