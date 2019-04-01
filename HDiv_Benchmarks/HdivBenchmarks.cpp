@@ -202,7 +202,7 @@ int main(){
     Case_1();
     
 //     Case_2();
-   FractureTest();
+//   FractureTest();
 }
 
 /// Executes cube
