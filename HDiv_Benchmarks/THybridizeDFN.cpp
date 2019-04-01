@@ -435,7 +435,7 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
     
 }
 
-//#define PrettyCube_Q
+#define PrettyCube_Q
 
 void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id) {
     
@@ -550,8 +550,8 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
                     sides = {0,1};
                 }
                 
-                std::set<int> bc_indexes = {-1,-2,-3,-4,-5,-6};
-                std::set<int> bc_indexes_1d = {-1000,-2000,-3000,-4000,-5000,-6000};
+                std::set<int> bc_indexes = {1,2,3};
+                std::set<int> bc_indexes_1d = {100,200,300};
                 for (auto gel : geometry->ElementVec()) {
                     
                     if (!gel) continue;
@@ -602,20 +602,20 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
                             {
 //                                std::cout << "Inserted a boundary element of dimension " << gelside.Dimension() <<
 //                                " matid " << bcmatid*1000 << std::endl;
-                                TPZGeoElBC gbc(gelside,bcmatid*1000);
+                                TPZGeoElBC gbc(gelside,bcmatid*100);
                                 break;
                             }
                         }
                     }
                 }
             }
-            
-            fracture_set.insert(-1000);
-            fracture_set.insert(-2000);
-            fracture_set.insert(-3000);
-            fracture_set.insert(-4000);
-            fracture_set.insert(-5000);
-            fracture_set.insert(-6000);
+
+            fracture_set.insert(100);
+            fracture_set.insert(200);
+            fracture_set.insert(300);
+//            fracture_set.insert(-4000);
+//            fracture_set.insert(-5000);
+//            fracture_set.insert(-6000);
             
             LoadReferencesByDimension(flux_cmesh, target_dim);
             flux_cmesh->SetDimModel(target_dim);
@@ -627,9 +627,9 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
 #else
 //           fracture_set.insert(5);
 //           fracture_set.insert(6);
-            fracture_set.insert(10);
-            fracture_set.insert(20);
-            fracture_set.insert(30);
+            fracture_set.insert(5);
+            fracture_set.insert(6);
+//            fracture_set.insert(7);
 //        fracture_set.insert(6);
 //        fracture_set.insert(6);
             /// nothing to do
