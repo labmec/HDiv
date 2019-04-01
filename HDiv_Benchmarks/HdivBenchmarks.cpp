@@ -73,10 +73,7 @@
 #include "pzl2projection.h"
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
-#include "TPZMixedDarcyFlow.h"
 
-
-#include "TPZDarcyFlow.h"
 #include "TPZMixedDarcyFlow.h"
 
 #ifdef USING_BOOST
@@ -418,7 +415,7 @@ void Case_1(){
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
-    sim.n_threads = 12;
+    sim.n_threads = 8;
     
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
