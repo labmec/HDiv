@@ -476,7 +476,7 @@ void Pretty_cube(){
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("Pressure");
         std::string file_frac("fracture.vtk");
-        auto material = mesh_vec[1]->FindMaterial(5);
+        auto material = mesh_vec[1]->FindMaterial(6);
         TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
         fract_2d->SetDimension(2);
         TPZAnalysis frac_an(mesh_vec[1],false);
