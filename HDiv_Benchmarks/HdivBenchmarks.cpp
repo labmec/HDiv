@@ -175,6 +175,7 @@ TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e);
 void AdjustMaterialIdBoundary(TPZMultiphysicsCompMesh *cmesh);
 TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
 void InsertInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
+void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel);
 
 void FractureTest();
 
@@ -1903,7 +1904,6 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     TPZCompMesh *q_cmesh = cmesh->MeshVector()[0];
     TPZCompMesh *p_cmesh = cmesh->MeshVector()[1];
     TPZCompMesh *s_cmesh = new TPZCompMesh(q_cmesh->Reference());
-//    q_cmesh->CopyMaterials(*s_cmesh);
     
     TPZGeoMesh * geometry = q_cmesh->Reference();
     if (!geometry) {
@@ -1918,9 +1918,6 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
 
         int nstate = 1;
         TPZVec<STATE> sol;
-        std::set<int> material_set_3d;
-        std::set<int> material_set_2d;
-        std::set<int> material_set_1d; /// we will see ...
     
         std::vector<std::pair<int,int>> set_pair_index_mat_id;
         for (auto cel : q_cmesh->ElementVec()) {
@@ -1946,72 +1943,60 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
             
             if (!s_cmesh->FindMaterial(mat_id)) {
                 int dim = gel->Dimension();
-                switch (dim) {
-                    case 3:
-                    {
-                        material_set_3d.insert(mat_id);
-                    }
-                        break;
-                    case 2:
-                    {
-                        material_set_2d.insert(mat_id);
-                    }
-                        break;
-                    case 1:
-                    {
-                        material_set_1d.insert(mat_id);
-                    }
-                        break;
-                    default:
-                        break;
-                }
-                
                 auto material = new TPZL2Projection(mat_id, dim, nstate, sol);
                 s_cmesh->InsertMaterialObject(material);
             }
-            
             
         }
     
         geometry->ResetReference();
 
         s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
-        int cel_order = 0;
+        int s_order = 0;
         for (auto pair : set_pair_index_mat_id) {
             int gel_index = pair.first;
-
             TPZGeoEl * gel = geometry->Element(gel_index);
-
-            int64_t cel_index;
-            int dimension = gel->Dimension();
-            s_cmesh->SetDimModel(dimension);
-            TPZCompEl * cel = s_cmesh->ApproxSpace().CreateCompEl(gel, *s_cmesh, cel_index);
-            TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-            TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-            if (intel){
-                intel->PRefine(cel_order);
-            } else if (intelDisc) {
-                intelDisc->SetDegree(cel_order);
-                intelDisc->SetTrueUseQsiEta();
-            } else {
-                DebugStop();
-            }
-            gel->ResetReference();
+            CreateTransportElement(s_order,s_cmesh, gel);
         }
-
+    
+        geometry->ResetReference();
+        s_cmesh->SetDimModel(0);
+        s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+        p_cmesh->LoadReferences();
+    
+        for (auto cel : p_cmesh->ElementVec()) {
+            if(!cel) continue;
+            TPZGeoEl *gel = cel->Reference();
+            if(!gel) DebugStop();
+            if(gel->Dimension() != 0) continue;
+            if(cel->NConnects() != 1) DebugStop();
+            if(cel->Connect(0).NElConnected() > 2)
+            {
+                int mat_id    = gel->MaterialId();
+                if (!s_cmesh->FindMaterial(mat_id)) {
+                    int dim = gel->Dimension();
+                    
+                    auto material = new TPZL2Projection(mat_id, dim, nstate, sol);
+                    s_cmesh->InsertMaterialObject(material);
+                }
+                CreateTransportElement(s_order,s_cmesh, gel);
+            }
+        }
         s_cmesh->InitializeBlock();
+    
     
     
 #else
     
+    q_cmesh->CopyMaterials(*s_cmesh);
     int cel_order = 0;
     for (int dim=1; dim<=3; dim++) {
-        transport_mesh->SetDimModel(dim);
-        transport_mesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
-        int64_t nel = flux_mesh->NElements();
+        s_cmesh->SetDimModel(dim);
+        s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+        int64_t nel = q_cmesh->NElements();
         int64_t index;
         for (int64_t el =0; el<nel; el++) {
-            TPZCompEl *cel = flux_mesh->Element(el);
+            TPZCompEl *cel = q_cmesh->Element(el);
             if (!cel) {
                 continue;
             }
@@ -2021,7 +2006,7 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
             }
             if(gel->Dimension() == dim && cel->NConnects() > 1)
             {
-                TPZCompEl * cel_s = transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+                TPZCompEl * cel_s = s_cmesh->ApproxSpace().CreateCompEl(gel, *s_cmesh, index);
                 TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel_s);
                 TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
                 if (intel){
@@ -2034,16 +2019,10 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
                     DebugStop();
                 }
                 gel->ResetReference();
-                
-//                TPZCompEl *cel_transport = transport_mesh->Element(index);
-//                if (!cel_transport) {
-//                    DebugStop();
-//                }
-//                cel_transport->Print();
             }
             if(gel->Dimension() == dim-1 && cel->NConnects() == 1 && gel->MaterialId() < 0)
             {
-                TPZCompEl * cel_s = transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+                TPZCompEl * cel_s = s_cmesh->ApproxSpace().CreateCompEl(gel, *s_cmesh, index);
                 TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel_s);
                 TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
                 if (intel){
@@ -2063,14 +2042,14 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         }
     }
     
-    transport_mesh->SetDimModel(0);
-    transport_mesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+    s_cmesh->SetDimModel(0);
+    s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
     cmesh->Reference()->ResetReference();
     cmesh->LoadReferences();
     std::set<int64_t> pointgel;
-    int64_t nel = pressure_mesh->NElements();
+    int64_t nel = p_cmesh->NElements();
     for (int64_t el=0; el<nel; el++) {
-        TPZCompEl *cel = pressure_mesh->Element(el);
+        TPZCompEl *cel = p_cmesh->Element(el);
         if(!cel) continue;
         TPZGeoEl *gel = cel->Reference();
         if(!gel) DebugStop();
@@ -2081,11 +2060,11 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         if(mfcel->Connect(0).NElConnected() > 2)
         {
             int64_t index;
-            transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+            s_cmesh->ApproxSpace().CreateCompEl(gel, *s_cmesh, index);
         }
     }
 
-    transport_mesh->InitializeBlock();
+    s_cmesh->InitializeBlock();
 #endif
     
     return s_cmesh;
@@ -2242,12 +2221,24 @@ TPZCompMesh * SaturationMesh(TPZMultiphysicsCompMesh *mpcompmesh, int order, Sim
     mpcompmesh->MeshVector()[2]=smesh;
     
     return smesh;
+    
+   
 }
 
-void CreateInterfaces(TPZMultiphysicsCompMesh *mpcompmesh){
-    TPZCompMesh *qmesh = mpcompmesh->MeshVector()[0];
-    TPZCompMesh *Swmesh = mpcompmesh->MeshVector()[2];
-    
-    mpcompmesh->LoadReferences();
-    
+void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel){
+    int64_t cel_index;
+    int dimension = gel->Dimension();
+    cmesh->SetDimModel(dimension);
+    TPZCompEl * cel = cmesh->ApproxSpace().CreateCompEl(gel, *cmesh, cel_index);
+    TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
+    TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
+    if (intel){
+        intel->PRefine(p_order);
+    } else if (intelDisc) {
+        intelDisc->SetDegree(p_order);
+        intelDisc->SetTrueUseQsiEta();
+    } else {
+        DebugStop();
+    }
+    gel->ResetReference();
 }
