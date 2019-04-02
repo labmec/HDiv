@@ -205,167 +205,50 @@ int main(){
 /// Executes cube
 void Pretty_cube(){
     
-//    SimulationCase sim;
-//    sim.UsePardisoQ=true;
-//    sim.IsHybrid=true;
-//    sim.omega_ids.push_back(1);
-//    sim.omega_dim.push_back(3);
-//    sim.permeabilities.push_back(1.0);
-//    sim.omega_ids.push_back(100);
-//    sim.omega_dim.push_back(2);
-//    sim.permeabilities.push_back(1.0);
-//    sim.omega_ids.push_back(101);
-//    sim.omega_dim.push_back(1);
-//    sim.permeabilities.push_back(1.0);
-//
-//    sim.gamma_ids.push_back(-1);
-//    sim.gamma_dim.push_back(3);
-//    sim.gamma_ids.push_back(-2);
-//    sim.gamma_dim.push_back(3);
-//    sim.gamma_ids.push_back(-3);
-//    sim.gamma_dim.push_back(3);
-//    sim.gamma_ids.push_back(-4);
-//    sim.gamma_dim.push_back(3);
-//    sim.gamma_ids.push_back(-5);
-//    sim.gamma_dim.push_back(3);
-//    sim.gamma_ids.push_back(-6);
-//    sim.gamma_dim.push_back(3);
-//
-//    //    D = 0;
-//    //    N = 1;
-//    sim.type.push_back(1);
-//    sim.type.push_back(1);
-//    sim.type.push_back(1);
-//    sim.type.push_back(1);
-//    sim.type.push_back(0);
-//    sim.type.push_back(0);
-//
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(2.0);
-//    sim.vals.push_back(1.0);
-//
-//    sim.gamma_ids.push_back(-1000);
-//    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-2000);
-//    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-3000);
-//    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-4000);
-//    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-5000);
-//    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-6000);
-//    sim.gamma_dim.push_back(2);
-//    //    D = 0;
-//    //    N = 1;
-//    sim.type.push_back(1);
-//    sim.type.push_back(1);
-//    sim.type.push_back(1);
-//    sim.type.push_back(1);
-//    sim.type.push_back(0);
-//    sim.type.push_back(0);
-//
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(2.0);
-//    sim.vals.push_back(1.0);
-//
-//    sim.gamma_ids.push_back(-1942);
-//    sim.gamma_dim.push_back(1);
-//    sim.type.push_back(1);
-//    sim.vals.push_back(0.0);
-//    /// Defining DFN data
-//
-//    TPZStack<TFracture> fracture_data;
-//    TFracture fracture;
-//    fracture.m_id               = 100;
-//    fracture.m_dim              = 2;
-//    fracture.m_kappa_normal     = 0.001;
-//    fracture.m_kappa_tangential = 0.001;
-//    fracture.m_d_opening        = 1.0e-2;
-//    fracture_data.push_back(fracture);
-//    fracture.m_id               = 101;
-//    fracture.m_dim              = 1;
-//    fracture.m_kappa_normal     = 0.001;
-//    fracture.m_kappa_tangential = 0.001;
-//    fracture.m_d_opening        = 1.0e-2;
-//    fracture_data.push_back(fracture);
-
-    
-    //
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
-    sim.omega_ids.push_back(4);
+    sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0);
-    sim.omega_ids.push_back(5);
-    sim.omega_dim.push_back(2);
-    sim.permeabilities.push_back(1.0);
-    sim.omega_ids.push_back(6);
-    sim.omega_dim.push_back(1);
-    sim.permeabilities.push_back(1.0);
-    sim.omega_ids.push_back(7);
-    sim.omega_dim.push_back(0);
-    sim.permeabilities.push_back(1.0);
     
-    sim.gamma_ids.push_back(1);
+    int bc_inlet  = 2;
+    int bc_outlet = 3;
+    int bc_non_flux = 4;
+    
+    sim.gamma_ids.push_back(bc_inlet);
     sim.gamma_dim.push_back(3);
-    sim.gamma_ids.push_back(2);
+    sim.gamma_ids.push_back(bc_outlet);
     sim.gamma_dim.push_back(3);
-    sim.gamma_ids.push_back(3);
+    sim.gamma_ids.push_back(bc_non_flux);
     sim.gamma_dim.push_back(3);
     
-    //    D = 0;
-    //    N = 1;
-    sim.type.push_back(0);
-    sim.type.push_back(0);
-    sim.type.push_back(1);
-    
-    sim.vals.push_back(2.0);
-    sim.vals.push_back(1.0);
-    sim.vals.push_back(0.0);
+    int bc_type_D = 0;    //    D = 0;
+    int bc_type_N = 1;    //    N = 1;
+    REAL p_inlet  = 2.0;
+    REAL p_outlet = 1.0;
+    REAL qn       = 0.0;
 
+    sim.type.push_back(bc_type_D);
+    sim.type.push_back(bc_type_D);
+    sim.type.push_back(bc_type_N);
     
-    sim.gamma_ids.push_back(100);
-    sim.gamma_dim.push_back(2);
-    sim.gamma_ids.push_back(200);
-    sim.gamma_dim.push_back(2);
-    sim.gamma_ids.push_back(300);
-    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-4000);
-//    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-5000);
-//    sim.gamma_dim.push_back(2);
-//    sim.gamma_ids.push_back(-6000);
-//    sim.gamma_dim.push_back(2);
-//    //    D = 0;
-//    //    N = 1;
-    sim.type.push_back(0);
-    sim.type.push_back(0);
-    sim.type.push_back(1);
-//    sim.type.push_back(1);
-//    sim.type.push_back(0);
-//    sim.type.push_back(0);
-//
-    sim.vals.push_back(2.0);
-    sim.vals.push_back(1.0);
-    sim.vals.push_back(0.0);
-//    sim.vals.push_back(0.0);
-//    sim.vals.push_back(2.0);
-//    sim.vals.push_back(1.0);
+    sim.vals.push_back(p_inlet);
+    sim.vals.push_back(p_outlet);
+    sim.vals.push_back(qn);
+
+    /// Defining DFN boundary data (id,bc_type,data)
+    std::set<std::tuple<int,int,REAL>> bc_ids_1d;
+    bc_ids_1d.insert(std::make_tuple(bc_inlet,bc_type_D,p_inlet));
+    bc_ids_1d.insert(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
+    bc_ids_1d.insert(std::make_tuple(bc_non_flux,bc_type_N,qn));
     
-//    sim.gamma_ids.push_back(-1942);
-//    sim.gamma_dim.push_back(1);
-//    sim.type.push_back(1);
-//    sim.vals.push_back(0.0);
+    std::set<std::tuple<int,int,REAL>> bc_ids_0d;
+    bc_ids_0d.insert(std::make_tuple(bc_inlet,bc_type_D,p_inlet));
+    bc_ids_0d.insert(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
+    bc_ids_0d.insert(std::make_tuple(bc_non_flux,bc_type_N,qn));
+
     /// Defining DFN data
-    
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
     fracture.m_id               = 5;
@@ -380,6 +263,8 @@ void Pretty_cube(){
     fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
+    
+
 
     //
     TPZGmshReader Geometry;
@@ -412,6 +297,8 @@ void Pretty_cube(){
         dfn_hybridzer.SetFractureData(fracture_data);
         dfn_hybridzer.SetDimension(dimension);
         
+        dfn_hybridzer.m_bc_ids_1d = bc_ids_1d;
+        dfn_hybridzer.m_bc_ids_0d = bc_ids_0d;
         cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
 
     }
@@ -472,11 +359,12 @@ void Pretty_cube(){
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
+    return;
     { /// fracture postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("Pressure");
         std::string file_frac("fracture.vtk");
-        auto material = mesh_vec[1]->FindMaterial(6);
+        auto material = mesh_vec[1]->FindMaterial(5);
         TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
         fract_2d->SetDimension(2);
         TPZAnalysis frac_an(mesh_vec[1],false);

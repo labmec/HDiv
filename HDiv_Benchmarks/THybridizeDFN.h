@@ -30,15 +30,11 @@ class THybridizeDFN : public TPZHybridizeHDiv {
     
 public: /// turn to private when is complete and implement access methods
     
-    
-    /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_2d;
-    
     /// Set of boundary material ids - boundary condition type - boundary data associated to 1D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_1d;
+    std::set<std::tuple<int,int,REAL>> m_bc_ids_1d;
     
     /// Set of boundary material ids - boundary condition type - boundary data associated to 0D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_0d;
+    std::set<std::tuple<int,int,REAL>> m_bc_ids_0d;
     
     /// List of fracture characteristics
     TPZStack<TFracture> m_fracture_data;
