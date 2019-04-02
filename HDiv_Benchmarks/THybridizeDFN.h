@@ -28,17 +28,16 @@
 /// This class is dedicated for conformal geometrical partitions and mixed meshes.
 class THybridizeDFN : public TPZHybridizeHDiv {
     
-public: /// turn to private when is complete and implement access methods
-    
-    
+private:
+
     /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_2d;
+    std::vector<std::tuple<int,int,REAL>> m_bc_ids_2d;
     
-    /// Set of boundary material ids - boundary condition type - boundary data associated to 1D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_1d;
+    /// Set of boundary material ids - boundary material ids of fractures intersections 1d
+    std::map<int,int> m_bc_ids_1d;
     
-    /// Set of boundary material ids - boundary condition type - boundary data associated to 0D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_0d;
+    /// Set of boundary material ids - boundary material ids of fractures intersections 0d
+    std::map<int,int> m_bc_ids_0d;
     
     /// List of fracture characteristics
     TPZStack<TFracture> m_fracture_data;
@@ -49,9 +48,6 @@ public: /// turn to private when is complete and implement access methods
     /// stands for base geometry
     TPZGeoMesh * m_geometry;
     
-    /// stands for geometry dimension
-    int m_geometry_dim;
-    
 public:
     
     /// Default constructor
@@ -60,17 +56,11 @@ public:
     /// Default destructor
     ~THybridizeDFN();
     
-    /// Method that duplicate and dissociate the connect belonging to the right computational element side
-    std::tuple<int, int> DissociateConnects(int flux_trace_id, int lagrange_mult_id, const TPZCompElSide &left, const TPZCompElSide &right, TPZVec<TPZCompMesh *> & mesh_vec);
-    
     /// Create interface multiphysics elements
     void CreateInterfaceElements(int target_dim, int interface_id, TPZCompMesh *cmesh, TPZVec<TPZCompMesh *> & mesh_vec);
     
     /// Set fracture data
     void SetFractureData(TPZStack<TFracture> & fracture_data);
-    
-    /// Set geometry dimension
-    void SetDimension(int dimension);
     
     void LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim);
     
@@ -78,7 +68,6 @@ public:
     
     void InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
     
-    void ApplyHibridizationOnInternalFaces(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id);
     
     TPZCompMesh * DuplicateMultiphysicsCMeshMaterials(TPZCompMesh * cmesh);
     
@@ -94,8 +83,8 @@ public:
     
     void BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
     
-    /// Construct a lagrange multiplier approximation space over the target dimension elements
-    TPZCompMesh * Hybridize(TPZCompMesh * cmesh, int target_dim);
+    /// Construct a lagrange multiplier approximation spaces for a DFN
+    TPZCompMesh * Hybridize(TPZCompMesh * cmesh);
     
     TPZStack<TPZCompElSide> AnalyzeSide(int target_dim, TPZGeoEl * gel, int side);
     
@@ -103,11 +92,30 @@ public:
     
     int CreateBCGeometricalElement(const TPZCompElSide & cel_side, TPZCompMesh * flux_cmesh,int & bc_impervious_id);
     
-    void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int impervious_bc_id, int & flux_trace_id, int & lagrange_id);
+    void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int & flux_trace_id, int & lagrange_id);
     
     void CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
     
     void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
+    
+    void CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes);
+    
+    
+    /// Set the set of boundary material ids - boundary condition type - boundary data associated to 2D elements
+    void SetReservoirBoundaryData(std::vector<std::tuple<int,int,REAL>> & bc_ids_2d){
+        m_bc_ids_2d = bc_ids_2d;
+    }
+    
+    /// Set the set of boundary material ids - boundary material ids of fractures intersections 1d
+    void SetMapReservoirBCToDFNBC1DIds( std::map<int,int> & bc_ids_1d){
+        m_bc_ids_1d = bc_ids_1d;
+    }
+    
+    /// Set the set of boundary material ids - boundary material ids of fractures intersections 0d
+    void SetMapReservoirBCToDFNBC0DIds( std::map<int,int> & bc_ids_0d){
+        m_bc_ids_0d = bc_ids_0d;
+    }
+    
     
 };
 

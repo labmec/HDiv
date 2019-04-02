@@ -74,7 +74,6 @@
 #include "pzmat1dlin.h"
 #include "pzmat2dlin.h"
 #include "TPZMixedDarcyFlow.h"
-#include "pzelchdivbound2.h"
 
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -174,6 +173,10 @@ void SeparateConnectsByFracId(TPZCompMesh * mixed_cmesh,int fracid);
 void InsertFractureMaterial(TPZCompMesh *cmesh);
 TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e);
 void AdjustMaterialIdBoundary(TPZMultiphysicsCompMesh *cmesh);
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
+void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
+TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
+
 
 void FractureTest();
 
@@ -196,14 +199,12 @@ int main(){
 //    InitializePZLOG();
 #endif
     
-
-    
     Pretty_cube();
     
 //    Case_1();
     
 //     Case_2();
-//    FractureTest();
+
 }
 
 /// Executes cube
@@ -215,92 +216,82 @@ void Pretty_cube(){
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0);
-    sim.omega_ids.push_back(100);
-    sim.omega_dim.push_back(2);
-    sim.permeabilities.push_back(1.0);
-    sim.omega_ids.push_back(101);
-    sim.omega_dim.push_back(1);
-    sim.permeabilities.push_back(1.0);
-
-    sim.gamma_ids.push_back(-1);
+    
+    int bc_inlet  = 2;
+    int bc_outlet = 3;
+    int bc_non_flux = 4;
+    
+    sim.gamma_ids.push_back(bc_inlet);
     sim.gamma_dim.push_back(3);
-    sim.gamma_ids.push_back(-2);
+    sim.gamma_ids.push_back(bc_outlet);
     sim.gamma_dim.push_back(3);
-    sim.gamma_ids.push_back(-3);
-    sim.gamma_dim.push_back(3);
-    sim.gamma_ids.push_back(-4);
-    sim.gamma_dim.push_back(3);
-    sim.gamma_ids.push_back(-5);
-    sim.gamma_dim.push_back(3);
-    sim.gamma_ids.push_back(-6);
+    sim.gamma_ids.push_back(bc_non_flux);
     sim.gamma_dim.push_back(3);
     
-    //    D = 0;
-    //    N = 1;
-    sim.type.push_back(1);
-    sim.type.push_back(1);
-    sim.type.push_back(1);
-    sim.type.push_back(1);
-    sim.type.push_back(0);
-    sim.type.push_back(0);
     
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(2.0);
-    sim.vals.push_back(1.0);
+    int bc_type_D = 0;    //    D = 0;
+    int bc_type_N = 1;    //    N = 1;
+    REAL p_inlet  = 2.0;
+    REAL p_outlet = 1.0;
+    REAL qn       = 0.0;
 
-    sim.gamma_ids.push_back(-1000);
-    sim.gamma_dim.push_back(2);
-    sim.gamma_ids.push_back(-2000);
-    sim.gamma_dim.push_back(2);
-    sim.gamma_ids.push_back(-3000);
-    sim.gamma_dim.push_back(2);
-    sim.gamma_ids.push_back(-4000);
-    sim.gamma_dim.push_back(2);
-    sim.gamma_ids.push_back(-5000);
-    sim.gamma_dim.push_back(2);
-    sim.gamma_ids.push_back(-6000);
-    sim.gamma_dim.push_back(2);
-    //    D = 0;
-    //    N = 1;
-    sim.type.push_back(1);
-    sim.type.push_back(1);
-    sim.type.push_back(1);
-    sim.type.push_back(1);
-    sim.type.push_back(0);
-    sim.type.push_back(0);
+    sim.type.push_back(bc_type_D);
+    sim.type.push_back(bc_type_D);
+    sim.type.push_back(bc_type_N);
     
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(0.0);
-    sim.vals.push_back(2.0);
-    sim.vals.push_back(1.0);
+    sim.vals.push_back(p_inlet);
+    sim.vals.push_back(p_outlet);
+    sim.vals.push_back(qn);
 
-    sim.gamma_ids.push_back(-1942);
-    sim.gamma_dim.push_back(1);
-    sim.type.push_back(1);
-    sim.vals.push_back(0.0);
+    /// Defining DFN boundary data (id,bc_type,data)
+    std::vector<std::tuple<int,int,REAL>> bc_ids_2d;
+    bc_ids_2d.push_back(std::make_tuple(bc_inlet,bc_type_D,p_inlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
+    
+    
+    int bc_1d_inlet  = 120;
+    int bc_1d_outlet = 130;
+    int bc_1d_non_flux = 140;
+    int bc_0d_inlet  = 220;
+    int bc_0d_outlet = 230;
+    int bc_0d_non_flux = 240;
+    
+    std::map<int,int> bc_ids_1d_map;
+    bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_outlet,bc_1d_outlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
+    
+    std::map<int,int> bc_ids_0d_map;
+    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
+
     /// Defining DFN data
-    
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 100;
+    fracture.m_id               = 5;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 0.001;
     fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
-    fracture.m_id               = 101;
+    fracture.m_id               = 6;
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 0.001;
     fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
-
-    TPZGeoMesh *gmesh = PrettyCubemesh();
+    
+    TPZGmshReader Geometry;
+    std::string source_dir = SOURCE_DIR;
+    std::string file_gmsh = source_dir + "/meshes/the_cuttest_cube/cube.msh";
+    TPZGeoMesh *gmesh = new TPZGeoMesh;
+    std::string version("4.1");
+    Geometry.SetFormatVersion(version);
+    gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
+    Geometry.PrintPartitionSummary(std::cout);
+    
     std::ofstream file("geometry_cube.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     
@@ -317,12 +308,13 @@ void Pretty_cube(){
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
         
-        int dimension = 3;
         THybridizeDFN dfn_hybridzer;
         dfn_hybridzer.SetFractureData(fracture_data);
-        dfn_hybridzer.SetDimension(dimension);
         
-        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
+        dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
+        dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
+        dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
 
     }
     else{
@@ -330,7 +322,6 @@ void Pretty_cube(){
     }
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
-    AdjustMaterialIdBoundary(mp_cmesh);
 
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
     {
@@ -360,18 +351,6 @@ void Pretty_cube(){
     std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
     
-    std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
-    cmeshm->Reference()->Print(file_geo_hybrid_txt);
-
-    std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-    mesh_vec[0]->Print(file_hybrid_mixed_q);
-    
-    std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-    mesh_vec[1]->Print(file_hybrid_mixed_p);
-    
-    std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
-    cmeshm->Print(file_hybrid_mixed);
-    
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("q");
     vecnames.Push("kappa");
@@ -382,12 +361,13 @@ void Pretty_cube(){
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
+
     { /// fracture postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
-        scalnames.Push("Pressure");
+        scalnames.Push("state");
         std::string file_frac("fracture.vtk");
-        auto material = mesh_vec[1]->FindMaterial(100);
-        TPZMatMixedPoisson3D * fract_2d = dynamic_cast<TPZMatMixedPoisson3D *>(material);
+        auto material = mesh_vec[1]->FindMaterial(5);
+        TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
         fract_2d->SetDimension(2);
         TPZAnalysis frac_an(mesh_vec[1],false);
         frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
@@ -396,42 +376,101 @@ void Pretty_cube(){
 
     { /// lagrange postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
-        scalnames.Push("Pressure");
+        scalnames.Push("state");
         std::string file_frac("lagrange_1d.vtk");
-        auto material = mesh_vec[1]->FindMaterial(101);
-        TPZMatMixedPoisson3D * fract_2d = dynamic_cast<TPZMatMixedPoisson3D *>(material);
+        auto material = mesh_vec[1]->FindMaterial(6);
+        TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
         fract_2d->SetDimension(1);
         TPZAnalysis frac_an(mesh_vec[1],false);
         frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
         frac_an.PostProcess(div,1);
     }
-    
+    return;
+    TPZCompMesh *cmesh_transport = CreateTransportMesh(mp_cmesh);
+    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
+    meshtrvec[0] = meshvec[0];
+    meshtrvec[1] = meshvec[1];
+    meshtrvec[2] = cmesh_transport;
+    TPZMultiphysicsCompMesh *mp_tr_cmesh = MPTransportMesh(mp_cmesh, sim, meshtrvec);
+    InsertTransportInterfaceElements(mp_tr_cmesh);
+
 }
 
 
 void Case_1(){
     
+//    SimulationCase sim;
+//    sim.UsePardisoQ=true;
+//    sim.IsHybrid=true;
+//    sim.n_threads = 12;
+//
+//    sim.omega_ids.push_back(1);
+//    sim.omega_dim.push_back(3);
+//    sim.permeabilities.push_back(1.0e-3);
+//
+//    sim.omega_ids.push_back(2);
+//    sim.omega_dim.push_back(3);
+//    sim.permeabilities.push_back(1.0e-3);
+//
+//
+//    sim.gamma_ids.push_back(4);
+//    sim.gamma_dim.push_back(3);
+//
+//    sim.gamma_ids.push_back(5);
+//    sim.gamma_dim.push_back(3);
+//
+//    sim.gamma_ids.push_back(6);
+//    sim.gamma_dim.push_back(3);
+//
+//    //    D = 0;
+//    //    N = 1;
+//    sim.type.push_back(1);
+//    sim.type.push_back(0);
+//    sim.type.push_back(0);
+//
+//    sim.vals.push_back(0.0);
+//    sim.vals.push_back(2.0);
+//    sim.vals.push_back(1.0);
+//
+//    /// Fracture data
+//    TPZStack<TFracture> fracture_data;
+//    TFracture fracture;
+//    fracture.m_id               = 3;
+//    fracture.m_dim              = 2;
+//    fracture.m_kappa_normal     = 1.0e-3;
+//    fracture.m_kappa_tangential = 1.0e-3;
+//    fracture.m_d_opening        = 1.0e-2;
+//    fracture_data.push_back(fracture);
+//
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
-    sim.n_threads = 12;
+    sim.n_threads = 8;
     
-    sim.omega_ids.push_back(1);
+    sim.omega_ids.push_back(4);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-3);
+    sim.permeabilities.push_back(1.0);
     
-    sim.omega_ids.push_back(2);
-    sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-3);
+    sim.omega_ids.push_back(5);
+    sim.omega_dim.push_back(2);
+    sim.permeabilities.push_back(1.0);
+    
+    sim.omega_ids.push_back(6);
+    sim.omega_dim.push_back(1);
+    sim.permeabilities.push_back(1.0);
+//
+//    sim.omega_ids.push_back(2);
+//    sim.omega_dim.push_back(3);
+//    sim.permeabilities.push_back(1.0e-3);
     
     
-    sim.gamma_ids.push_back(4);
+    sim.gamma_ids.push_back(3);
     sim.gamma_dim.push_back(3);
     
-    sim.gamma_ids.push_back(5);
+    sim.gamma_ids.push_back(1);
     sim.gamma_dim.push_back(3);
     
-    sim.gamma_ids.push_back(6);
+    sim.gamma_ids.push_back(2);
     sim.gamma_dim.push_back(3);
     
     //    D = 0;
@@ -444,22 +483,52 @@ void Case_1(){
     sim.vals.push_back(2.0);
     sim.vals.push_back(1.0);
     
+    //
+    sim.gamma_ids.push_back(30);
+    sim.gamma_dim.push_back(2);
+    
+    sim.gamma_ids.push_back(10);
+    sim.gamma_dim.push_back(2);
+    
+    sim.gamma_ids.push_back(20);
+    sim.gamma_dim.push_back(2);
+    
+    //    D = 0;
+    //    N = 1;
+    sim.type.push_back(1);
+    sim.type.push_back(0);
+    sim.type.push_back(0);
+    
+    sim.vals.push_back(0.0);
+    sim.vals.push_back(2.0);
+    sim.vals.push_back(1.0);
+    //
+    
+    sim.gamma_ids.push_back(-1942);
+    sim.gamma_dim.push_back(1);
+    sim.type.push_back(1);
+    sim.vals.push_back(0.0);
     /// Fracture data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 3;
+    fracture.m_id               = 5;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 1.0e-3;
-    fracture.m_kappa_tangential = 1.0e-3;
+    fracture.m_kappa_normal     = 1.0;
+    fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
-    
-    
+    fracture.m_id               = 6;
+    fracture.m_dim              = 1;
+    fracture.m_kappa_normal     = 0.001;
+    fracture.m_kappa_tangential = 0.001;
+    fracture.m_d_opening        = 1.0e-2;
+    fracture_data.push_back(fracture);
+
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/cube.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
-    Geometry.SetFormatVersion("4");
+    Geometry.SetFormatVersion("3");
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
   
@@ -474,22 +543,12 @@ void Case_1(){
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
     
-#ifdef PZDEBUG
-    
-    std::ofstream filemixed("mixedMesh.txt");
-    cmixedmesh->Print(filemixed);
-    
-#endif
-    
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
         
-        int dimension = 3;
         THybridizeDFN dfn_hybridzer;
         dfn_hybridzer.SetFractureData(fracture_data);
-        dfn_hybridzer.SetDimension(dimension);
-        
-        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
+        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
         
     }
     else{
@@ -716,6 +775,7 @@ void Case_1(){
 #endif
     
     TPZStack<std::string,10> scalnames, vecnames;
+
     vecnames.Push("q");
     vecnames.Push("kappa");
     scalnames.Push("p");
@@ -768,7 +828,7 @@ void Case_2(){
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
     std::ofstream filemixed("mixedMesh.txt");
-    cmixedmesh->Print(filemixed);
+  //  cmixedmesh->Print(filemixed);
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
@@ -1523,7 +1583,6 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     int dimension = geometry->Dimension();
     int nvols = sim_data.omega_ids.size();
     int nbound = sim_data.gamma_ids.size();
-   
 
     TPZCompMesh *cmesh = new TPZCompMesh(geometry);
     
@@ -1561,7 +1620,7 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     }
     cmesh->InitializeBlock();
     
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
     std::stringstream file_name;
     file_name << "q_cmesh_raw" << ".txt";
     std::ofstream sout(file_name.str().c_str());
@@ -1581,7 +1640,7 @@ TPZCompMesh * PressureMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_
 
     std::set<int> matids;
     for (int ivol=0; ivol < nvols; ivol++) {
-        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dimension);
+        TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dimension);
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         if (sim_data.omega_dim[ivol] == dimension) {
@@ -1604,7 +1663,7 @@ TPZCompMesh * PressureMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_
         newnod.SetLagrangeMultiplier(1);
     }
     
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
     std::stringstream file_name;
     file_name   << sim_data.dump_folder << "/" << "p_cmesh" << ".txt";
     std::ofstream sout(file_name.str().c_str());
@@ -1640,7 +1699,9 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
-        TPZMatMixedPoisson3D * volume = new TPZMatMixedPoisson3D(sim_data.omega_ids[ivol],dim);
+
+        TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dim);
+
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1712,12 +1773,12 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     }
     
     TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
-    
     TPZFNMatrix<9,STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
 
         TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dimension);
+
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1757,7 +1818,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
 //        cmesh->ExpandSolution();
     }
     
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
     std::stringstream file_name;
     file_name  << "Dual_cmesh" << ".txt";
     std::ofstream sout(file_name.str().c_str());
@@ -1765,6 +1826,50 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
 #endif
     
     meshvec = mesh_vec;
+    return cmesh;
+}
+
+TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec){
+    
+    
+    TPZGeoMesh *geometry = mixed->Reference();
+    int dimension = geometry->Dimension();
+    TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
+
+    // isso tem que ser modificado para inserir somente materiais de transporte e condicoes de contorno
+    mixed->CopyMaterials(*cmesh);
+    
+    cmesh->SetDimModel(dimension);
+    
+    TPZManVector<int,5> active_approx_spaces(3); /// 1 stands for an active approximation spaces
+    active_approx_spaces[0] = 0;
+    active_approx_spaces[1] = 0;
+    active_approx_spaces[2] = 1;
+    cmesh->BuildMultiphysicsSpace(active_approx_spaces,meshvec);
+    
+    std::cout << "Created multi physics mesh\n";
+    if (sim_data.IsMHMQ) {
+        cmesh->CleanUpUnconnectedNodes();
+        cmesh->ExpandSolution();
+    }
+    else{
+        //        TPZCompMeshTools::GroupElements(cmesh);
+        //        std::cout << "Created grouped elements\n";
+        //        bool keepmatrix = false;
+        //        bool keeponelagrangian = true;
+        //        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
+        //        std::cout << "Created condensed elements\n";
+        //        cmesh->CleanUpUnconnectedNodes();
+        //        cmesh->ExpandSolution();
+    }
+    
+#ifdef PZDEBUG
+    std::stringstream file_name;
+    file_name  << "Dual_cmesh" << ".txt";
+    std::ofstream sout(file_name.str().c_str());
+    cmesh->Print(sout);
+#endif
+    
     return cmesh;
 }
 
@@ -1829,30 +1934,17 @@ void FractureTest(){
     gengrid.SetBC(gmesh, 6, -3);
     gengrid.SetBC(gmesh, 7, -4);
     
-    TPZManVector<REAL,3> co(3,0.0);
-    co[0] = 0.5;
-    co[1] = 1.0;
+//    TPZExtendGridDimension extend(gmesh,1.0);
+//    extend.SetElType(1);
+//    TPZGeoMesh *gmesh3d = extend.ExtendedMesh(1,-5,-6);
+//    gmesh3d->BuildConnectivity();
+   
     
+    std::ofstream file2("gmesh.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file2);
     
-    TPZGeoNode * node = gmesh->FindNode(co);
-    int index_1 = gmesh->NodeIndex(node);
-    
-    co[0] = 0.5;
-    co[1] = 0.0;
-    
-    node = gmesh->FindNode(co);
-    int index_2 = gmesh->NodeIndex(node);
-    
-    TPZVec<int64_t> cords(2);
-    
-    cords[0]=index_1;
-    cords[1]=index_2;
-    int64_t Nels = gmesh->NElements();
-    gmesh->CreateGeoElement(EOned, cords, 2, Nels);
-    gmesh->BuildConnectivity();
-    std::ofstream file("test.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
-    
+    std::ofstream file3("gmesh.txt");
+    gmesh->Print(file3);
     
     //Flux Mesh
     SimulationCase casetest;
@@ -1867,25 +1959,27 @@ void FractureTest(){
     casetest.gamma_ids.push_back(-2);
     casetest.gamma_ids.push_back(-3);
     casetest.gamma_ids.push_back(-4);
-    
+//    casetest.gamma_ids.push_back(-5);
+//    casetest.gamma_ids.push_back(-6);
     //    d = 0;
     //    n = 1;
     casetest.type.push_back(1);
     casetest.type.push_back(0);
     casetest.type.push_back(1);
     casetest.type.push_back(0);
+//    casetest.type.push_back(0);
+//    casetest.type.push_back(0);
     
     casetest.vals.push_back(0.0);
-    casetest.vals.push_back(100.0);
+    casetest.vals.push_back(2.0);
     casetest.vals.push_back(0.0);
-    casetest.vals.push_back(10.0);
+    casetest.vals.push_back(1.0);
+//    casetest.vals.push_back(2.0);
+//    casetest.vals.push_back(1.0);
+    
     
     TPZCompMesh *cmeshq = FluxMesh(gmesh, 1, casetest);
-    std::ofstream filecomptxt("cmeshq.txt");
-    cmeshq->Print(filecomptxt);
-    SeparateConnectsByFracId(cmeshq, 2);
-    std::ofstream filecomptxt2("cmeshqq.txt");
-    cmeshq->Print(filecomptxt2);
+
     
     //
     TPZCompMesh *cmeshp = PressureMesh(gmesh, 1, casetest);
@@ -1893,9 +1987,9 @@ void FractureTest(){
     fmeshvec[0]=cmeshq;
     fmeshvec[1]=cmeshp;
     
-    TPZCompMesh *cmixedmesh = CMeshMixed(gmesh, 1, casetest, fmeshvec);
+    TPZCompMesh *cmixedmesh = MPCMeshMixed(gmesh, 1, casetest, fmeshvec);
     std::ofstream filemixed("mixedMesh.txt");
-    cmixedmesh->Print(filemixed);
+   // cmixedmesh->Print(filemixed);
     
     
     
@@ -1942,7 +2036,7 @@ void FractureTest(){
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("Flux");
     scalnames.Push("Pressure");
-    scalnames.Push("Permeability");
+  //  scalnames.Push("Permeability");
     
     int div = 0;
     int dim=gmesh->Dimension();
@@ -2020,6 +2114,146 @@ void InsertFractureMaterial(TPZCompMesh *cmesh){
     cmesh->AutoBuild();
     //
 }
+
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
+{
+    TPZCompMesh *flux_mesh = cmesh->MeshVector()[0];
+    TPZCompMesh *pressure_mesh = cmesh->MeshVector()[1];
+    TPZCompMesh *transport_mesh = new TPZCompMesh(flux_mesh->Reference());
+    flux_mesh->CopyMaterials(*transport_mesh);
+    
+    cmesh->Reference()->ResetReference();
+
+    for (int dim=1; dim<=3; dim++) {
+        transport_mesh->SetDimModel(dim);
+        transport_mesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+        int64_t nel = flux_mesh->NElements();
+        for (int64_t el =0; el<nel; el++) {
+            TPZCompEl *cel = flux_mesh->Element(el);
+            if (!cel) {
+                continue;
+            }
+            TPZGeoEl *gel = cel->Reference();
+            if (!gel) {
+                DebugStop();
+            }
+            if(gel->Dimension() == dim && cel->NConnects() > 1)
+            {
+                int64_t index;
+                transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+            }
+            if(gel->Dimension() == dim-1 && cel->NConnects() == 1 && gel->MaterialId() < 0)
+            {
+                int64_t index;
+                transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+            }
+        }
+    }
+    transport_mesh->SetDimModel(0);
+    transport_mesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+    cmesh->Reference()->ResetReference();
+    cmesh->LoadReferences();
+    std::set<int64_t> pointgel;
+    int64_t nel = pressure_mesh->NElements();
+    for (int64_t el=0; el<nel; el++) {
+        TPZCompEl *cel = pressure_mesh->Element(el);
+        if(!cel) continue;
+        TPZGeoEl *gel = cel->Reference();
+        if(!gel) DebugStop();
+        if(gel->Dimension() != 0) continue;
+        TPZCompEl *mfcel = gel->Reference();
+        if(!mfcel) DebugStop();
+        if(mfcel->NConnects() != 1) DebugStop();
+        if(mfcel->Connect(0).NElConnected() > 2)
+        {
+            int64_t index;
+            transport_mesh->ApproxSpace().CreateCompEl(gel, *transport_mesh, index);
+        }
+    }
+    return transport_mesh;
+}
+
+void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
+{
+    // tototototototo
+    // the multiphysics interface element needs to be aware of active approximation spaces!!!
+    // one should call SetActive on each newly created interface element
+    
+    // totototototo
+    int transport_matid = 200;
+    TPZCompMesh *transport_mesh = cmesh->MeshVector()[2];
+    cmesh->Reference()->ResetReference();
+    transport_mesh->LoadReferences();
+    int mesh_dim = cmesh->Dimension();
+    int64_t nel = transport_mesh->NElements();
+    TPZManVector<int64_t,3> left_mesh_indexes(2,0),right_mesh_indexes(1,2);
+    left_mesh_indexes[1] = 2;
+    for (int64_t el = 0; el<nel; el++) {
+        TPZCompEl *cel = transport_mesh->Element(el);
+        if(!cel) DebugStop();
+        TPZGeoEl *gel = cel->Reference();
+        if(!gel) DebugStop();
+        int nsides = gel->NSides();
+        int geldim = gel->Dimension();
+        for (int side = 0; side<nsides; side++) {
+            int sidedim = gel->SideDimension(side);
+            if(sidedim < geldim-1) continue;
+            TPZStack<TPZCompElSide> celstack;
+            TPZCompElSide celside(cel,side);
+            TPZGeoElSide gelside(gel,side);
+            gelside.EqualLevelCompElementList(celstack, 0, 0);
+            if(celstack.size() == 0 && sidedim < mesh_dim)
+            {
+                DebugStop();
+            }
+            if(sidedim == geldim-1)
+            {
+                if(celstack.size() > 1)
+                {
+                    // there must be a lower dimensional transport element to equate the fluxes
+                    continue;
+                }
+                TPZGeoEl *neighgel = celstack[0].Element()->Reference();
+                if(geldim > neighgel->Dimension())
+                {
+                    // we only create interfaces from lower to higher dimensional elements
+                    // neighgel must be a boundary element
+                    continue;
+                }
+                if(geldim == neighgel->Dimension() && gel->Id() > neighgel->Id())
+                {
+                    // the interface is created from the lower id to the higher id
+                    continue;
+                }
+                {
+                    // we need to create the interface
+                    TPZGeoElBC gbc(gelside,transport_matid);
+                    int64_t index;
+                    TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstack[0]);
+                    mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
+                }
+            }
+            else // sidedim == geldim
+            {
+                // we create interfaces between the element and all the neighbours
+                int num_interface = celstack.size();
+                for (int intface = 0; intface<num_interface; intface++) {
+                    int matid = transport_matid;
+                    if (gel->MaterialId() < 0) {
+                        // if the element is a boundary condition, use the material for interface material id
+                        matid = gel->MaterialId();
+                    }
+                    TPZGeoElBC gbc(gelside,matid);
+                    int64_t index;
+                    // the neighbour always on the left -> the neighbour will compute the transport
+                    TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celstack[intface], celside);
+                    mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
+                }
+            }
+        }
+    }
+}
+
 TPZCompMesh * SaturationMesh(TPZMultiphysicsCompMesh *mpcompmesh, int order, SimulationCase sim){
     
     TPZManVector<TPZCompMesh * > mesh_vec = mpcompmesh->MeshVector();
@@ -2091,6 +2325,7 @@ TPZCompMesh * SaturationMesh(TPZMultiphysicsCompMesh *mpcompmesh, int order, Sim
     
     return smesh;
 }
+
 void CreateInterfaces(TPZMultiphysicsCompMesh *mpcompmesh){
     TPZCompMesh *qmesh = mpcompmesh->MeshVector()[0];
     TPZCompMesh *Swmesh = mpcompmesh->MeshVector()[2];

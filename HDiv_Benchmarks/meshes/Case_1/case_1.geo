@@ -1,7 +1,7 @@
 
 Mesh.Algorithm = 8;
 // h = 0.0273;           
-h = 5.0;
+h = 0.5;
 
 
 // Dimensions: x is left to right, y is front to back and z is top to bottom
@@ -137,6 +137,6 @@ Physical Surface("fracture") = {52};
 
 Physical Surface("domain_box") = {44, 50, 56, 58, 46, 60, 48, 162, 64, 36, 34, 38, 30};
 Physical Surface("inlet") = {62};
-Physical Surface("outlet_right") = {32};
+Physical Surface("outlet_right") = {30};
 
 
