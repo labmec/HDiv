@@ -1,7 +1,7 @@
 
 Mesh.Algorithm = 8;
 // h = 0.0273;           
-h = 1.0;
+h = 0.5;
 
 
 // Dimensions: x is left to right, y is front to back and z is top to bottom
@@ -126,8 +126,12 @@ Plane Surface(64) = {63};
 Surface Loop(65) = {64, 62, 162, 60, 58, 56, 52};
 Volume(66) = {65};
 
-Physical Volume("Vol1") = {42};
-Physical Volume("Vol2") = {66, 54};
+vol1[] = {42};
+vol2[] = {66, 54};
+
+
+Physical Volume("Vol1") = {vol1[]};
+Physical Volume("Vol2") = {vol2[]};
 
 Physical Surface("fracture") = {52};
 
