@@ -288,8 +288,6 @@ void Pretty_cube(){
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
     
-
-    //
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
     std::string file_gmsh = source_dir + "/meshes/the_cuttest_cube/cube.msh";
@@ -317,15 +315,13 @@ void Pretty_cube(){
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
         
-        int dimension = 3;
         THybridizeDFN dfn_hybridzer;
         dfn_hybridzer.SetFractureData(fracture_data);
-        dfn_hybridzer.SetDimension(dimension);
         
-        dfn_hybridzer.m_bc_ids_2d = bc_ids_2d;
-        dfn_hybridzer.m_bc_ids_1d = bc_ids_1d_map;
-        dfn_hybridzer.m_bc_ids_0d = bc_ids_0d_map;
-        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
+        dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
+        dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
+        dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
 
     }
     else{
@@ -333,7 +329,6 @@ void Pretty_cube(){
     }
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
-//    AdjustMaterialIdBoundary(mp_cmesh);
 
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
     {
@@ -362,7 +357,6 @@ void Pretty_cube(){
     
     std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
-
     
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("q");
@@ -556,22 +550,12 @@ void Case_1(){
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
     
-#ifdef PZDEBUG
-    
-    std::ofstream filemixed("mixedMesh.txt");
-  //  cmixedmesh->Print(filemixed);
-    
-#endif
-    
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
         
-        int dimension = 3;
         THybridizeDFN dfn_hybridzer;
         dfn_hybridzer.SetFractureData(fracture_data);
-        dfn_hybridzer.SetDimension(dimension);
-        
-        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
+        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
         
     }
     else{
