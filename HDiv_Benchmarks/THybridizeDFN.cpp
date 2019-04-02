@@ -20,7 +20,6 @@ THybridizeDFN::THybridizeDFN() : TPZHybridizeHDiv(){
     m_fracture_ids.clear();
     m_fracture_data.resize(0);
     m_geometry = NULL;
-//    m_geometry_dim = 0;
 }
 
 /// Default destructor

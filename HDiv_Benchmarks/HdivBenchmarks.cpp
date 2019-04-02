@@ -203,7 +203,7 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
+    Pretty_cube();
 
     Case_1();
 
@@ -214,7 +214,7 @@ int main(){
 /// Executes cube
 void Pretty_cube(){
     
-    int h_level = 2;
+    int h_level = 1;
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
