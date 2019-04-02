@@ -418,9 +418,9 @@ void Case_1(){
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0);
     
-    int bc_inlet  = 5;
-    int bc_outlet = 6;
-    int bc_non_flux = 4;
+    int bc_inlet  = 3;
+    int bc_outlet = 4;
+    int bc_non_flux = 5;
     
     sim.gamma_ids.push_back(bc_inlet);
     sim.gamma_dim.push_back(3);
@@ -511,7 +511,7 @@ void Case_1(){
         
         dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
         dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
-      //  dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+
         cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
         
     }
