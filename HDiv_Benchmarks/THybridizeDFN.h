@@ -29,16 +29,15 @@
 class THybridizeDFN : public TPZHybridizeHDiv {
     
 public: /// turn to private when is complete and implement access methods
-    
-    
+
     /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_2d;
+    std::vector<std::tuple<int,int,REAL>> m_bc_ids_2d;
     
-    /// Set of boundary material ids - boundary condition type - boundary data associated to 1D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_1d;
+    /// Set of boundary material ids - boundary material ids of fractures intersections 1d
+    std::map<int,int> m_bc_ids_1d;
     
-    /// Set of boundary material ids - boundary condition type - boundary data associated to 0D elements
-    std::set<std::tuple<int,int,int>> m_bc_ids_0d;
+    /// Set of boundary material ids - boundary material ids of fractures intersections 0d
+    std::map<int,int> m_bc_ids_0d;
     
     /// List of fracture characteristics
     TPZStack<TFracture> m_fracture_data;
@@ -108,6 +107,8 @@ public:
     void CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
     
     void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
+    
+    void CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes, std::set<int> & material_set);
     
 };
 
