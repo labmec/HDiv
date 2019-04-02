@@ -214,7 +214,7 @@ int main(){
 /// Executes cube
 void Pretty_cube(){
     
-    int h_level = 1;
+    int h_level = 2;
     
     SimulationCase sim;
     sim.UsePardisoQ=true;

@@ -458,7 +458,9 @@ void THybridizeDFN::CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gme
         
         if (!gel) continue;
         if (gel->Dimension() != dim - 1) continue;
-        
+        if (gel->HasSubElement()) {
+            continue;
+        }
         
         bool quad_gel_Q = gel->Type() == EQuadrilateral;
         bool trin_gel_Q = gel->Type() == ETriangle;
