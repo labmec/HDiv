@@ -174,7 +174,9 @@ void InsertFractureMaterial(TPZCompMesh *cmesh);
 TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e);
 void AdjustMaterialIdBoundary(TPZMultiphysicsCompMesh *cmesh);
 TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
-void InsertInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
+void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
+TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
+
 
 void FractureTest();
 
@@ -355,17 +357,17 @@ void Pretty_cube(){
     std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
     
-    std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
-    cmeshm->Reference()->Print(file_geo_hybrid_txt);
-
-    std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-    mesh_vec[0]->Print(file_hybrid_mixed_q);
-    
-    std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-    mesh_vec[1]->Print(file_hybrid_mixed_p);
-    
-    std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
-    cmeshm->Print(file_hybrid_mixed);
+//    std::ofstream file_geo_hybrid_txt("geometry_cube_hybrid.txt");
+//    cmeshm->Reference()->Print(file_geo_hybrid_txt);
+//
+//    std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+//    mesh_vec[0]->Print(file_hybrid_mixed_q);
+//    
+//    std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+//    mesh_vec[1]->Print(file_hybrid_mixed_p);
+//    
+//    std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+//    cmeshm->Print(file_hybrid_mixed);
     
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("q");
@@ -401,7 +403,15 @@ void Pretty_cube(){
         frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
         frac_an.PostProcess(div,1);
     }
-    
+    return;
+    TPZCompMesh *cmesh_transport = CreateTransportMesh(mp_cmesh);
+    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
+    meshtrvec[0] = meshvec[0];
+    meshtrvec[1] = meshvec[1];
+    meshtrvec[2] = cmesh_transport;
+    TPZMultiphysicsCompMesh *mp_tr_cmesh = MPTransportMesh(mp_cmesh, sim, meshtrvec);
+    InsertTransportInterfaceElements(mp_tr_cmesh);
+
 }
 
 
@@ -1847,6 +1857,50 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     return cmesh;
 }
 
+TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec){
+    
+    
+    TPZGeoMesh *geometry = mixed->Reference();
+    int dimension = geometry->Dimension();
+    TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
+
+    // isso tem que ser modificado para inserir somente materiais de transporte e condicoes de contorno
+    mixed->CopyMaterials(*cmesh);
+    
+    cmesh->SetDimModel(dimension);
+    
+    TPZManVector<int,5> active_approx_spaces(3); /// 1 stands for an active approximation spaces
+    active_approx_spaces[0] = 0;
+    active_approx_spaces[1] = 0;
+    active_approx_spaces[2] = 1;
+    cmesh->BuildMultiphysicsSpace(active_approx_spaces,meshvec);
+    
+    std::cout << "Created multi physics mesh\n";
+    if (sim_data.IsMHMQ) {
+        cmesh->CleanUpUnconnectedNodes();
+        cmesh->ExpandSolution();
+    }
+    else{
+        //        TPZCompMeshTools::GroupElements(cmesh);
+        //        std::cout << "Created grouped elements\n";
+        //        bool keepmatrix = false;
+        //        bool keeponelagrangian = true;
+        //        TPZCompMeshTools::CreatedCondensedElements(cmesh, keeponelagrangian, keepmatrix);
+        //        std::cout << "Created condensed elements\n";
+        //        cmesh->CleanUpUnconnectedNodes();
+        //        cmesh->ExpandSolution();
+    }
+    
+#ifdef PZDEBUG
+    std::stringstream file_name;
+    file_name  << "Dual_cmesh" << ".txt";
+    std::ofstream sout(file_name.str().c_str());
+    cmesh->Print(sout);
+#endif
+    
+    return cmesh;
+}
+
 TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data){
     
     TPZAnalysis * analysis = new TPZAnalysis(cmesh, true);
@@ -2147,7 +2201,7 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     return transport_mesh;
 }
 
-void InsertInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
+void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
 {
     // tototototototo
     // the multiphysics interface element needs to be aware of active approximation spaces!!!

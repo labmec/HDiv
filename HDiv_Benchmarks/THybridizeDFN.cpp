@@ -1193,6 +1193,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     /// ClassifyCompelSides
     TPZStack<std::pair<int, int>> gel_index_and_order_fractures_intersection;
     // list of pressure elements that need to be created
+
     ClassifyCompelSides(fractures_intersections_dim, q_cmesh, gel_index_and_order_fractures_intersection, flux_trace_id, lagrange_id);
     
     /// Creates the lagrange mulplier approximation space
