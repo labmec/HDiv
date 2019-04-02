@@ -133,6 +133,6 @@ Physical Surface("fracture") = {52};
 
 Physical Surface("domain_box") = {44, 50, 56, 58, 46, 60, 48, 162, 64, 36, 34, 38, 30};
 Physical Surface("inlet") = {62};
-Physical Surface("outlet_right") = {32};
+Physical Surface("outlet_right") = {30};
 
 
