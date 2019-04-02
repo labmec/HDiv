@@ -451,27 +451,15 @@ void Case_1(){
     bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
     
     
-    int bc_1d_inlet  = 120;
-    int bc_1d_outlet = 130;
-    int bc_1d_non_flux = 140;
-    int bc_0d_inlet  = 220;
-    int bc_0d_outlet = 230;
-    int bc_0d_non_flux = 240;
-    
+    int bc_1d_non_flux = -1942;
     std::map<int,int> bc_ids_1d_map;
     bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
-//    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
-//    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
-    
-    std::map<int,int> bc_ids_0d_map;
-    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
-    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
-    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
+
     
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 3;
+    fracture.m_id               = 6;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 0.001;
     fracture.m_kappa_tangential = 0.001;
@@ -488,10 +476,10 @@ void Case_1(){
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
-    std::ofstream file("geometry_cube.vtk");
+    std::ofstream file("geometry_case_1.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     
-    std::ofstream file_txt("geometry_cube_base.txt");
+    std::ofstream file_txt("geometry_case_1_base.txt");
     gmesh->Print(file_txt);
     
     
@@ -511,7 +499,6 @@ void Case_1(){
         
         dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
         dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
-
         cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
         
     }
@@ -546,7 +533,7 @@ void Case_1(){
     
     TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(mesh_vec, cmeshm);
     
-    std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
+    std::ofstream file_geo_hybrid("geometry_case_1_hybrid.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
     
     TPZStack<std::string,10> scalnames, vecnames;
@@ -555,7 +542,7 @@ void Case_1(){
     scalnames.Push("p");
     
     int div = 0;
-    std::string file_reservoir("cube.vtk");
+    std::string file_reservoir("case_1.vtk");
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
@@ -564,7 +551,7 @@ void Case_1(){
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("state");
         std::string file_frac("fracture.vtk");
-        auto material = mesh_vec[1]->FindMaterial(5);
+        auto material = mesh_vec[1]->FindMaterial(6);
         TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
         fract_2d->SetDimension(2);
         TPZAnalysis frac_an(mesh_vec[1],false);
@@ -572,17 +559,6 @@ void Case_1(){
         frac_an.PostProcess(div,2);
     }
     
-    { /// lagrange postprocessor
-        TPZStack<std::string,10> scalnames, vecnames;
-        scalnames.Push("state");
-        std::string file_frac("lagrange_1d.vtk");
-        auto material = mesh_vec[1]->FindMaterial(6);
-        TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-        fract_2d->SetDimension(1);
-        TPZAnalysis frac_an(mesh_vec[1],false);
-        frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
-        frac_an.PostProcess(div,1);
-    }
     return;
     TPZCompMesh *cmesh_transport = CreateTransportMesh(mp_cmesh);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
