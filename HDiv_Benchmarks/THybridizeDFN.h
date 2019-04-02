@@ -108,7 +108,7 @@ public:
     
     void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
     
-    void CreateFractureBCGeoElements(TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes, std::set<int> & material_set);
+    void CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes, std::set<int> & material_set);
     
 };
 

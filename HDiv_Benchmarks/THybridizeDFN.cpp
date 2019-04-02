@@ -456,7 +456,10 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
             TPZVec<STATE> sol(1,0);
             for(auto fracture : m_fracture_data){
                 int fracture_id = fracture.m_id;
-                auto fracture_material = new TPZL2Projection(fracture_id, target_dim-1, n_state, sol);
+                if (fracture.m_dim != target_dim) {
+                    continue;
+                }
+                auto fracture_material = new TPZL2Projection(fracture_id, target_dim, n_state, sol);
                 fracture_material->SetScaleFactor(0);
                 if (!pressure_cmesh->FindMaterial(fracture_id)) {
                     pressure_cmesh->InsertMaterialObject(fracture_material);
@@ -522,7 +525,10 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
     std::set<int> fracture_flux_material_set;
     for(auto fracture : m_fracture_data){
         int fracture_id = fracture.m_id;
-        auto fracture_material = new TPZL2Projection(fracture_id, target_dim-1, n_state, sol);
+        if (fracture.m_dim != target_dim) {
+            continue;
+        }
+        auto fracture_material = new TPZL2Projection(fracture_id, target_dim, n_state, sol);
         fracture_material->SetScaleFactor(0.0);
         if (!flux_cmesh->FindMaterial(fracture_id)) {
             flux_cmesh->InsertMaterialObject(fracture_material);
@@ -546,7 +552,7 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
                 int mat_id = chunk.second;
                 bc_indexes_1d.insert(mat_id);
             }
-            CreateFractureBCGeoElements(geometry, bc_indexes_2d, bc_indexes_1d, fracture_flux_material_set);
+            CreateFractureBCGeoElements(target_dim, geometry, bc_indexes_2d, bc_indexes_1d, fracture_flux_material_set);
         }
             break;
         case 1:
@@ -555,7 +561,7 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
                 int mat_id = chunk.second;
                 bc_indexes_0d.insert(mat_id);
             }
-            CreateFractureBCGeoElements(geometry, bc_indexes_2d, bc_indexes_0d, fracture_flux_material_set);
+            CreateFractureBCGeoElements(target_dim, geometry, bc_indexes_2d, bc_indexes_0d, fracture_flux_material_set);
         }
             break;
         default:
@@ -604,7 +610,7 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
     
 }
 
-void THybridizeDFN::CreateFractureBCGeoElements(TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes, std::set<int> & material_set){
+void THybridizeDFN::CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes, std::set<int> & material_set){
     
     
     int dim = gmesh->Dimension();
@@ -622,9 +628,19 @@ void THybridizeDFN::CreateFractureBCGeoElements(TPZGeoMesh * gmesh, std::set<int
         
         std::vector<int> sides;
         if (quad_gel_Q) {
-            sides = {4,5,6,7};
+            if (target_dim == 2) {
+                sides = {4,5,6,7};
+            }else{
+                sides = {0,1,2,3};
+            }
+            
         }else if (trin_gel_Q){
-            sides = {3,4,5};
+            
+            if (target_dim == 2) {
+                sides = {3,4,5};
+            }else{
+                sides = {0,1,2};
+            }
         }else if (line_gel_Q){
             sides = {0,1};
         }
@@ -666,7 +682,9 @@ void THybridizeDFN::CreateFractureBCGeoElements(TPZGeoMesh * gmesh, std::set<int
                 }
                 if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
                 {
-                    foundfrac = true;
+                    if(gel_side.Element()->Dimension() == target_dim) {
+                        foundfrac = true;
+                    }
                 }
             }
             bool candidate_to_create_bc_Q = foundface == false || foundbc == true || foundfrac == false;
@@ -674,9 +692,16 @@ void THybridizeDFN::CreateFractureBCGeoElements(TPZGeoMesh * gmesh, std::set<int
             for (auto gel_side : all_neigh) {
                 if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
                 {
-                    int bc_frac_mat_id = m_bc_ids_1d[bcmatid];
-                    TPZGeoElBC gbc(gelside,bc_frac_mat_id);
-                    material_set.insert(bc_frac_mat_id);
+                    if (target_dim == 2) {
+                        int bc_frac_mat_id = m_bc_ids_1d[bcmatid];
+                        TPZGeoElBC gbc(gelside,bc_frac_mat_id);
+                        material_set.insert(bc_frac_mat_id);
+                    }else if (target_dim == 1){
+                        int bc_frac_mat_id = m_bc_ids_0d[bcmatid];
+                        TPZGeoElBC gbc(gelside,bc_frac_mat_id);
+                        material_set.insert(bc_frac_mat_id);
+                    }
+
                     break;
                 }
             }
@@ -687,19 +712,48 @@ void THybridizeDFN::CreateFractureBCGeoElements(TPZGeoMesh * gmesh, std::set<int
 
 void THybridizeDFN::InsertMaterialsForMixedOperatorOnFractures(int target_dim, TPZCompMesh * cmesh){
     
-    
-//    std::vector<int> bc_indexes = {-1000,-2000,-3000,-4000,-5000,-600};
-//    std::vector<double> bc_vals = {0,0,2,1};
-//    std::vector<int> bc_type = {0,0,1,1};
-    
+    int c = 0;
     for(auto fracture : m_fracture_data){
         int fracture_id = fracture.m_id;
         if (!cmesh->FindMaterial(fracture_id)) {
+            if (fracture.m_dim != target_dim) {
+                continue;
+            }
             auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim-1);
             fracture_material->SetPermeability(fracture.m_kappa_tangential);
             cmesh->InsertMaterialObject(fracture_material);
+            if (c == 0) {
+  
+                TPZFMatrix<STATE> val1(1,1,0.0), val2(1,1,0.0);
+                for (auto chunk : m_bc_ids_2d) {
+                    
+                    int bc_mat_id(std::get<0>(chunk));
+                    int bc_type(std::get<1>(chunk));
+                    REAL bc_value(std::get<2>(chunk));
+                    
+                    int bc_fracture_id;
+                    if (target_dim == 2) {
+                        bc_fracture_id = m_bc_ids_1d[bc_mat_id];
+                        val2(0,0) = bc_value;
+                        if (!cmesh->FindMaterial(bc_fracture_id)) {
+                            auto bc = fracture_material->CreateBC(fracture_material, bc_fracture_id, bc_type, val1, val2);
+                            cmesh->InsertMaterialObject(bc);
+                        }
+                    }else if (target_dim == 1){
+                        bc_fracture_id = m_bc_ids_0d[bc_mat_id];
+                        val2(0,0) = bc_value;
+                        if (!cmesh->FindMaterial(bc_fracture_id)) {
+                            auto bc = fracture_material->CreateBC(fracture_material, bc_fracture_id, bc_type, val1, val2);
+                            cmesh->InsertMaterialObject(bc);
+                        }
+                    }
+
+                }
+            }
         }
     }
+    
+    
     
 
     
@@ -1109,7 +1163,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures);
     
     
-    if(0){
     // switch the material id of the pressure elements if they are neighbour of 1d fracture elements
     // create boundary elements for the 1d fracture elements
     int fractures_intersections_dim = target_dim - 2;
@@ -1127,19 +1180,22 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     
     /// Creates the lagrange mulplier approximation space
     CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
-    }
+
     
     /// Computational multiphysics mesh reconstruction
     TPZManVector<int,5> & active_approx_spaces = ExtractActiveApproxSpaces(cmesh);
     TPZCompMesh * dfn_hybrid_cmesh = DuplicateMultiphysicsCMeshMaterials(cmesh);
     CleanUpMultiphysicsCMesh(cmesh);
     InsertMaterialsForHibridization(target_dim, dfn_hybrid_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
-//    InsertMaterialsForMixedOperatorOnFractures(target_dim,dfn_hybrid_cmesh);
+    
+    InsertMaterialsForMixedOperatorOnFractures(fractures_dim,dfn_hybrid_cmesh);
+    InsertMaterialsForMixedOperatorOnFractures(fractures_intersections_dim,dfn_hybrid_cmesh);
+    
     BuildMultiphysicsCMesh(matrix_dim,dfn_hybrid_cmesh,active_approx_spaces,dfn_mixed_mesh_vec);
     
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
-//    CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
-//    CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
+    CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
+    CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     
     dfn_hybrid_cmesh->InitializeBlock();
     return dfn_hybrid_cmesh;

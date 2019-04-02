@@ -373,13 +373,13 @@ void Pretty_cube(){
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
-    return;
+    
     { /// fracture postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
-        scalnames.Push("Pressure");
+        scalnames.Push("state");
         std::string file_frac("fracture.vtk");
         auto material = mesh_vec[1]->FindMaterial(5);
-        TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
+        TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
         fract_2d->SetDimension(2);
         TPZAnalysis frac_an(mesh_vec[1],false);
         frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
@@ -388,10 +388,10 @@ void Pretty_cube(){
 
     { /// lagrange postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
-        scalnames.Push("Pressure");
+        scalnames.Push("state");
         std::string file_frac("lagrange_1d.vtk");
         auto material = mesh_vec[1]->FindMaterial(6);
-        TPZMixedDarcyFlow * fract_2d = dynamic_cast<TPZMixedDarcyFlow *>(material);
+        TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
         fract_2d->SetDimension(1);
         TPZAnalysis frac_an(mesh_vec[1],false);
         frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
