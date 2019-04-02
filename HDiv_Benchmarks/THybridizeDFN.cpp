@@ -408,9 +408,10 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
         }
             break;
     }
-
+#ifdef PZDEBUG
     std::ofstream geo_file("geometry_with_bcs.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(geometry, geo_file, true);
+#endif
     
     /// nothing to do
     LoadReferencesByDimension(flux_cmesh, target_dim);
