@@ -177,6 +177,7 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
 
 void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
+void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel);
 
 void FractureTest();
 
