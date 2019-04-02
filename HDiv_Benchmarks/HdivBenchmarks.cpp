@@ -321,7 +321,7 @@ void Pretty_cube(){
     }
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
-    AdjustMaterialIdBoundary(mp_cmesh);
+//    AdjustMaterialIdBoundary(mp_cmesh);
 
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
     {
@@ -373,7 +373,7 @@ void Pretty_cube(){
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
-    
+
     { /// fracture postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("state");
@@ -386,6 +386,7 @@ void Pretty_cube(){
         frac_an.PostProcess(div,2);
     }
 
+        return;
     { /// lagrange postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("state");

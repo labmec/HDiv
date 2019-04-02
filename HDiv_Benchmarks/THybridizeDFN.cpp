@@ -719,7 +719,7 @@ void THybridizeDFN::InsertMaterialsForMixedOperatorOnFractures(int target_dim, T
             if (fracture.m_dim != target_dim) {
                 continue;
             }
-            auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim-1);
+            auto fracture_material = new TPZMixedDarcyFlow(fracture_id, target_dim);
             fracture_material->SetPermeability(fracture.m_kappa_tangential);
             cmesh->InsertMaterialObject(fracture_material);
             if (c == 0) {
@@ -997,13 +997,13 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
     flux_cmesh->SetDimModel(target_dim);
     flux_cmesh->SetAllCreateFunctionsHDiv();
     LoadReferencesByDimension(flux_cmesh, target_dim);
-    if (!flux_cmesh->FindMaterial(impervious_bc_id)) {
-        int n_state = 1;
-        TPZVec<STATE> sol(1,0.);
-        auto impervious_mat = new TPZL2Projection(impervious_bc_id, target_dim, n_state, sol);
-        impervious_mat->SetScaleFactor(0.0);
-        flux_cmesh->InsertMaterialObject(impervious_mat);
-    }
+//    if (!flux_cmesh->FindMaterial(impervious_bc_id)) {
+//        int n_state = 1;
+//        TPZVec<STATE> sol(1,0.);
+//        auto impervious_mat = new TPZL2Projection(impervious_bc_id, target_dim, n_state, sol);
+//        impervious_mat->SetScaleFactor(0.0);
+//        flux_cmesh->InsertMaterialObject(impervious_mat);
+//    }
 
     std::pair<int, int> gel_index_and_order;
     TPZGeoMesh * geometry = flux_cmesh->Reference();
@@ -1035,9 +1035,9 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
             
             bool needs_bc_Q = n_candidates == 1;
             if (needs_bc_Q) {
-                TPZGeoElBC gbc(gel,is,impervious_bc_id);
-                int64_t index;
-                flux_cmesh->CreateCompEl(gbc.CreatedElement(), index);
+//                TPZGeoElBC gbc(gel,is,impervious_bc_id);
+//                int64_t index;
+//                flux_cmesh->CreateCompEl(gbc.CreatedElement(), index);
 #ifdef LOG4CXX
                 if(dfn_logger->isDebugEnabled())
                 {
@@ -1148,38 +1148,38 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     int fractures_dim = target_dim - 1;
     BuildMixedOperatorOnFractures(p_order, fractures_dim, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
 
-    
-    
+
+
     /// Hybridization for 2D  fracture elements
     /// load elements with dimension target_dim and target_dim - 1
     LoadReferencesByDimension(q_cmesh,fractures_dim);
-    
+
     /// ClassifyCompelSides
     TPZStack<std::pair<int, int>> gel_index_and_order_fractures;
     // hybridize the 2d fracture elements
     ClassifyCompelSides(fractures_dim, q_cmesh, gel_index_and_order_fractures, bc_impervious_id, flux_trace_id, lagrange_id);
-    
+
     /// Creates the lagrange mulplier approximation space
     CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures);
     
     
-    // switch the material id of the pressure elements if they are neighbour of 1d fracture elements
-    // create boundary elements for the 1d fracture elements
-    int fractures_intersections_dim = target_dim - 2;
-    BuildMixedOperatorOnFractures(p_order, fractures_intersections_dim, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
-    
-    
-    /// Hybridization for 1D fracture intersection elements
-    /// load elements with dimension target_dim and target_dim - 1
-    LoadReferencesByDimension(q_cmesh,fractures_intersections_dim);
-    
-    /// ClassifyCompelSides
-    TPZStack<std::pair<int, int>> gel_index_and_order_fractures_intersection;
-    // list of pressure elements that need to be created
-    ClassifyCompelSides(fractures_intersections_dim, q_cmesh, gel_index_and_order_fractures_intersection, bc_impervious_id, flux_trace_id, lagrange_id);
-    
-    /// Creates the lagrange mulplier approximation space
-    CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
+//    // switch the material id of the pressure elements if they are neighbour of 1d fracture elements
+//    // create boundary elements for the 1d fracture elements
+//    int fractures_intersections_dim = target_dim - 2;
+//    BuildMixedOperatorOnFractures(p_order, fractures_intersections_dim, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
+//    
+//    
+//    /// Hybridization for 1D fracture intersection elements
+//    /// load elements with dimension target_dim and target_dim - 1
+//    LoadReferencesByDimension(q_cmesh,fractures_intersections_dim);
+//    
+//    /// ClassifyCompelSides
+//    TPZStack<std::pair<int, int>> gel_index_and_order_fractures_intersection;
+//    // list of pressure elements that need to be created
+//    ClassifyCompelSides(fractures_intersections_dim, q_cmesh, gel_index_and_order_fractures_intersection, bc_impervious_id, flux_trace_id, lagrange_id);
+//    
+//    /// Creates the lagrange mulplier approximation space
+//    CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
 
     
     /// Computational multiphysics mesh reconstruction
@@ -1189,13 +1189,13 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     InsertMaterialsForHibridization(target_dim, dfn_hybrid_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
     
     InsertMaterialsForMixedOperatorOnFractures(fractures_dim,dfn_hybrid_cmesh);
-    InsertMaterialsForMixedOperatorOnFractures(fractures_intersections_dim,dfn_hybrid_cmesh);
+//    InsertMaterialsForMixedOperatorOnFractures(fractures_intersections_dim,dfn_hybrid_cmesh);
     
     BuildMultiphysicsCMesh(matrix_dim,dfn_hybrid_cmesh,active_approx_spaces,dfn_mixed_mesh_vec);
     
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
-    CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
+//    CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     
     dfn_hybrid_cmesh->InitializeBlock();
     return dfn_hybrid_cmesh;
