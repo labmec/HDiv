@@ -226,6 +226,7 @@ void Pretty_cube(){
     sim.gamma_ids.push_back(bc_non_flux);
     sim.gamma_dim.push_back(3);
     
+    
     int bc_type_D = 0;    //    D = 0;
     int bc_type_N = 1;    //    N = 1;
     REAL p_inlet  = 2.0;
@@ -389,7 +390,6 @@ void Pretty_cube(){
         frac_an.PostProcess(div,2);
     }
 
-        return;
     { /// lagrange postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("state");
@@ -1791,7 +1791,6 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     }
     
     TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
-    
     TPZFNMatrix<9,STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
