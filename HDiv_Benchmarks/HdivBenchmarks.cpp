@@ -179,6 +179,8 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
 void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel);
 
+void UniformRefinement(TPZGeoMesh * geometry, int h_level);
+
 void FractureTest();
 
 /// Executes case 1
@@ -201,11 +203,7 @@ int main(){
 #endif
     
 
-//     Pretty_cube();
-    
-    Case_1();
-    
-//    Pretty_cube();
+     Pretty_cube();
 
 //    Case_1();
 
@@ -215,6 +213,8 @@ int main(){
 
 /// Executes cube
 void Pretty_cube(){
+    
+    int h_level = 1;
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
@@ -298,12 +298,15 @@ void Pretty_cube(){
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
-    std::ofstream file("geometry_cube.vtk");
+    UniformRefinement(gmesh, h_level);
+    
+#ifdef PZDEBUG
+    std::ofstream file("geometry_cube_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     
     std::ofstream file_txt("geometry_cube_base.txt");
     gmesh->Print(file_txt);
-    
+#endif
     
     
     int p_order = 1;
@@ -332,6 +335,8 @@ void Pretty_cube(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
 
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
+
+#ifdef PZDEBUG
     {
         std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
         mesh_vec[0]->ComputeNodElCon();
@@ -345,7 +350,7 @@ void Pretty_cube(){
         cmeshm->ComputeNodElCon();
         cmeshm->Print(file_hybrid_mixed);
     }
-
+#endif
     
     TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
@@ -369,7 +374,7 @@ void Pretty_cube(){
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
-
+#ifdef PZDEBUG
     { /// fracture postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("state");
@@ -393,6 +398,7 @@ void Pretty_cube(){
         frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
         frac_an.PostProcess(div,1);
     }
+#endif
     return;
     TPZCompMesh *cmesh_transport = CreateTransportMesh(mp_cmesh);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
@@ -2225,4 +2231,22 @@ void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel){
         DebugStop();
     }
     gel->ResetReference();
+}
+
+void UniformRefinement(TPZGeoMesh * geometry, int h_level) {
+    
+    TPZManVector<TPZGeoEl*> sons;
+    for(int i=0; i < h_level; i++)
+    {
+        int64_t nels = geometry->NElements();
+        for(int64_t elem = 0; elem < nels; elem++)
+        {
+            TPZGeoEl * gel = geometry->ElementVec()[elem];
+            if(!gel || gel->HasSubElement())
+                continue;
+            gel->Divide(sons);
+        }
+    }
+    geometry->ResetConnectivities();
+    geometry->BuildConnectivity();
 }

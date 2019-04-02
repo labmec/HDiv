@@ -622,6 +622,10 @@ void THybridizeDFN::LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim)
             continue;
         }
         
+        if (gel->HasSubElement()) {
+            continue;
+        }
+        
         bool check_vols = gel->Dimension() == dim && cel->NConnects() > 1; ///  Volumetric elements
         bool check_bc = gel->Dimension() == dim - 1 && cel->NConnects() == 1; ///  Boundary elements
         
