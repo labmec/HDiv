@@ -238,15 +238,28 @@ void Pretty_cube(){
     sim.vals.push_back(qn);
 
     /// Defining DFN boundary data (id,bc_type,data)
-    std::set<std::tuple<int,int,REAL>> bc_ids_1d;
-    bc_ids_1d.insert(std::make_tuple(bc_inlet,bc_type_D,p_inlet));
-    bc_ids_1d.insert(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
-    bc_ids_1d.insert(std::make_tuple(bc_non_flux,bc_type_N,qn));
+    std::vector<std::tuple<int,int,REAL>> bc_ids_2d;
+    bc_ids_2d.push_back(std::make_tuple(bc_inlet,bc_type_D,p_inlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
     
-    std::set<std::tuple<int,int,REAL>> bc_ids_0d;
-    bc_ids_0d.insert(std::make_tuple(bc_inlet,bc_type_D,p_inlet));
-    bc_ids_0d.insert(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
-    bc_ids_0d.insert(std::make_tuple(bc_non_flux,bc_type_N,qn));
+    
+    int bc_1d_inlet  = 120;
+    int bc_1d_outlet = 130;
+    int bc_1d_non_flux = 140;
+    int bc_0d_inlet  = 220;
+    int bc_0d_outlet = 230;
+    int bc_0d_non_flux = 240;
+    
+    std::map<int,int> bc_ids_1d_map;
+    bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_outlet,bc_1d_outlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
+    
+    std::map<int,int> bc_ids_0d_map;
+    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
 
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
@@ -297,8 +310,9 @@ void Pretty_cube(){
         dfn_hybridzer.SetFractureData(fracture_data);
         dfn_hybridzer.SetDimension(dimension);
         
-        dfn_hybridzer.m_bc_ids_1d = bc_ids_1d;
-        dfn_hybridzer.m_bc_ids_0d = bc_ids_0d;
+        dfn_hybridzer.m_bc_ids_2d = bc_ids_2d;
+        dfn_hybridzer.m_bc_ids_1d = bc_ids_1d_map;
+        dfn_hybridzer.m_bc_ids_0d = bc_ids_0d_map;
         cmeshm = dfn_hybridzer.Hybridize(cmixedmesh,dimension);
 
     }

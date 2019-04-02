@@ -513,159 +513,176 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
     
     
     /// create boundary elements for the 2d fractures
-    if(target_dim == 2)
-    {
-        TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
-        flux_cmesh->Reference()->ResetReference();
-        int n_state = 1;
-        TPZVec<STATE> sol(1,0);
-        // insert the material objects if needed
-        std::set<int> fracture_flux_material_set;
-        for(auto fracture : m_fracture_data){
-            int fracture_id = fracture.m_id;
-            auto fracture_material = new TPZL2Projection(fracture_id, target_dim-1, n_state, sol);
-            fracture_material->SetScaleFactor(0.0);
-            if (!flux_cmesh->FindMaterial(fracture_id)) {
-                flux_cmesh->InsertMaterialObject(fracture_material);
-                fracture_flux_material_set.insert(fracture_id);
-            }
+
+    TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
+    flux_cmesh->Reference()->ResetReference();
+    int n_state = 1;
+    TPZVec<STATE> sol(1,0);
+    // insert the material objects if needed
+    std::set<int> fracture_flux_material_set;
+    for(auto fracture : m_fracture_data){
+        int fracture_id = fracture.m_id;
+        auto fracture_material = new TPZL2Projection(fracture_id, target_dim-1, n_state, sol);
+        fracture_material->SetScaleFactor(0.0);
+        if (!flux_cmesh->FindMaterial(fracture_id)) {
+            flux_cmesh->InsertMaterialObject(fracture_material);
+            fracture_flux_material_set.insert(fracture_id);
         }
-        
-        
-        std::set<int> bc_indexes_1d,bc_indexes_0d;
-        for (auto chunk : m_bc_ids_1d) {
-            int mat_id(std::get<0>(chunk));
-            bc_indexes_1d.insert(mat_id);
-        }
-        
-        for (auto chunk : m_bc_ids_0d) {
-            int mat_id(std::get<0>(chunk));
-            bc_indexes_0d.insert(mat_id);
-        }
-        
-        /// Adding bc elements (This method must provide the correct material ids.) for the fractures that have boundary neighbours
-        if(target_dim == 2)
+    }
+    
+    
+    std::set<int> bc_indexes_2d, bc_indexes_1d, bc_indexes_0d;
+    for (auto chunk : m_bc_ids_2d) {
+        int mat_id(std::get<0>(chunk));
+        bc_indexes_2d.insert(mat_id);
+    }
+    
+    /// Insert fractures intersections with 3D bc
+    TPZGeoMesh * geometry = flux_cmesh->Reference();
+    switch (target_dim) {
+        case 2:
         {
-            /// Insert fractures intersections with bc
-            {
-                TPZGeoMesh * geometry = flux_cmesh->Reference();
-                int dim = geometry->Dimension();
-                std::map<std::pair<int,int>,std::pair<int,int>> surf_to_surf_side_indexes;
-
-                for (auto gel : geometry->ElementVec()) {
-                    
-                    if (!gel) continue;
-                    if (gel->Dimension() != dim - 1) continue;
-                    
-                    
-                    bool quad_gel_Q = gel->Type() == EQuadrilateral;
-                    bool trin_gel_Q = gel->Type() == ETriangle;
-                    bool line_gel_Q = gel->Type() == EOned;
-                    
-                    std::vector<int> sides;
-                    if (quad_gel_Q) {
-                        sides = {4,5,6,7};
-                    }else if (trin_gel_Q){
-                        sides = {3,4,5};
-                    }else if (line_gel_Q){
-                        sides = {0,1};
-                    }
-                    
-                    int bc_mat_id = gel->MaterialId();
-                    if(bc_indexes_1d.find(bc_mat_id) ==  bc_indexes_1d.end())
-                    {
-                        continue;
-                    }
-                    
-                    // here we have a geometric element that corresponds to a 3d boundary (2 dimensional)
-                    for (auto side: sides) {
-                        TPZStack<TPZGeoElSide> all_neigh;
-                        TPZGeoElSide gelside(gel, side);
-                        // for each side of the boundary element, look for all neighbours
-                        gelside.AllNeighbours(all_neigh);
-                        std::set<int> surfaces;
-                        surfaces.insert(gel->Index());
-
-                        // foundface indicates whether there is another geometric element with the same material id
-                        bool foundface = false;
-                        // foundbc indicates we found an element with material id of fracture bcs
-                        bool foundbc = false;
-                        // bcmatid will be equal the boundary material of a neighbouring face
-                        int bcmatid = 0;
-                        // foundfrac indicates there is a neighbouring geometric element with a fracture material id
-                        bool foundfrac = false;
-                        for (auto gel_side : all_neigh) {
-                            bool is_bc_member_Q = gel_side.Element()->MaterialId() == bc_mat_id;
-                            if (is_bc_member_Q) {
-                                foundface = true;
-                                // this statement is redundant???
-                                bcmatid = gel_side.Element()->MaterialId();
-                            }
-                            if(bc_indexes_1d.find(gel_side.Element()->MaterialId()) != bc_indexes_1d.end())
-                            {
-                                foundbc = true;
-
-                            }
-                            if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
-                            {
-                                foundfrac = true;
-                            }
-                        }
-//                        bool candidate_to_create_bc_Q = foundface == false || foundbc == true || foundfrac == false;
-                        bool candidate_to_create_bc_Q = foundface == false || foundfrac == false;
-                        if(candidate_to_create_bc_Q) continue;
-                        for (auto gel_side : all_neigh) {
-                            if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
-                            {
-                                TPZGeoElBC gbc(gelside,bcmatid);
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                std::ofstream geo_file("geometry_with_bcs.vtk");
-                TPZVTKGeoMesh::PrintGMeshVTK(geometry, geo_file, true);
+            for (auto chunk : m_bc_ids_1d) {
+                int mat_id = chunk.second;
+                bc_indexes_1d.insert(mat_id);
             }
-
-            /// nothing to do
-            LoadReferencesByDimension(flux_cmesh, target_dim);
-            flux_cmesh->SetDimModel(target_dim);
-            flux_cmesh->SetDefaultOrder(p_order);
-            flux_cmesh->SetAllCreateFunctionsHDiv();
-            flux_cmesh->AutoBuild(fracture_flux_material_set);
-            
+            CreateFractureBCGeoElements(geometry, bc_indexes_2d, bc_indexes_1d, fracture_flux_material_set);
         }
+            break;
+        case 1:
+        {
+            for (auto chunk : m_bc_ids_0d) {
+                int mat_id = chunk.second;
+                bc_indexes_0d.insert(mat_id);
+            }
+            CreateFractureBCGeoElements(geometry, bc_indexes_2d, bc_indexes_0d, fracture_flux_material_set);
+        }
+            break;
+        default:
+        {
+            DebugStop();
+        }
+            break;
+    }
 
+    std::ofstream geo_file("geometry_with_bcs.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(geometry, geo_file, true);
+    
+    /// nothing to do
+    LoadReferencesByDimension(flux_cmesh, target_dim);
+    flux_cmesh->SetDimModel(target_dim);
+    flux_cmesh->SetDefaultOrder(p_order);
+    flux_cmesh->SetAllCreateFunctionsHDiv();
+    flux_cmesh->AutoBuild(fracture_flux_material_set);
+
+    
+    int sideorient = 1;
+    for (auto gel : flux_cmesh->Reference()->ElementVec()) {
+        if (!gel->Reference()) {
+            continue;
+        }
         
-        int sideorient = 1;
-        for (auto gel : flux_cmesh->Reference()->ElementVec()) {
-            if (!gel->Reference()) {
+        int n_sides = gel->NSides();
+        
+        for (int is = 0 ; is < n_sides; is++) {
+            if (gel->SideDimension(is) != target_dim-1) {
                 continue;
             }
             
-            int n_sides = gel->NSides();
+            TPZInterpolatedElement * intel = dynamic_cast<TPZInterpolatedElement *>(gel->Reference());
             
-            for (int is = 0 ; is < n_sides; is++) {
-                if (gel->SideDimension(is) != target_dim-1) {
-                    continue;
-                }
-                
-                TPZInterpolatedElement * intel = dynamic_cast<TPZInterpolatedElement *>(gel->Reference());
-                
-                if (!intel) {
-                    DebugStop();
-                }
-                
-                intel->SetSideOrient(is, sideorient);
+            if (!intel) {
+                DebugStop();
             }
+            
+            intel->SetSideOrient(is, sideorient);
+        }
+    }
+    
+    flux_cmesh->InitializeBlock();
+    flux_cmesh->SetDimModel(target_dim); ///  for coherence
+    
+}
+
+void THybridizeDFN::CreateFractureBCGeoElements(TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes, std::set<int> & material_set){
+    
+    
+    int dim = gmesh->Dimension();
+    std::map<std::pair<int,int>,std::pair<int,int>> surf_to_surf_side_indexes;
+    
+    for (auto gel : gmesh->ElementVec()) {
+        
+        if (!gel) continue;
+        if (gel->Dimension() != dim - 1) continue;
+        
+        
+        bool quad_gel_Q = gel->Type() == EQuadrilateral;
+        bool trin_gel_Q = gel->Type() == ETriangle;
+        bool line_gel_Q = gel->Type() == EOned;
+        
+        std::vector<int> sides;
+        if (quad_gel_Q) {
+            sides = {4,5,6,7};
+        }else if (trin_gel_Q){
+            sides = {3,4,5};
+        }else if (line_gel_Q){
+            sides = {0,1};
         }
         
-        flux_cmesh->InitializeBlock();
-    
-        flux_cmesh->SetDimModel(target_dim); ///  for coherence
+        int bc_mat_id = gel->MaterialId();
+        if(bc_indexes.find(bc_mat_id) ==  bc_indexes.end())
+        {
+            continue;
+        }
         
+        // here we have a geometric element that corresponds to a 3d boundary (2 dimensional)
+        for (auto side: sides) {
+            TPZStack<TPZGeoElSide> all_neigh;
+            TPZGeoElSide gelside(gel, side);
+            // for each side of the boundary element, look for all neighbours
+            gelside.AllNeighbours(all_neigh);
+            std::set<int> surfaces;
+            surfaces.insert(gel->Index());
+            
+            // foundface indicates whether there is another geometric element with the same material id
+            bool foundface = false;
+            // foundbc indicates we found an element with material id of fracture bcs
+            bool foundbc = false;
+            // bcmatid will be equal the boundary material of a neighbouring face
+            int bcmatid = 0;
+            // foundfrac indicates there is a neighbouring geometric element with a fracture material id
+            bool foundfrac = false;
+            for (auto gel_side : all_neigh) {
+                bool is_bc_member_Q = gel_side.Element()->MaterialId() == bc_mat_id;
+                if (is_bc_member_Q) {
+                    foundface = true;
+                    // this statement is redundant???
+                    bcmatid = gel_side.Element()->MaterialId();
+                }
+                if(bc_frac_indexes.find(gel_side.Element()->MaterialId()) != bc_frac_indexes.end())
+                {
+                    foundbc = true;
+                    
+                }
+                if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
+                {
+                    foundfrac = true;
+                }
+            }
+            bool candidate_to_create_bc_Q = foundface == false || foundbc == true || foundfrac == false;
+            if(candidate_to_create_bc_Q) continue;
+            for (auto gel_side : all_neigh) {
+                if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
+                {
+                    int bc_frac_mat_id = m_bc_ids_1d[bcmatid];
+                    TPZGeoElBC gbc(gelside,bc_frac_mat_id);
+                    material_set.insert(bc_frac_mat_id);
+                    break;
+                }
+            }
+        }
     }
+    
 }
 
 void THybridizeDFN::InsertMaterialsForMixedOperatorOnFractures(int target_dim, TPZCompMesh * cmesh){
@@ -1050,7 +1067,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
     int matrix_dim = target_dim;
     
     /// Computes available material identifiers
-    int shift = 1000;
+    int shift = 10000;
     ComputeMaterialIds(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id, shift);
     
     /// Insert material identifiers for flux trace, lagrange multiplier and multiphysics interface
