@@ -599,7 +599,6 @@ void Case_2(){
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
     std::ofstream filemixed("mixedMesh.txt");
-  //  cmixedmesh->Print(filemixed);
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
