@@ -1,4 +1,4 @@
-h = 0.02835;
+h = 10*0.02835;
 Geometry.Tolerance = 1e-05;
 Mesh.Algorithm = 8;
 
@@ -332,7 +332,7 @@ Physical Volume("DOMAIN") = {1};
 frac_loop_0 = newll;
 Line Loop(frac_loop_0) = { frac_line_2, -frac_line_84, -frac_line_14, frac_line_13, frac_line_71, -frac_line_11, frac_line_10, -frac_line_6, frac_line_7, -frac_line_3};
 fracture_0 = news; Plane Surface(fracture_0) = {frac_loop_0};
-Physical Surface("FRACTURE_0") = {fracture_0};
+//Physical Surface("FRACTURE_0") = {fracture_0};
 Surface{fracture_0} In Volume{1};
 
 Line{frac_line_61} In Surface{fracture_0};
@@ -357,7 +357,7 @@ Line{frac_line_127} In Surface{fracture_0};
 frac_loop_1 = newll;
 Line Loop(frac_loop_1) = { frac_line_18, -frac_line_22, frac_line_23, -frac_line_65, -frac_line_25, frac_line_24, frac_line_48, -frac_line_30, frac_line_31, -frac_line_19};
 fracture_1 = news; Plane Surface(fracture_1) = {frac_loop_1};
-Physical Surface("FRACTURE_1") = {fracture_1};
+//Physical Surface("FRACTURE_1") = {fracture_1};
 Surface{fracture_1} In Volume{1};
 
 Line{frac_line_49} In Surface{fracture_1};
@@ -382,7 +382,7 @@ Line{frac_line_128} In Surface{fracture_1};
 frac_loop_2 = newll;
 Line Loop(frac_loop_2) = { frac_line_34, -frac_line_38, frac_line_39, -frac_line_78, -frac_line_42, frac_line_40, frac_line_55, -frac_line_46, frac_line_47, -frac_line_35};
 fracture_2 = news; Plane Surface(fracture_2) = {frac_loop_2};
-Physical Surface("FRACTURE_2") = {fracture_2};
+//Physical Surface("FRACTURE_2") = {fracture_2};
 Surface{fracture_2} In Volume{1};
 
 Line{frac_line_51} In Surface{fracture_2};
@@ -407,7 +407,7 @@ Line{frac_line_128} In Surface{fracture_2};
 frac_loop_3 = newll;
 Line Loop(frac_loop_3) = { frac_line_49, -frac_line_116, -frac_line_53, frac_line_51, frac_line_90, -frac_line_57, frac_line_56, -frac_line_59, frac_line_60, -frac_line_50};
 fracture_3 = news; Plane Surface(fracture_3) = {frac_loop_3};
-Physical Surface("FRACTURE_3") = {fracture_3};
+//Physical Surface("FRACTURE_3") = {fracture_3};
 Surface{fracture_3} In Volume{1};
 
 Line{frac_line_92} In Surface{fracture_3};
@@ -424,7 +424,7 @@ Line{frac_line_130} In Surface{fracture_3};
 frac_loop_4 = newll;
 Line Loop(frac_loop_4) = { frac_line_61, frac_line_97, -frac_line_73, frac_line_72, -frac_line_69, frac_line_70, -frac_line_67, frac_line_66, -frac_line_100, -frac_line_62};
 fracture_4 = news; Plane Surface(fracture_4) = {frac_loop_4};
-Physical Surface("FRACTURE_4") = {fracture_4};
+//Physical Surface("FRACTURE_4") = {fracture_4};
 Surface{fracture_4} In Volume{1};
 
 Line{frac_line_93} In Surface{fracture_4};
@@ -441,7 +441,7 @@ Line{frac_line_131} In Surface{fracture_4};
 frac_loop_5 = newll;
 Line Loop(frac_loop_5) = { frac_line_75, frac_line_106, -frac_line_79, frac_line_80, -frac_line_83, frac_line_82, -frac_line_85, frac_line_86, -frac_line_123, -frac_line_76};
 fracture_5 = news; Plane Surface(fracture_5) = {frac_loop_5};
-Physical Surface("FRACTURE_5") = {fracture_5};
+//Physical Surface("FRACTURE_5") = {fracture_5};
 Surface{fracture_5} In Volume{1};
 
 Line{frac_line_108} In Surface{fracture_5};
@@ -458,7 +458,7 @@ Line{frac_line_131} In Surface{fracture_5};
 frac_loop_6 = newll;
 Line Loop(frac_loop_6) = { frac_line_87, -frac_line_91, frac_line_92, -frac_line_95, frac_line_94, -frac_line_98, frac_line_99, -frac_line_88};
 fracture_6 = news; Plane Surface(fracture_6) = {frac_loop_6};
-Physical Surface("FRACTURE_6") = {fracture_6};
+//Physical Surface("FRACTURE_6") = {fracture_6};
 Surface{fracture_6} In Volume{1};
 
 Line{frac_line_132} In Surface{fracture_6};
@@ -469,7 +469,7 @@ Line{frac_line_135} In Surface{fracture_6};
 frac_loop_7 = newll;
 Line Loop(frac_loop_7) = { frac_line_101, -frac_line_110, frac_line_111, -frac_line_108, frac_line_107, -frac_line_103, frac_line_104, -frac_line_102};
 fracture_7 = news; Plane Surface(fracture_7) = {frac_loop_7};
-Physical Surface("FRACTURE_7") = {fracture_7};
+//Physical Surface("FRACTURE_7") = {fracture_7};
 Surface{fracture_7} In Volume{1};
 
 Line{frac_line_132} In Surface{fracture_7};
@@ -480,7 +480,7 @@ Line{frac_line_137} In Surface{fracture_7};
 frac_loop_8 = newll;
 Line Loop(frac_loop_8) = { frac_line_113, -frac_line_124, frac_line_125, -frac_line_121, frac_line_120, -frac_line_117, frac_line_118, -frac_line_114};
 fracture_8 = news; Plane Surface(fracture_8) = {frac_loop_8};
-Physical Surface("FRACTURE_8") = {fracture_8};
+//Physical Surface("FRACTURE_8") = {fracture_8};
 Surface{fracture_8} In Volume{1};
 
 Line{frac_line_134} In Surface{fracture_8};
@@ -756,3 +756,32 @@ Physical Surface("BoundaryConditions_4") = {228, 229, 199, 240};
 Physical Surface("BoundaryConditions_5") = {230, 232, 233, 231};
 //+
 Physical Surface("BoundaryConditions_6") = {239, 238, 197, 198};
+
+//+
+
+Physical Surface("FRACTURES") = {fracture_0,fracture_1,fracture_2,fracture_3,fracture_4,fracture_5,fracture_6,fracture_7,fracture_8};
+
+//+
+Line(157) = {48, 47};
+//+
+Line(158) = {46, 45};
+//+
+Line(159) = {49, 50};
+//+
+Physical Curve("FractureIntersections") = {159, 157, 158};
+//+
+Line(160) = {52, 51};
+//+
+Line(161) = {54, 53};
+//+
+Line(162) = {56, 55};
+//+
+Physical Curve("FractureIntersections") += {160, 162, 161};
+//+
+Line(163) = {62, 61};
+//+
+Line(164) = {58, 57};
+//+
+Line(165) = {60, 59};
+//+
+Physical Curve("FractureIntersections") += {163, 165, 164};

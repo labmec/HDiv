@@ -874,7 +874,7 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
                     LOGPZ_DEBUG(dfn_logger, sout.str())
                 }
 #endif
-                continue;
+                DebugStop();
             }
             
             // means there is only the element/side and a boundary condition. No hybridization needed
