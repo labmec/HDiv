@@ -20,121 +20,11 @@ THybridizeDFN::THybridizeDFN() : TPZHybridizeHDiv(){
     m_fracture_ids.clear();
     m_fracture_data.resize(0);
     m_geometry = NULL;
-    m_geometry_dim = 0;
+//    m_geometry_dim = 0;
 }
 
 /// Default destructor
 THybridizeDFN::~THybridizeDFN(){
-    
-}
-
-#define NEW_V_Q
-
-std::tuple<int, int> THybridizeDFN::DissociateConnects(int flux_trace_id, int lagrange_mult_id, const TPZCompElSide &left, const TPZCompElSide &right, TPZVec<TPZCompMesh *> & mesh_vec){
-    
-    TPZCompMesh * flux_cmesh = mesh_vec[0];
-    
-    TPZGeoElSide gleft(left.Reference());
-    TPZGeoElSide gright(right.Reference());
-    TPZInterpolatedElement *intelleft = dynamic_cast<TPZInterpolatedElement *> (left.Element());
-    TPZInterpolatedElement *intelright = dynamic_cast<TPZInterpolatedElement *> (right.Element());
-    intelleft->SetSideOrient(left.Side(), 1);
-    intelright->SetSideOrient(right.Side(), 1);
-    TPZStack<TPZCompElSide> equalright;
-    TPZConnect & cleft = intelleft->SideConnect(0, left.Side());
-    
-    if (cleft.HasDependency()) {
-    
-        gright.EqualLevelCompElementList(equalright,1,0);
-    
-#ifdef PZDEBUG
-        if(equalright.size() > 1)
-        {
-            DebugStop();
-        }
-        if(equalright.size()==1)
-        {
-            TPZGeoEl *equalgel = equalright[0].Element()->Reference();
-            if(equalgel->Dimension() != flux_cmesh->Dimension()-1)
-            {
-                DebugStop();
-            }
-        }
-#endif
-        // reset the reference of the wrap element
-        if(equalright.size()) equalright[0].Element()->Reference()->ResetReference();
-        cleft.RemoveDepend();
-    }
-    else
-    {
-        int64_t index = flux_cmesh->AllocateNewConnect(cleft);
-        TPZConnect &newcon = flux_cmesh->ConnectVec()[index];
-        cleft.DecrementElConnected();
-        newcon.ResetElConnected();
-        newcon.IncrementElConnected();
-        newcon.SetSequenceNumber(flux_cmesh->NConnects() - 1);
-        
-        int rightlocindex = intelright->SideConnectLocId(0, right.Side());
-        intelright->SetConnectIndex(rightlocindex, index);
-    }
-    int sideorder = cleft.Order();
-    flux_cmesh->SetDefaultOrder(sideorder);
-    // create HDivBound on the sides of the elements
-    TPZCompEl *wrap1, *wrap2;
-    {
-        intelright->Reference()->ResetReference();
-        intelleft->LoadElementReference();
-        intelleft->SetPreferredOrder(sideorder);
-        TPZGeoElBC gbc(gleft, flux_trace_id);/// red flag!
-        int64_t index;
-        wrap1 = flux_cmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *flux_cmesh, index);
-        if(cleft.Order() != sideorder)
-        {
-            DebugStop();
-        }
-        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (wrap1);
-        int wrapside = gbc.CreatedElement()->NSides() - 1;
-        intel->SetSideOrient(wrapside, 1);
-        intelleft->Reference()->ResetReference();
-        wrap1->Reference()->ResetReference();
-    }
-    // if the wrap of the large element was not created...
-    if(equalright.size() == 0)
-    {
-        intelleft->Reference()->ResetReference();
-        intelright->LoadElementReference();
-        TPZConnect &cright = intelright->SideConnect(0,right.Side());
-        int rightprevorder = cright.Order();
-        intelright->SetPreferredOrder(cright.Order());
-        TPZGeoElBC gbc(gright, flux_trace_id);
-        int64_t index;
-        wrap2 = flux_cmesh->ApproxSpace().CreateCompEl(gbc.CreatedElement(), *flux_cmesh, index);
-        if(cright.Order() != rightprevorder)
-        {
-            DebugStop();
-        }
-        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (wrap2);
-        int wrapside = gbc.CreatedElement()->NSides() - 1;
-        intel->SetSideOrient(wrapside, 1);
-        intelright->Reference()->ResetReference();
-        wrap2->Reference()->ResetReference();
-    }
-    else
-    {
-        wrap2 = equalright[0].Element();
-    }
-    wrap1->LoadElementReference();
-    wrap2->LoadElementReference();
-    int64_t pressureindex;
-    int pressureorder;
-    {
-        TPZGeoElBC gbc(gleft, lagrange_mult_id); /// red flag!
-        pressureindex = gbc.CreatedElement()->Index();
-        pressureorder = sideorder;
-    }
-    intelleft->LoadElementReference();
-    intelright->LoadElementReference();
-    return std::make_tuple(pressureindex, pressureorder);
     
 }
 
@@ -220,11 +110,6 @@ void THybridizeDFN::SetFractureData(TPZStack<TFracture> & fracture_data){
 }
 
 
-void THybridizeDFN::SetDimension(int dimension){
-    m_geometry_dim = dimension;
-}
-
-
 void THybridizeDFN::ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift){
     
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
@@ -288,84 +173,6 @@ void THybridizeDFN::InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & f
 }
 
 
-void THybridizeDFN::ApplyHibridizationOnInternalFaces(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id){
-    
-    TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
-    if (!mp_cmesh) {
-        DebugStop();
-    }
-    TPZManVector<TPZCompMesh *, 3> dfn_mixed_mesh_vec = mp_cmesh->MeshVector();
-
-    TPZCompMesh * flux_cmesh = dfn_mixed_mesh_vec[0];
-    TPZGeoMesh * gmesh = flux_cmesh->Reference();
-
-    gmesh->ResetReference();
-    for (auto cel : flux_cmesh->ElementVec()) {
-        if (cel->Reference()->Dimension() == target_dim and cel->NConnects() > 1) {
-            cel->LoadElementReference();
-        }
-    }
-    int64_t nel = flux_cmesh->NElements();
-    std::list<std::tuple<int64_t, int> > pressures;
-    for (int64_t el = 0; el < nel; el++) {
-        TPZCompEl *cel = flux_cmesh->Element(el);
-        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-        if (!intel || (intel->Reference()->Dimension() != target_dim)) {
-            continue;
-        }
-        
-        if (intel->NConnects() == 1 ) {
-            continue;
-        }
-        
-        // loop over the side of dimension dim-1
-        TPZGeoEl *gel = intel->Reference();
-        for (int side = gel->NCornerNodes(); side < gel->NSides() - 1; side++) {
-            if (gel->SideDimension(side) != target_dim - 1) {
-                continue;
-            }
-            
-            TPZCompElSide celside(intel, side);
-            TPZCompElSide neighcomp = RightElement(intel, side); // Candidate to reimplement
-            if (neighcomp) {
-                pressures.push_back(DissociateConnects(flux_trace_id,lagrange_id,celside, neighcomp, dfn_mixed_mesh_vec));
-            }
-        }
-    }
-    flux_cmesh->InitializeBlock();
-    flux_cmesh->ComputeNodElCon();
-    
-    TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
-    gmesh->ResetReference();
-    pressure_cmesh->SetDimModel(gmesh->Dimension()-1);
-    for (auto pindex : pressures) {
-        int64_t elindex;
-        int order;
-        std::tie(elindex, order) = pindex;
-        TPZGeoEl *gel = gmesh->Element(elindex);
-        int64_t celindex;
-        TPZCompEl *cel = pressure_cmesh->ApproxSpace().CreateCompEl(gel, *pressure_cmesh, celindex);
-        TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
-        TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
-        if (intel){
-            intel->PRefine(order);
-        } else if (intelDisc) {
-            intelDisc->SetDegree(order);
-            intelDisc->SetTrueUseQsiEta();
-        } else {
-            DebugStop();
-        }
-        int n_connects = cel->NConnects();
-        for (int i = 0; i < n_connects; ++i) {
-            cel->Connect(i).SetLagrangeMultiplier(2);
-        }
-        gel->ResetReference();
-    }
-    pressure_cmesh->InitializeBlock();
-    pressure_cmesh->SetDimModel(gmesh->Dimension());
-    
-    
-}
 
 TPZManVector<int,5> & THybridizeDFN::ExtractActiveApproxSpaces(TPZCompMesh * cmesh){
     
@@ -1117,7 +924,7 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
 }
 
 /// Construct a lagrange multiplier approximation space over the target dimension elements
-TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
+TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
     if (!mp_cmesh) {
@@ -1132,6 +939,12 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh, int target_dim){
         DebugStop();
     }
     
+    TPZGeoMesh * geometry = q_cmesh->Reference();
+    if (!geometry) {
+        DebugStop();
+    }
+    
+    int target_dim = geometry->Dimension();
     int p_order = 1;
     int flux_trace_id = 0, lagrange_id = 0, mp_nterface_id = 0;
     
