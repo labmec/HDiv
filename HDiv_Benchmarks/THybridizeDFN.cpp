@@ -408,9 +408,10 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
         }
             break;
     }
-
+#ifdef PZDEBUG
     std::ofstream geo_file("geometry_with_bcs.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(geometry, geo_file, true);
+#endif
     
     /// nothing to do
     LoadReferencesByDimension(flux_cmesh, target_dim);
@@ -458,7 +459,9 @@ void THybridizeDFN::CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gme
         
         if (!gel) continue;
         if (gel->Dimension() != dim - 1) continue;
-        
+        if (gel->HasSubElement()) {
+            continue;
+        }
         
         bool quad_gel_Q = gel->Type() == EQuadrilateral;
         bool trin_gel_Q = gel->Type() == ETriangle;
@@ -619,6 +622,10 @@ void THybridizeDFN::LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim)
         
         TPZGeoEl * gel = cel->Reference();
         if (!gel) {
+            continue;
+        }
+        
+        if (gel->HasSubElement()) {
             continue;
         }
         

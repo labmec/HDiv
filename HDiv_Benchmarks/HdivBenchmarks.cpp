@@ -179,6 +179,8 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
 void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel);
 
+void UniformRefinement(TPZGeoMesh * geometry, int h_level);
+
 void FractureTest();
 
 /// Executes case 1
@@ -201,13 +203,9 @@ int main(){
 #endif
     
 
-//     Pretty_cube();
-    
-    Case_1();
-    
 //    Pretty_cube();
 
-//    Case_1();
+    Case_1();
 
 //     Case_2();
 
@@ -215,6 +213,8 @@ int main(){
 
 /// Executes cube
 void Pretty_cube(){
+    
+    int h_level = 2;
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
@@ -298,20 +298,25 @@ void Pretty_cube(){
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
-    std::ofstream file("geometry_cube.vtk");
+    UniformRefinement(gmesh, h_level);
+    
+#ifdef PZDEBUG
+    std::ofstream file("geometry_cube_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     
     std::ofstream file_txt("geometry_cube_base.txt");
     gmesh->Print(file_txt);
-    
+#endif
     
     
     int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
-    std::ofstream filemixed("mixedMesh.txt");
+#ifdef PZDEBUG
+    std::ofstream filemixed("mixed_cmesh.txt");
     cmixedmesh->Print(filemixed);
+#endif
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
@@ -332,6 +337,8 @@ void Pretty_cube(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
 
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
+
+#ifdef PZDEBUG
     {
         std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
         mesh_vec[0]->ComputeNodElCon();
@@ -345,7 +352,7 @@ void Pretty_cube(){
         cmeshm->ComputeNodElCon();
         cmeshm->Print(file_hybrid_mixed);
     }
-
+#endif
     
     TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
@@ -356,8 +363,10 @@ void Pretty_cube(){
     
     TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(mesh_vec, cmeshm);
     
+#ifdef PZDEBUG
     std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
+#endif
     
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("q");
@@ -369,7 +378,7 @@ void Pretty_cube(){
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
-
+#ifdef PZDEBUG
     { /// fracture postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("state");
@@ -393,6 +402,7 @@ void Pretty_cube(){
         frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
         frac_an.PostProcess(div,1);
     }
+#endif
     return;
     TPZCompMesh *cmesh_transport = CreateTransportMesh(mp_cmesh);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
@@ -406,6 +416,8 @@ void Pretty_cube(){
 
 
 void Case_1(){
+    
+    int h_level = 0;
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
@@ -451,27 +463,15 @@ void Case_1(){
     bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
     
     
-    int bc_1d_inlet  = 120;
-    int bc_1d_outlet = 130;
-    int bc_1d_non_flux = 140;
-    int bc_0d_inlet  = 220;
-    int bc_0d_outlet = 230;
-    int bc_0d_non_flux = 240;
-    
+    int bc_1d_non_flux = -1942;
     std::map<int,int> bc_ids_1d_map;
     bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
-//    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
-//    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
-    
-    std::map<int,int> bc_ids_0d_map;
-    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
-    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
-    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
+
     
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 3;
+    fracture.m_id               = 6;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 0.001;
     fracture.m_kappa_tangential = 0.001;
@@ -488,20 +488,26 @@ void Case_1(){
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
-    std::ofstream file("geometry_cube.vtk");
+    UniformRefinement(gmesh, h_level);
+    
+#ifdef PZDEBUG
+    std::ofstream file("geometry_case_1.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     
-    std::ofstream file_txt("geometry_cube_base.txt");
+    std::ofstream file_txt("geometry_case_1_base.txt");
     gmesh->Print(file_txt);
-    
+#endif
     
     
     int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
-    std::ofstream filemixed("mixedMesh.txt");
+    
+#ifdef PZDEBUG
+    std::ofstream filemixed("mixed_cmesh.txt");
     cmixedmesh->Print(filemixed);
+#endif
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
@@ -511,7 +517,6 @@ void Case_1(){
         
         dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
         dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
-
         cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
         
     }
@@ -522,6 +527,8 @@ void Case_1(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
+    
+#ifdef PZDEBUG
     {
         std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
         mesh_vec[0]->ComputeNodElCon();
@@ -535,6 +542,7 @@ void Case_1(){
         cmeshm->ComputeNodElCon();
         cmeshm->Print(file_hybrid_mixed);
     }
+#endif
     
     
     TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
@@ -546,8 +554,10 @@ void Case_1(){
     
     TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(mesh_vec, cmeshm);
     
-    std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
+#ifdef PZDEBUG
+    std::ofstream file_geo_hybrid("geometry_case_1_hybrid.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
+#endif
     
     TPZStack<std::string,10> scalnames, vecnames;
     vecnames.Push("q");
@@ -555,34 +565,23 @@ void Case_1(){
     scalnames.Push("p");
     
     int div = 0;
-    std::string file_reservoir("cube.vtk");
+    std::string file_reservoir("case_1.vtk");
     an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
     an->PostProcess(div,3);
     
-    
+#ifdef PZDEBUG
     { /// fracture postprocessor
         TPZStack<std::string,10> scalnames, vecnames;
         scalnames.Push("state");
         std::string file_frac("fracture.vtk");
-        auto material = mesh_vec[1]->FindMaterial(5);
+        auto material = mesh_vec[1]->FindMaterial(6);
         TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
         fract_2d->SetDimension(2);
         TPZAnalysis frac_an(mesh_vec[1],false);
         frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
         frac_an.PostProcess(div,2);
     }
-    
-    { /// lagrange postprocessor
-        TPZStack<std::string,10> scalnames, vecnames;
-        scalnames.Push("state");
-        std::string file_frac("lagrange_1d.vtk");
-        auto material = mesh_vec[1]->FindMaterial(6);
-        TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-        fract_2d->SetDimension(1);
-        TPZAnalysis frac_an(mesh_vec[1],false);
-        frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
-        frac_an.PostProcess(div,1);
-    }
+#endif
     return;
     TPZCompMesh *cmesh_transport = CreateTransportMesh(mp_cmesh);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
@@ -623,7 +622,6 @@ void Case_2(){
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, 1, sim, meshvec);
     std::ofstream filemixed("mixedMesh.txt");
-  //  cmixedmesh->Print(filemixed);
     
     TPZCompMesh *cmeshm =NULL;
     if(sim.IsHybrid){
@@ -2250,4 +2248,22 @@ void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel){
         DebugStop();
     }
     gel->ResetReference();
+}
+
+void UniformRefinement(TPZGeoMesh * geometry, int h_level) {
+    
+    TPZManVector<TPZGeoEl*> sons;
+    for(int i=0; i < h_level; i++)
+    {
+        int64_t nels = geometry->NElements();
+        for(int64_t elem = 0; elem < nels; elem++)
+        {
+            TPZGeoEl * gel = geometry->ElementVec()[elem];
+            if(!gel || gel->HasSubElement())
+                continue;
+            gel->Divide(sons);
+        }
+    }
+    geometry->ResetConnectivities();
+    geometry->BuildConnectivity();
 }
