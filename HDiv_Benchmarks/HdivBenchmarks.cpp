@@ -474,7 +474,7 @@ void Case_1(){
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 0.001;
-    fracture.m_kappa_tangential = 0.001;
+    fracture.m_kappa_tangential = 1000.0;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
    

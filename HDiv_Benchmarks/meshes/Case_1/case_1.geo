@@ -1,7 +1,6 @@
 
 Mesh.Algorithm = 8;
-// h = 0.0273;           
-h = 5.0;
+h = 50.0*0.0273;           
 
 
 // Dimensions: x is left to right, y is front to back and z is top to bottom
