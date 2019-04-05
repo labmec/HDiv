@@ -331,6 +331,11 @@ void Pretty_cube(){
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
 
+    
+    //
+    TPZCompMesh * s_cmesh = CreateTransportMesh(mp_cmesh);
+    InsertTransportInterfaceElements(mp_cmesh);
+    //
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
     {
         std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
@@ -534,7 +539,7 @@ void Case_1(){
 
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_1/cube.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     Geometry.SetFormatVersion("3");
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
