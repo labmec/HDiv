@@ -285,11 +285,11 @@ Volume(8) = {8};
 
 Physical Volume("RockMatrix") = {8, 3, 4, 7, 2, 6, 1, 5};
 
-Physical Surface("BC_Front") = {5, 6, 7, 8};
+Physical Surface("BCFront") = {5, 6, 7, 8};
 
-Physical Surface("BC_Back") = {2, 1, 4, 3};
+Physical Surface("BCBack") = {2, 1, 4, 3};
 
-Physical Surface("BC_Neumann") = {9, 10, 11, 12, 13, 14, 15, 16, 21, 23, 22, 24, 20, 18, 19, 17};
+Physical Surface("BCNeumann") = {9, 10, 11, 12, 13, 14, 15, 16, 21, 23, 22, 24, 20, 18, 19, 17};
 
 Coherence;
 
