@@ -2,7 +2,7 @@ h = 10*0.02835;
 Geometry.Tolerance = 1e-05;
 Mesh.Algorithm = 8;
 
-// Define points
+// Define box points
 p0 = newp; Point(p0) = {0.5, 0.0, 1.0, h};
 p1 = newp; Point(p1) = {0.5, 0.0, 0.0, h};
 p2 = newp; Point(p2) = {0.5, 1.0, 0.0, h};
@@ -250,9 +250,7 @@ out_line_yz2 = newl; Line(out_line_yz2) = {pout001, pout011};
 // End of line specification
 
 // Start domain specification
-frac_loop_9 = newll;
-Line Loop(frac_loop_9) = { frac_line_16, frac_line_16ex, -frac_line_33, -frac_line_33ex, frac_line_32, -frac_line_28, frac_line_29, -frac_line_45, frac_line_44, -frac_line_17};
-auxiliary_9 = news; Plane Surface(auxiliary_9) = {frac_loop_9};
+
 
 Line{frac_line_19} In Surface{auxiliary_9};
 Line{frac_line_31} In Surface{auxiliary_9};
