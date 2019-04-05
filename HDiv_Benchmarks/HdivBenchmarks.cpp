@@ -439,6 +439,11 @@ void Pretty_cube(){
     meshtrvec[1] = meshvec[1];
     meshtrvec[2] = s_cmesh;
     TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, sim, meshtrvec);
+#ifdef PZDEBUG
+    std::ofstream btransport("btransport_cmesh.txt");
+    cmesh_transport->ComputeNodElCon();
+    cmesh_transport->Print(btransport);
+#endif
     InsertTransportInterfaceElements(cmesh_transport);
     
 #ifdef PZDEBUG
@@ -447,6 +452,7 @@ void Pretty_cube(){
     cmesh_transport->Print(transport);
 #endif
 
+    return;
 
 }
 
