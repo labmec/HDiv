@@ -297,7 +297,8 @@ void Pretty_cube(){
     /// 7 fractures intersections
     /// 8 crossing intersections
     TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
-    dim_name_and_physical_tag[0]["CrossingIntersections"] = 
+    dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
+    dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     
     
     TPZGmshReader Geometry;
