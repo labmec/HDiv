@@ -336,6 +336,11 @@ void Pretty_cube(){
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
 
+    
+    //
+    TPZCompMesh * s_cmesh = CreateTransportMesh(mp_cmesh);
+    InsertTransportInterfaceElements(mp_cmesh);
+    //
     TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
 
 #ifdef PZDEBUG
