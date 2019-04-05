@@ -283,20 +283,16 @@ Surface Loop(8) = {20, 8, 15, 31, 27, 36};
 Volume(8) = {8};
 //+
 
-Physical Volume("RockMatrix") = {8, 3, 4, 7, 2, 6, 1, 5};
+Physical Volume("RockMatrix_1") = {8, 3, 4, 7, 2, 6, 1, 5};
+Physical Surface("BCInlet") = {5, 6, 7, 8};
+Physical Surface("BCOutlet") = {2, 1, 4, 3};
+Physical Surface("BCImpervious") = {9, 10, 11, 12, 13, 14, 15, 16, 21, 23, 22, 24, 20, 18, 19, 17};
 
-Physical Surface("BC_Front") = {5, 6, 7, 8};
-
-Physical Surface("BC_Back") = {2, 1, 4, 3};
-
-Physical Surface("BC_Neumann") = {9, 10, 11, 12, 13, 14, 15, 16, 21, 23, 22, 24, 20, 18, 19, 17};
-
-Coherence;
-
-//+
 Physical Surface("Fractures") = {33, 34, 35, 36, 26, 28, 25, 27, 32, 31, 30, 29};
 Physical Curve("FracturesIntersections") = {45, 28, 9, 46, 27, 10};
 Physical Point("CrossingIntresections") = {14};
+
+Coherence;
 
 Transfinite Line "*" = 2 Using Bump 1;
 Transfinite Surface "*";

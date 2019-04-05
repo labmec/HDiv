@@ -13,9 +13,11 @@ class TPZTracerFlow : public TPZDiscontinuousGalerkin {
     
 private:
     
-   
     /** @brief material dimension */
     int m_dimension;
+    
+    /** @brief material dimension */
+    int m_mat_id;
     
 public:
     
@@ -25,21 +27,17 @@ public:
     /** @brief Constructor based on a material id */
     TPZTracerFlow(int matid, int dimension);
     
-    /** @brief Constructor based on a TRMMultiphase object */
-    TPZTracerFlow(const TPZTracerFlow &mat);
+    /** @brief Constructor based on a TPZTracerFlow object */
+    TPZTracerFlow(const TPZTracerFlow &other);
     
-    /** @brief Constructor based on a TRMMultiphase object */
-    TPZTracerFlow &operator=(const TPZTracerFlow &mat)
-    {
-        DebugStop();
-        return *this;
-    }
+    /** @brief Assignment operator */
+    TPZTracerFlow &operator=(const TPZTracerFlow &other);
     
     /** @brief Default destructor */
     ~TPZTracerFlow();
     
     /** @brief Set the required data at each integration point */
-    void FillDataRequirements(TPZVec<TPZMaterialData> &datavec);
+    virtual void FillDataRequirements(TPZVec<TPZMaterialData> &datavec);
     
     /** @brief Set the required data at each integration point */
     void FillBoundaryConditionDataRequirement(int type, TPZVec<TPZMaterialData> &datavec);
@@ -105,7 +103,7 @@ public:
     /**
      * Save the element data to a stream
      */
-    void Write(TPZStream &buf, int withclassid);
+    void Write(TPZStream &buf, int withclassid) ;
     
     /**
      * Read the element data from a stream

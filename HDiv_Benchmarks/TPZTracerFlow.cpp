@@ -7,13 +7,27 @@ TPZTracerFlow::TPZTracerFlow(){
 }
 
 /** @brief Constructor based on a material id */
-TPZTracerFlow::TPZTracerFlow(int matid, int dimension){
+TPZTracerFlow::TPZTracerFlow(int matid, int dimension) : TPZDiscontinuousGalerkin(matid) {
 
+    m_mat_id = matid;
+    m_dimension = dimension;
+    
 }
 
 /** @brief Constructor based on a TRMMultiphase object */
-TPZTracerFlow::TPZTracerFlow(const TPZTracerFlow &mat){
+TPZTracerFlow::TPZTracerFlow(const TPZTracerFlow &other) : TPZDiscontinuousGalerkin(other) {
+    m_mat_id = other.m_mat_id;
+    m_dimension = other.m_dimension;
+}
 
+TPZTracerFlow & TPZTracerFlow::operator=(const TPZTracerFlow &other){
+    if (this != & other) // prevent self-assignment
+    {
+        TPZMaterial::operator=(other);
+        m_mat_id = other.m_mat_id;
+        m_dimension = other.m_dimension;
+    }
+    return *this;
 }
 
 /** @brief Default destructor */
