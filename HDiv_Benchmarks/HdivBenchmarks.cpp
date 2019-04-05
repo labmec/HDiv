@@ -299,7 +299,9 @@ void Pretty_cube(){
     TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
-    
+
+    dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
+    dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;

@@ -284,9 +284,9 @@ Volume(8) = {8};
 //+
 
 Physical Volume("RockMatrix_1") = {8, 3, 4, 7, 2, 6, 1, 5};
-Physical Surface("BCFront") = {5, 6, 7, 8};
-Physical Surface("BCBack") = {2, 1, 4, 3};
-Physical Surface("BCNeumann") = {9, 10, 11, 12, 13, 14, 15, 16, 21, 23, 22, 24, 20, 18, 19, 17};
+Physical Surface("BCInlet") = {5, 6, 7, 8};
+Physical Surface("BCOutlet") = {2, 1, 4, 3};
+Physical Surface("BCImpervious") = {9, 10, 11, 12, 13, 14, 15, 16, 21, 23, 22, 24, 20, 18, 19, 17};
 
 Physical Surface("Fractures") = {33, 34, 35, 36, 26, 28, 25, 27, 32, 31, 30, 29};
 Physical Curve("FracturesIntersections") = {45, 28, 9, 46, 27, 10};
