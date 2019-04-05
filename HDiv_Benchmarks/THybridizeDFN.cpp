@@ -92,7 +92,6 @@ void THybridizeDFN::CreateInterfaceElements(int target_dim, int interface_id, TP
             int64_t index;
             TPZMultiphysicsInterfaceElement *mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, clarge);
             mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
-            
             count++;
         }
     }

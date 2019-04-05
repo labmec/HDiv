@@ -178,7 +178,7 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
 
 void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
-void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel);
+void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel, bool is_BC);
 
 void UniformRefinement(TPZGeoMesh * geometry, int h_level);
 
@@ -257,12 +257,13 @@ void Pretty_cube(){
     bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
     
     
-    int bc_1d_inlet  = 120;
-    int bc_1d_outlet = 130;
-    int bc_1d_non_flux = 140;
-    int bc_0d_inlet  = 220;
-    int bc_0d_outlet = 230;
-    int bc_0d_non_flux = 240;
+    int bc_1d_inlet  = 130;
+    int bc_1d_outlet = 140;
+    int bc_1d_non_flux = 150;
+    
+    int bc_0d_inlet  = 230;
+    int bc_0d_outlet = 240;
+    int bc_0d_non_flux = 250;
     
     std::map<int,int> bc_ids_1d_map;
     bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
@@ -438,7 +439,9 @@ void Pretty_cube(){
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
     meshtrvec[2] = s_cmesh;
+    
     TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, sim, meshtrvec);
+    
 #ifdef PZDEBUG
     std::ofstream btransport("btransport_cmesh.txt");
     cmesh_transport->ComputeNodElCon();
@@ -1671,44 +1674,25 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
     int dimension = geometry->Dimension();
     TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
 
-    /// TODO:: create this map externally.
-    /// materials map
-    std::map<int, int> vols_mat_map;
-    vols_mat_map.insert(std::make_pair(1, 3));
-    vols_mat_map.insert(std::make_pair(2, 3));
-    vols_mat_map.insert(std::make_pair(6, 2));
-    vols_mat_map.insert(std::make_pair(7, 1));
-    vols_mat_map.insert(std::make_pair(8, 0));
     
-    int bc_id,bc_type;
-    REAL value;
+    std::set<int> allmat_ids = {1,2,6,7,8,100007};
+    std::set<int> bcmat_ids = {3,4,130,140,230,240};
     
     /// Inserting the materials
-    for (auto material: vols_mat_map) {
-        
-        TPZTracerFlow * volume = new TPZTracerFlow(material.first,material.second);
+    for (auto mat_id: allmat_ids) {
+        TPZTracerFlow * volume = new TPZTracerFlow(mat_id,0);
         cmesh->InsertMaterialObject(volume);
-        
-        if (material.first==1) { /// no volumes there is not benchmark! (-,-)
-            TPZFNMatrix<9,STATE> val1(1,1,0.0),val2(1,1,0.0);
-            
-            {/// inlet BC data
-                bc_id = 3;
-                bc_type = 0;
-                value = 1;
-                TPZMaterial * face = volume->CreateBC(volume,bc_id,bc_type,val1,val2);
-                cmesh->InsertMaterialObject(face);
-            }
-            
-            {/// outlet BC data
-                bc_id = 4;
-                bc_type = 0;
-                value = -1942; /// This value is not used for outlet BC condition
-                TPZMaterial * face = volume->CreateBC(volume,bc_id,bc_type,val1,val2);
-                cmesh->InsertMaterialObject(face);
-            }
-            
-        }
+    }
+    
+    TPZMaterial * material = cmesh->FindMaterial(1);
+    TPZFMatrix<STATE> val1(1,1,0);
+    TPZFMatrix<STATE> val2(1,1,1);
+    
+    int typ = 0; // inlet
+    /// Inserting the materials
+    for (auto mat_id: bcmat_ids) {
+        TPZMaterial * bc = material->CreateBC(material, mat_id, typ, val1, val2);
+        cmesh->InsertMaterialObject(bc);
     }
     
     cmesh->SetDimModel(dimension);
@@ -2001,72 +1985,89 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     
     geometry->ResetReference();
     q_cmesh->LoadReferences();
-    int dim = geometry->Dimension();
 
+    std::set<int> allmat_ids = {1,2,6,7,8,1000007};
+    std::set<int> bcmat_ids = {3,4,130,140,230,240};
+    
     int nstate = 1;
-    TPZVec<STATE> sol;
+    TPZVec<STATE> sol(1,0.0);
+    
+    /// Inserting the materials
+    for (auto mat_id: allmat_ids) {
+        TPZL2Projection * volume = new TPZL2Projection(mat_id,0,nstate, sol);
+        s_cmesh->InsertMaterialObject(volume);
+    }
+    
+    /// Inserting the materials
+    for (auto mat_id: bcmat_ids) {
+        TPZL2Projection * volume = new TPZL2Projection(mat_id,0,nstate, sol);
+        s_cmesh->InsertMaterialObject(volume);
+    }
+    geometry->ResetReference();
 
-    std::vector<std::pair<int,int>> set_pair_index_mat_id;
+    s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
+    int s_order = 0;
+    s_cmesh->SetDefaultOrder(s_order);
     for (auto cel : q_cmesh->ElementVec()) {
         
         if (!cel) {
             DebugStop();
         }
-
+        
         TPZGeoEl * gel = cel->Reference();
         int gel_index = gel->Index();
-        int mat_id    = gel->MaterialId();
+        int mat_id = gel->MaterialId();
         
-        bool matrix_cel = gel->Dimension() == dim && cel->NConnects() > 1;
-        bool fracture_cel = gel->Dimension() == dim - 1 && cel->NConnects() > 1;
-        bool bc_cel = gel->Dimension() == dim-1 && cel->NConnects() == 1;
-        if (matrix_cel || fracture_cel || bc_cel) {
-            set_pair_index_mat_id.push_back(std::make_pair(gel_index, mat_id));
-            
-            if (!s_cmesh->FindMaterial(mat_id)) {
-                int dim = gel->Dimension();
-                auto material = new TPZL2Projection(mat_id, dim, nstate, sol);
-                s_cmesh->InsertMaterialObject(material);
-            }
+        if (allmat_ids.find(mat_id) != allmat_ids.end()) {
+            TPZGeoEl * gel = geometry->Element(gel_index);
+            CreateTransportElement(s_order,s_cmesh, gel, false);
         }
-
+        if (bcmat_ids.find(mat_id) != bcmat_ids.end()) {
+            TPZGeoEl * gel = geometry->Element(gel_index);
+            CreateTransportElement(s_order,s_cmesh, gel, true);
+        }
     }
 
-    geometry->ResetReference();
 
-    s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
-    int s_order = 0;
-    for (auto pair : set_pair_index_mat_id) {
-        int gel_index = pair.first;
-        TPZGeoEl * gel = geometry->Element(gel_index);
-        CreateTransportElement(s_order,s_cmesh, gel);
-    }
-
-    geometry->ResetReference();
+    
     s_cmesh->SetDimModel(0);
     s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
-    p_cmesh->LoadReferences();
-
-
-    /// Custom computational mesh construction (CustomBuild)
-    for (auto cel : p_cmesh->ElementVec()) {
-        if(!cel) continue;
-        TPZGeoEl *gel = cel->Reference();
-        if(!gel) DebugStop();
-        if(gel->Dimension() != 0) continue;
-        if(cel->NConnects() != 1) DebugStop();
-        if(cel->Connect(0).NElConnected() > 2)
-        {
-            int mat_id    = gel->MaterialId();
-            if (!s_cmesh->FindMaterial(mat_id)) {
-                int dim = gel->Dimension();
-                
-                auto material = new TPZL2Projection(mat_id, dim, nstate, sol);
-                s_cmesh->InsertMaterialObject(material);
-            }
-            CreateTransportElement(s_order,s_cmesh, gel);
+    
+    /// Create point element
+    for (auto cel : cmesh->ElementVec()) {
+        if (!cel) {
+            continue;
         }
+        
+        TPZGeoEl * gel = cel->Reference();
+        if (!gel) {
+            DebugStop();
+        }
+        
+        if (gel->Dimension() != 0) {
+            continue;
+        }
+        
+        TPZMultiphysicsInterfaceElement * int_face = dynamic_cast<TPZMultiphysicsInterfaceElement *>(cel);
+        if (int_face) {
+            continue;
+        }
+        
+        int n_connect = cel->NConnects();
+        if (n_connect!=1) {
+            DebugStop();
+        }
+        
+        TPZConnect & c = cel->Connect(0);
+        
+        if (c.NElConnected() > 2 && gel->MaterialId() == 1000007) { /// tototototototototo
+            CreateTransportElement(s_order,s_cmesh, gel, false);
+        }
+        
+        
     }
+    geometry->ResetReference();
+    
     s_cmesh->InitializeBlock();
     
     return s_cmesh;
@@ -2074,21 +2075,27 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
 
 void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
 {
+    
+    /// arinak
+    int transport_matid = 1;
+    
     // tototototototo
     // the multiphysics interface element needs to be aware of active approximation spaces!!!
     // one should call SetActive on each newly created interface element
     
+    std::set<int> bcmat_ids = {3,4,130,140,230,240};
+    bool needs_all_boundaries_Q = false;
+    
     // totototototo
-    int transport_matid = 200;
     TPZCompMesh *transport_mesh = cmesh->MeshVector()[2];
     cmesh->Reference()->ResetReference();
-    transport_mesh->LoadReferences();
+    cmesh->LoadReferences();
     int mesh_dim = cmesh->Dimension();
-    int64_t nel = transport_mesh->NElements();
+    int64_t nel = cmesh->NElements();
     TPZManVector<int64_t,3> left_mesh_indexes(2,0),right_mesh_indexes(1,2);
     left_mesh_indexes[1] = 2;
     for (int64_t el = 0; el<nel; el++) {
-        TPZCompEl *cel = transport_mesh->Element(el);
+        TPZCompEl *cel = cmesh->Element(el);
         if(!cel) DebugStop();
         TPZGeoEl *gel = cel->Reference();
         if(!gel) DebugStop();
@@ -2097,13 +2104,20 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
         for (int side = 0; side<nsides; side++) {
             int sidedim = gel->SideDimension(side);
             if(sidedim < geldim-1) continue;
+            int mat_id = gel->MaterialId();
+            if (bcmat_ids.find(mat_id) != bcmat_ids.end()) {
+                continue;
+            }
             TPZStack<TPZCompElSide> celstack;
             TPZCompElSide celside(cel,side);
             TPZGeoElSide gelside(gel,side);
             gelside.EqualLevelCompElementList(celstack, 0, 0);
-            if(celstack.size() == 0 && sidedim < mesh_dim)
+            if(celstack.size() == 0 && sidedim < mesh_dim && needs_all_boundaries_Q)
             {
                 DebugStop();
+            }
+            if(celstack.size() == 0){
+                continue;
             }
             if(sidedim == geldim-1)
             {
@@ -2137,8 +2151,14 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
                 // we create interfaces between the element and all the neighbours
                 int num_interface = celstack.size();
                 for (int intface = 0; intface<num_interface; intface++) {
+                    
+                    int neigh_dim = celstack[intface].Element()->Reference()->Dimension();
+                    if(neigh_dim != geldim + 1){
+                        continue;
+                    }
+                    
                     int matid = transport_matid;
-                    if (gel->MaterialId() < 0) {
+                    if (bcmat_ids.find(mat_id) != bcmat_ids.end()) {
                         // if the element is a boundary condition, use the material for interface material id
                         matid = gel->MaterialId();
                     }
@@ -2227,10 +2247,13 @@ TPZCompMesh * SaturationMesh(TPZMultiphysicsCompMesh *mpcompmesh, int order, Sim
    
 }
 
-void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel){
+void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel, bool is_BC){
     int64_t cel_index;
     int dimension = gel->Dimension();
     cmesh->SetDimModel(dimension);
+    if (is_BC) {
+        cmesh->SetDimModel(dimension+1);
+    }
     TPZCompEl * cel = cmesh->ApproxSpace().CreateCompEl(gel, *cmesh, cel_index);
     TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
     TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
