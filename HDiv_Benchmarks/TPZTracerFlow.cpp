@@ -252,10 +252,78 @@ void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMateria
 void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMaterialData> &datavecleft, TPZVec<TPZMaterialData> &datavecright, REAL weight, TPZFMatrix<STATE> &ef){
     TPZFMatrix<STATE> ek_fake(ef.Rows(),ef.Rows());
     this->ContributeInterface(data,datavecleft,datavecright, weight, ek_fake, ef);
+    
 }
 
 void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMaterialData> &datavecleft, REAL weight, TPZFMatrix<STATE> &ek, TPZFMatrix<STATE> &ef, TPZBndCond &bc){
-    DebugStop();
+    
+    int q_b = 0;
+    int p_b = 1;
+    int s_b = 2;
+    
+    // Getting phis and solution for left material data
+    TPZFMatrix<REAL>  &phiP_l =  datavecleft[p_b].phi;
+    TPZFMatrix<REAL>  &phiS_l =  datavecleft[s_b].phi;
+    int n_phi_q_l = datavecleft[q_b].fVecShapeIndex.NElements();
+    int n_phi_p_l = phiP_l.Rows();
+    int n_phi_s_l = phiS_l.Rows();
+    REAL s_l = datavecleft[s_b].sol[0][0];
+    int firsts_s_l    = n_phi_q_l + n_phi_p_l;
+    
+
+    TPZManVector<REAL,3> n = data.normal;
+    TPZManVector<REAL,3> q_l =  datavecleft[q_b].sol[0];
+    REAL qn = 0.0;
+    for (int i = 0; i < 3; i++) {
+        qn += q_l[i]*n[i];
+    }
+    
+    switch (bc.Type()) {
+            
+        case 0 :    // BC inlet
+        {
+            REAL s_inlet = bc.Val2()(0,0);
+            if (qn > 0.0) {
+                for (int is = 0; is < n_phi_s_l; is++) {
+                    ef(is + firsts_s_l) += +1.0*weight * s_inlet * phiS_l(is,0)*qn;
+                }
+            }else{
+                DebugStop();
+            }
+ 
+            
+        }
+            break;
+            
+        case 1 :    // BC outlet
+        {
+            if (qn > 0.0) {
+                for (int is = 0; is < n_phi_s_l; is++) {
+                    
+                    ef(is + firsts_s_l) += +1.0*weight * s_l*phiS_l(is,0)*qn;
+                    
+                    for (int js = 0; js < n_phi_s_l; js++) {
+                        ek(is + firsts_s_l, js + firsts_s_l) += +1.0*weight * phiS_l(js,0) * phiS_l(is,0)*qn;
+                    }
+                }
+            }else{
+                DebugStop();
+            }
+            
+            
+        }
+            break;
+            
+        default: std::cout << "This BC doesn't exist." << std::endl;
+        {
+            
+            DebugStop();
+        }
+            break;
+    }
+    
+    return;
+    
 }
 
 void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMaterialData> &datavecleft, REAL weight, TPZFMatrix<STATE> &ef, TPZBndCond &bc){

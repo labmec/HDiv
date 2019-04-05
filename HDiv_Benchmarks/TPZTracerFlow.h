@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include "pzdiscgal.h"
+#include "pzbndcond.h"
 
 class TPZTracerFlow : public TPZDiscontinuousGalerkin {
     
