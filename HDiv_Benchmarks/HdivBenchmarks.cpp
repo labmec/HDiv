@@ -224,9 +224,9 @@ void Pretty_cube(){
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0);
     
-    int bc_inlet  = 2;
-    int bc_outlet = 3;
-    int bc_non_flux = 4;
+    int bc_inlet  = 3;
+    int bc_outlet = 4;
+    int bc_non_flux = 5;
     
     sim.gamma_ids.push_back(bc_inlet);
     sim.gamma_dim.push_back(3);
@@ -277,18 +277,19 @@ void Pretty_cube(){
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 5;
+    fracture.m_id               = 6;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 0.001;
     fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
-    fracture.m_id               = 6;
+    fracture.m_id               = 7;
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 0.001;
     fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
+    
     
     /// Benchmarks Material ID convention
     /// 1 and 2 for 3D matrix
@@ -299,9 +300,12 @@ void Pretty_cube(){
     TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
-
-    dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
-    dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
+    dim_name_and_physical_tag[2]["BCInlet"] = 3;
+    dim_name_and_physical_tag[2]["BCOutlet"] = 4;
+    dim_name_and_physical_tag[2]["BCImpervious"] = 5;
+    dim_name_and_physical_tag[2]["Fractures"] = 6;
+    dim_name_and_physical_tag[1]["FracturesIntersections"] = 7;
+    dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
@@ -310,7 +314,7 @@ void Pretty_cube(){
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
     
-    GetDimNamePhysical() = dim_name_and_physical_tag;
+    Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
@@ -400,7 +404,7 @@ void Pretty_cube(){
             TPZStack<std::string,10> scalnames, vecnames;
             scalnames.Push("state");
             std::string file_frac("fracture.vtk");
-            auto material = mesh_vec[1]->FindMaterial(5);
+            auto material = mesh_vec[1]->FindMaterial(6);
             TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
             fract_2d->SetDimension(2);
             TPZAnalysis frac_an(mesh_vec[1],false);
@@ -412,7 +416,7 @@ void Pretty_cube(){
             TPZStack<std::string,10> scalnames, vecnames;
             scalnames.Push("state");
             std::string file_frac("lagrange_1d.vtk");
-            auto material = mesh_vec[1]->FindMaterial(6);
+            auto material = mesh_vec[1]->FindMaterial(7);
             TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
             fract_2d->SetDimension(1);
             TPZAnalysis frac_an(mesh_vec[1],false);
@@ -422,22 +426,26 @@ void Pretty_cube(){
 #endif
     }
 
-    TPZCompMesh *cmesh_transport = CreateTransportMesh(mp_cmesh);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    
+#ifdef PZDEBUG
+    std::ofstream scmesh_file("s_cmesh.txt");
+    s_cmesh->ComputeNodElCon();
+    s_cmesh->Print(scmesh_file);
+#endif
+    
+    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
+    meshtrvec[0] = meshvec[0];
+    meshtrvec[1] = meshvec[1];
+    meshtrvec[2] = s_cmesh;
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, sim, meshtrvec);
+    InsertTransportInterfaceElements(cmesh_transport);
     
 #ifdef PZDEBUG
     std::ofstream transport("transport_cmesh.txt");
     cmesh_transport->ComputeNodElCon();
     cmesh_transport->Print(transport);
 #endif
-    
-    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
-    meshtrvec[0] = meshvec[0];
-    meshtrvec[1] = meshvec[1];
-    meshtrvec[2] = cmesh_transport;
-    TPZMultiphysicsCompMesh *mp_tr_cmesh = MPTransportMesh(mp_cmesh, sim, meshtrvec);
-    InsertTransportInterfaceElements(mp_tr_cmesh);
-    
-
 
 
 }
