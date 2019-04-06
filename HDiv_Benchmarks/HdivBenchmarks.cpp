@@ -290,7 +290,13 @@ void Pretty_cube(){
     fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
-    
+    fracture.m_id               = 8;
+    fracture.m_dim              = 0;
+    fracture.m_kappa_normal     = 0.00;
+    fracture.m_kappa_tangential = 0.00;
+    fracture.m_d_opening        = 1.0e-2;
+    fracture_data.push_back(fracture);
+
     
     /// Benchmarks Material ID convention
     /// 1 and 2 for 3D matrix
@@ -1675,7 +1681,7 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
     TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
 
     
-    std::set<int> allmat_ids = {1,2,6,7,8,100007};
+    std::set<int> allmat_ids = {1,2,6,7,8};
     std::set<int> bcmat_ids = {3,4,130,140,230,240};
     
     /// Inserting the materials
@@ -1723,6 +1729,7 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
     std::stringstream file_name;
     file_name  << "Dual_cmesh" << ".txt";
     std::ofstream sout(file_name.str().c_str());
+    cmesh->ComputeNodElCon();
     cmesh->Print(sout);
 #endif
     
@@ -2047,6 +2054,15 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         if (gel->Dimension() != 0) {
             continue;
         }
+        int matid = gel->MaterialId();
+        if(bcmat_ids.find(matid) != bcmat_ids.end())
+        {
+            continue;
+        }
+        if(allmat_ids.find(matid) == allmat_ids.end())
+        {
+            continue;
+        }
         
         TPZMultiphysicsInterfaceElement * int_face = dynamic_cast<TPZMultiphysicsInterfaceElement *>(cel);
         if (int_face) {
@@ -2054,13 +2070,21 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         }
         
         int n_connect = cel->NConnects();
-        if (n_connect!=1) {
+        if (n_connect !=1 && gel->MaterialId() == 8) {
             DebugStop();
         }
-        
+        else if(n_connect == 1 && gel->MaterialId() != 8)
+        {
+            std::cout << "I dont understand matid should be 8\n";
+        }
+        else if (n_connect == 0)
+        {
+            DebugStop();
+        }
         TPZConnect & c = cel->Connect(0);
         
-        if (c.NElConnected() > 2 && gel->MaterialId() == 1000007) { /// tototototototototo
+        if (c.NElConnected() > 2 && gel->MaterialId() == 8) { /// tototototototototo
+//            std::cout << "created a transport element for el " << gel->Index() << std::endl;
             CreateTransportElement(s_order,s_cmesh, gel, false);
         }
         
@@ -2097,6 +2121,8 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
     for (int64_t el = 0; el<nel; el++) {
         TPZCompEl *cel = cmesh->Element(el);
         if(!cel) DebugStop();
+        TPZMultiphysicsElement *celmp = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!celmp) DebugStop();
         TPZGeoEl *gel = cel->Reference();
         if(!gel) DebugStop();
         int nsides = gel->NSides();
@@ -2154,6 +2180,12 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
                     
                     int neigh_dim = celstack[intface].Element()->Reference()->Dimension();
                     if(neigh_dim != geldim + 1){
+                        continue;
+                    }
+                    TPZCompEl *leftel = celstack[intface].Element();
+                    TPZMultiphysicsElement *leftelmp = dynamic_cast<TPZMultiphysicsElement *>(leftel);
+                    if(!leftelmp)
+                    {
                         continue;
                     }
                     
