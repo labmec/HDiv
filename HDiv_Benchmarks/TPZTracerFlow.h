@@ -37,15 +37,15 @@ public:
     ~TPZTracerFlow();
     
     /** @brief Set the required data at each integration point */
-    virtual void FillDataRequirements(TPZVec<TPZMaterialData> &datavec);
+    virtual void FillDataRequirements(TPZVec<TPZMaterialData> &datavec) override ;
     
     /** @brief Set the required data at each integration point */
-    virtual void FillBoundaryConditionDataRequirement(int type, TPZVec<TPZMaterialData> &datavec);
+    virtual void FillBoundaryConditionDataRequirement(int type, TPZVec<TPZMaterialData> &datavec) override;
     
     virtual void FillDataRequirementsInterface(TPZMaterialData &data, TPZVec<TPZMaterialData > &datavec_left, TPZVec<TPZMaterialData > &datavec_right) override;
     
     /** @brief Returns the name of the material */
-    std::string Name() {
+    virtual std::string Name() override{
         return "TPZTracerFlow";
     }
     
