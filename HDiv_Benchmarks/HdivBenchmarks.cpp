@@ -434,13 +434,6 @@ void Pretty_cube(){
     }
 
     TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
-    
-#ifdef PZDEBUG
-    std::ofstream scmesh_file("s_cmesh.txt");
-    s_cmesh->ComputeNodElCon();
-    s_cmesh->Print(scmesh_file);
-#endif
-    
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -448,18 +441,20 @@ void Pretty_cube(){
     
     TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, sim, meshtrvec);
     
-#ifdef PZDEBUG
-    std::ofstream btransport("btransport_cmesh.txt");
-    cmesh_transport->ComputeNodElCon();
-    cmesh_transport->Print(btransport);
-#endif
+
     InsertTransportInterfaceElements(cmesh_transport);
     
 #ifdef PZDEBUG
+    std::ofstream s_cmesh_file("s_cmesh.txt");
+    s_cmesh->Print(s_cmesh_file);
+#endif
+    
+#ifdef PZDEBUG
     std::ofstream transport("transport_cmesh.txt");
-    cmesh_transport->ComputeNodElCon();
     cmesh_transport->Print(transport);
 #endif
+    
+    
 
     return;
 
@@ -1682,7 +1677,7 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
 
     
     std::set<int> allmat_ids = {1,2,6,7,8};
-    std::set<int> bcmat_ids = {3,4,130,140,230,240};
+    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250};
     
     /// Inserting the materials
     for (auto mat_id: allmat_ids) {
@@ -1691,6 +1686,9 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
     }
     
     TPZMaterial * material = cmesh->FindMaterial(1);
+    if (!material) {
+        DebugStop();
+    }
     TPZFMatrix<STATE> val1(1,1,0);
     TPZFMatrix<STATE> val2(1,1,1);
     
@@ -1982,7 +1980,7 @@ void InsertFractureMaterial(TPZCompMesh *cmesh){
 TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
 {
     TPZCompMesh *q_cmesh = cmesh->MeshVector()[0];
-    TPZCompMesh *p_cmesh = cmesh->MeshVector()[1];
+//    TPZCompMesh *p_cmesh = cmesh->MeshVector()[1];
     TPZCompMesh *s_cmesh = new TPZCompMesh(q_cmesh->Reference());
     
     TPZGeoMesh * geometry = q_cmesh->Reference();
@@ -1993,8 +1991,8 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     geometry->ResetReference();
     q_cmesh->LoadReferences();
 
-    std::set<int> allmat_ids = {1,2,6,7,8,1000007};
-    std::set<int> bcmat_ids = {3,4,130,140,230,240};
+    std::set<int> allmat_ids = {1,2,6,7,8};
+    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250};
     
     int nstate = 1;
     TPZVec<STATE> sol(1,0.0);
@@ -2084,7 +2082,6 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         TPZConnect & c = cel->Connect(0);
         
         if (c.NElConnected() > 2 && gel->MaterialId() == 8) { /// tototototototototo
-//            std::cout << "created a transport element for el " << gel->Index() << std::endl;
             CreateTransportElement(s_order,s_cmesh, gel, false);
         }
         
@@ -2107,11 +2104,11 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh)
     // the multiphysics interface element needs to be aware of active approximation spaces!!!
     // one should call SetActive on each newly created interface element
     
-    std::set<int> bcmat_ids = {3,4,130,140,230,240};
+    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250};
     bool needs_all_boundaries_Q = false;
     
     // totototototo
-    TPZCompMesh *transport_mesh = cmesh->MeshVector()[2];
+//    TPZCompMesh *transport_mesh = cmesh->MeshVector()[2];
     cmesh->Reference()->ResetReference();
     cmesh->LoadReferences();
     int mesh_dim = cmesh->Dimension();
