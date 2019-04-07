@@ -451,6 +451,7 @@ void Pretty_cube(){
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
     tracer_analysis->Assemble();
     
+    
     std::cout << "Solution of the system" << std::endl;
     tracer_analysis->Solve();
     

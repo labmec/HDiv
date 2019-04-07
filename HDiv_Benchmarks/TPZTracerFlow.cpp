@@ -54,6 +54,23 @@ void TPZTracerFlow::FillBoundaryConditionDataRequirement(int type, TPZVec<TPZMat
     }
 }
 
+void TPZTracerFlow::FillDataRequirementsInterface(TPZMaterialData &data, TPZVec<TPZMaterialData > &datavec_left, TPZVec<TPZMaterialData > &datavec_right)
+{
+    
+    data.SetAllRequirements(false);
+    int nref_left = datavec_left.size();
+    for(int iref = 0; iref<nref_left; iref++){
+        datavec_left[iref].SetAllRequirements(false);
+        datavec_left[iref].fNeedsSol = true;
+        datavec_left[iref].fNeedsNormal = true;
+    }
+    int nref_right = datavec_right.size();
+    for(int iref = 0; iref<nref_right; iref++){
+        datavec_right[iref].SetAllRequirements(false);
+        datavec_right[iref].fNeedsSol = true;
+    }
+    
+}
 
 
 /** @brief Print out the data associated with the material */

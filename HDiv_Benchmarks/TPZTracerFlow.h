@@ -40,7 +40,9 @@ public:
     virtual void FillDataRequirements(TPZVec<TPZMaterialData> &datavec);
     
     /** @brief Set the required data at each integration point */
-    void FillBoundaryConditionDataRequirement(int type, TPZVec<TPZMaterialData> &datavec);
+    virtual void FillBoundaryConditionDataRequirement(int type, TPZVec<TPZMaterialData> &datavec);
+    
+    virtual void FillDataRequirementsInterface(TPZMaterialData &data, TPZVec<TPZMaterialData > &datavec_left, TPZVec<TPZMaterialData > &datavec_right) override;
     
     /** @brief Returns the name of the material */
     std::string Name() {
