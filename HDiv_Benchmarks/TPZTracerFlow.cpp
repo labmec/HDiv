@@ -129,12 +129,12 @@ void TPZTracerFlow::Contribute(TPZVec<TPZMaterialData> &datavec, REAL weight, TP
     TPZFMatrix<REAL>  &phiP =  datavec[p_b].phi;
     TPZFMatrix<REAL>  &phiS =  datavec[s_b].phi;
 
-    int n_phi_q = datavec[q_b].fVecShapeIndex.NElements();
-    int n_phi_p = phiP.Rows();
+//    int n_phi_q = datavec[q_b].fVecShapeIndex.NElements();
+//    int n_phi_p = phiP.Rows();
     int n_phi_s = phiS.Rows();
     REAL s = datavec[s_b].sol[0][0];
 
-    int firsts_s    = n_phi_q + n_phi_p;
+    int firsts_s    = 0;
     
     // Time
     REAL dt = 0.5;
@@ -202,22 +202,21 @@ void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMateria
     // Getting phis and solution for left material data
     TPZFMatrix<REAL>  &phiP_l =  datavecleft[p_b].phi;
     TPZFMatrix<REAL>  &phiS_l =  datavecleft[s_b].phi;
-    int n_phi_q_l = datavecleft[q_b].fVecShapeIndex.NElements();
-    int n_phi_p_l = phiP_l.Rows();
+//    int n_phi_q_l = datavecleft[q_b].fVecShapeIndex.NElements();
+//    int n_phi_p_l = phiP_l.Rows();
     int n_phi_s_l = phiS_l.Rows();
     REAL s_l = datavecleft[s_b].sol[0][0];
-    int firsts_s_l    = n_phi_q_l + n_phi_p_l;
+    int firsts_s_l    = 0;
 
     // Getting phis and solution for right material data
     TPZFMatrix<REAL>  &phiP_r =  datavecright[p_b].phi;
     TPZFMatrix<REAL>  &phiS_r =  datavecright[s_b].phi;
-    int n_phi_q_r = datavecright[q_b].fVecShapeIndex.NElements();
-    int n_phi_p_r = phiP_r.Rows();
+//    int n_phi_q_r = datavecright[q_b].fVecShapeIndex.NElements();
+//    int n_phi_p_r = phiP_r.Rows();
     int n_phi_s_r = phiS_r.Rows();
     REAL s_r = datavecright[s_b].sol[0][0];
-    int firsts_s_r    = n_phi_q_r + n_phi_p_r;
+    int firsts_s_r    = n_phi_s_l;
     
-    ;
     TPZManVector<REAL,3> n = data.normal;
     TPZManVector<REAL,3> q_l =  datavecleft[q_b].sol[0];
     REAL qn = 0.0;
