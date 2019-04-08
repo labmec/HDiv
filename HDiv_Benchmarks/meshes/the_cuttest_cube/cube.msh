@@ -5,11 +5,11 @@ $PhysicalNames
 7
 0 7 "CrossingIntresections"
 1 6 "FracturesIntersections"
-2 2 "BC_Front"
-2 3 "BC_Back"
-2 4 "BC_Neumann"
+2 2 "BCInlet"
+2 3 "BCOutlet"
+2 4 "BCImpervious"
 2 5 "Fractures"
-3 1 "RockMatrix"
+3 1 "RockMatrix_1"
 $EndPhysicalNames
 $Entities
 27 54 36 8
