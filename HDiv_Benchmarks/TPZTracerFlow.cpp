@@ -11,6 +11,9 @@ TPZTracerFlow::TPZTracerFlow(int matid, int dimension) : TPZDiscontinuousGalerki
 
     m_mat_id = matid;
     m_dimension = dimension;
+    m_mass_matrix_Q = false;
+    m_dt = 0.0;
+    m_phi = 0.0;
     
 }
 
@@ -18,6 +21,9 @@ TPZTracerFlow::TPZTracerFlow(int matid, int dimension) : TPZDiscontinuousGalerki
 TPZTracerFlow::TPZTracerFlow(const TPZTracerFlow &other) : TPZDiscontinuousGalerkin(other) {
     m_mat_id = other.m_mat_id;
     m_dimension = other.m_dimension;
+    m_mass_matrix_Q = other.m_mass_matrix_Q;
+    m_dt = other.m_dt;
+    m_phi = other.m_phi;
 }
 
 TPZTracerFlow & TPZTracerFlow::operator=(const TPZTracerFlow &other){
@@ -26,6 +32,9 @@ TPZTracerFlow & TPZTracerFlow::operator=(const TPZTracerFlow &other){
         TPZMaterial::operator=(other);
         m_mat_id = other.m_mat_id;
         m_dimension = other.m_dimension;
+        m_mass_matrix_Q = other.m_mass_matrix_Q;
+        m_dt = other.m_dt;
+        m_phi = other.m_phi;
     }
     return *this;
 }
@@ -118,8 +127,8 @@ int TPZTracerFlow::NSolutionVariables(int var){
 /** @brief Returns the solution associated with the var index */
 void TPZTracerFlow::Solution(TPZVec<TPZMaterialData> &datavec, int var, TPZVec<REAL> &Solout){
 
-    int s_w    = 0;
-    REAL sw = datavec[s_w].sol[0][0];
+    int s_b    = 2;
+    REAL sw = datavec[s_b].sol[0][0];
 
     Solout.Resize(this->NSolutionVariables(var));
 
@@ -153,34 +162,18 @@ void TPZTracerFlow::Contribute(TPZVec<TPZMaterialData> &datavec, REAL weight, TP
     
     // Setting the phis
     TPZFMatrix<REAL>  &phiS =  datavec[s_b].phi;
-    int n_phi_s = phiS.Rows();
     REAL s = datavec[s_b].sol[0][0];
+    int n_phi_s = phiS.Rows();
 
     int firsts_s    = 0;
     
-    // Time
-    REAL dt = 1.0e20;//0.5;
-    REAL phi = 0.1;
-    bool current_state_Q = true;
-
-    /// For last state
-    if(!current_state_Q){
-        for (int is = 0; is < n_phi_s; is++)
+    for (int is = 0; is < n_phi_s; is++)
+    {
+        ef(is + firsts_s) += 1.0 * weight * m_phi * s * phiS(is,0);
+        
+        for (int js = 0; js < n_phi_s; js++)
         {
-            ef(is + firsts_s) += weight * (1.0/dt) * (phi*(s) )* phiS(is,0);
-            for (int js = 0; js < n_phi_s; js++)
-            {
-                ek(is + firsts_s, js + firsts_s) += weight * (1.0/dt) * (- phiS(js,0) )* phiS(is,0);
-            }
-        }
-    }else{
-        for (int is = 0; is < n_phi_s; is++)
-        {
-            ef(is + firsts_s) += weight * (1.0/dt) * (-phi*(s) )* phiS(is,0);
-            for (int js = 0; js < n_phi_s; js++)
-            {
-                ek(is + firsts_s, js + firsts_s) += weight * (1.0/dt) * (phiS(js,0) )* phiS(is,0);
-            }
+            ek(is + firsts_s, js + firsts_s) += weight * m_phi * (phiS(js,0) )* phiS(is,0);
         }
     }
 
@@ -217,6 +210,10 @@ void TPZTracerFlow::Read(TPZStream &buf, void *context){
 
 void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMaterialData> &datavecleft, TPZVec<TPZMaterialData> &datavecright, REAL weight, TPZFMatrix<STATE> &ek,TPZFMatrix<STATE> &ef){
     
+    if (m_mass_matrix_Q) {
+        return;
+    }
+    
     int q_b = 0;
     int s_b = 2;
     
@@ -247,28 +244,28 @@ void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMateria
     
     for (int is = 0; is < n_phi_s_l; is++) {
         
-        ef(is + firsts_s_l) += -1.0*weight * (beta*s_l + (1.0-beta)*s_r)*phiS_l(is,0)*qn;
+        ef(is + firsts_s_l) += +1.0 * m_dt * weight * (beta*s_l + (1.0-beta)*s_r)*phiS_l(is,0)*qn;
         
         for (int js = 0; js < n_phi_s_l; js++) {
-            ek(is + firsts_s_l, js + firsts_s_l) += +1.0*weight * beta * phiS_l(js,0) * phiS_l(is,0)*qn;
+            ek(is + firsts_s_l, js + firsts_s_l) += +1.0* m_dt * weight * beta * phiS_l(js,0) * phiS_l(is,0)*qn;
         }
         
         for (int js = 0; js < n_phi_s_r; js++) {
-            ek(is + firsts_s_l, js + firsts_s_r) += +1.0*weight * (1.0-beta) * phiS_r(js,0) * phiS_l(is,0)*qn;
+            ek(is + firsts_s_l, js + firsts_s_r) += +1.0* m_dt * weight * (1.0-beta) * phiS_r(js,0) * phiS_l(is,0)*qn;
         }
         
     }
     
     for (int is = 0; is < n_phi_s_r; is++) {
         
-        ef(is + firsts_s_r) += 1.0*weight * (beta*s_l + (1.0-beta)*s_r)*phiS_r(is,0)*qn;
+        ef(is + firsts_s_r) += -1.0* m_dt * weight * (beta*s_l + (1.0-beta)*s_r)*phiS_r(is,0)*qn;
         
         for (int js = 0; js < n_phi_s_l; js++) {
-            ek(is + firsts_s_r, js + firsts_s_l) += -1.0*weight * beta * phiS_l(js,0) * phiS_r(is,0)*qn;
+            ek(is + firsts_s_r, js + firsts_s_l) += -1.0* m_dt * weight * beta * phiS_l(js,0) * phiS_r(is,0)*qn;
         }
         
         for (int js = 0; js < n_phi_s_r; js++) {
-            ek(is + firsts_s_r, js + firsts_s_r) += -1.0*weight * (1.0-beta) * phiS_r(js,0) * phiS_r(is,0)*qn;
+            ek(is + firsts_s_r, js + firsts_s_r) += -1.0* m_dt * weight * (1.0-beta) * phiS_r(js,0) * phiS_r(is,0)*qn;
         }
         
     }
@@ -284,6 +281,10 @@ void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMateria
 }
 
 void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMaterialData> &datavecleft, REAL weight, TPZFMatrix<STATE> &ek, TPZFMatrix<STATE> &ef, TPZBndCond &bc){
+    
+    if (m_mass_matrix_Q) {
+        return;
+    }
     
     int q_b = 0;
     int s_b = 2;
@@ -309,7 +310,7 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
             REAL s_inlet = bc.Val2()(0,0);
             if (qn < 0.0 || IsZero(qn)) {
                 for (int is = 0; is < n_phi_s_l; is++) {
-                    ef(is + firsts_s_l) += -1.0*weight * s_inlet * phiS_l(is,0)*qn;
+                    ef(is + firsts_s_l) += +1.0* m_dt * weight * s_inlet * phiS_l(is,0)*qn;
                 }
             }else{
                 std::cout << "TPZTracerFlow:: Outlet flux in inlet boundary condition qn = " << qn << std::endl;
@@ -324,10 +325,10 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
             if (qn > 0.0 || IsZero(qn)) {
                 for (int is = 0; is < n_phi_s_l; is++) {
                     
-                    ef(is + firsts_s_l) += -1.0*weight * s_l*phiS_l(is,0)*qn;
+                    ef(is + firsts_s_l) += +1.0* m_dt * weight * s_l*phiS_l(is,0)*qn;
                     
                     for (int js = 0; js < n_phi_s_l; js++) {
-                        ek(is + firsts_s_l, js + firsts_s_l) += +1.0*weight * phiS_l(js,0) * phiS_l(is,0)*qn;
+                        ek(is + firsts_s_l, js + firsts_s_l) += +1.0* m_dt * weight * phiS_l(js,0) * phiS_l(is,0)*qn;
                     }
                 }
             }else{
