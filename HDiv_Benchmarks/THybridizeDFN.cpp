@@ -231,13 +231,16 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
         
     }
     
-    /// Use this structure for get normal permeability
+    /// TODO:: Use this structure for get normal permeability
     /// m_fracture_data
+    
+    REAL kappa_normal = m_fracture_data[0].m_kappa_normal;
     if (!cmesh->FindMaterial(flux_resistivity_id)) {
         
-        auto flux_trace_mat = new TPZL2Projection(flux_resistivity_id, target_dim, n_state, sol);
-        flux_trace_mat->SetScaleFactor(0.0);
-        cmesh->InsertMaterialObject(flux_trace_mat);
+        
+        auto normal_flux_mat = new TPZNormalDarcyFlow(flux_resistivity_id, target_dim);
+        normal_flux_mat->SetKappaNormal(kappa_normal);
+        cmesh->InsertMaterialObject(normal_flux_mat);
         
     }
     

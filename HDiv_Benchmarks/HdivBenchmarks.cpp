@@ -77,6 +77,7 @@
 #include "pzmat2dlin.h"
 #include "TPZMixedDarcyFlow.h"
 #include "TPZTracerFlow.h"
+#include "TPZNormalDarcyFlow.h"
 
 #ifdef USING_BOOST
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -209,7 +210,6 @@ int main(){
     std::string log_file = source_dir;
     log_file += "/dfn.cfg";
     InitializePZLOG(log_file);
-//    InitializePZLOG();
 #endif
     
 

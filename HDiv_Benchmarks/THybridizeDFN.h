@@ -23,6 +23,7 @@
 #include "TPZMixedDarcyFlow.h"
 #include "pzbndcond.h"
 #include "TPZVTKGeoMesh.h"
+#include "TPZNormalDarcyFlow.h"
 
 
 /// This class is dedicated for conformal geometrical partitions and mixed meshes.
