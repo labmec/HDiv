@@ -20,6 +20,7 @@ public:
     REAL    m_kappa_normal;
     REAL    m_kappa_tangential;
     REAL    m_d_opening;
+    REAL    m_porosity;
     
     /// Default constructor
     TFracture();

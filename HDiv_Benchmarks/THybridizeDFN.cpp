@@ -129,7 +129,8 @@ void THybridizeDFN::ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int 
         }
         flux_trace_id = maxMatId + 1 + shift;
         lagrange_id = maxMatId + 2 + shift;
-        mp_nterface_id = maxMatId + 3 + shift;
+//        flux_resistivity_id = maxMatId + 3 + shift;
+        mp_nterface_id = maxMatId + 4 + shift;
     }
     
 }
@@ -1072,7 +1073,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
                 {
                     continue;
                 }
-                mpcel->Print();
+
                 TPZGeoEl *gel = cel->Reference();
                 // find a neighbour with matid = 8
                 TPZGeoEl *gel8 = 0;
@@ -1091,7 +1092,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
                 if(!gel8)
                 {
                     std::cout << "no element found at the intersection of fractures\n";
-                    gel->Print();
                     gel->SetMaterialId(8);
                 }
                 else

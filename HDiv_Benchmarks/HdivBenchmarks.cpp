@@ -107,10 +107,11 @@ struct SimulationCase {
     TPZStack<int>   gamma_ids;
     TPZStack<int>   gamma_dim;
     TPZStack<REAL>   permeabilities;
+    TPZStack<REAL>   porosities;
     TPZStack<REAL>   type;
     TPZStack<REAL>   vals;
     
-    SimulationCase() : IsMHMQ(false), UsePardisoQ(true), IsHybrid(false),UseFrontalQ(false), UseGmshMeshQ(false), NonAffineQ(false), elemen_type(0), n_h_levels(0), n_p_levels(1), n_acc_terms(0), int_order(1), n_threads(0),perturbation_type(0), mesh_type(""), domain_type(""),conv_summary(""),dump_folder(""),omega_ids(),omega_dim(),gamma_ids(), gamma_dim(), permeabilities(), type(), vals()
+    SimulationCase() : IsMHMQ(false), UsePardisoQ(true), IsHybrid(false),UseFrontalQ(false), UseGmshMeshQ(false), NonAffineQ(false), elemen_type(0), n_h_levels(0), n_p_levels(1), n_acc_terms(0), int_order(1), n_threads(0),perturbation_type(0), mesh_type(""), domain_type(""),conv_summary(""),dump_folder(""),omega_ids(),omega_dim(),gamma_ids(), gamma_dim(), permeabilities(),porosities(), type(), vals()
     {
         
     }
@@ -118,7 +119,7 @@ struct SimulationCase {
     SimulationCase(const SimulationCase &copy) :IsHybrid(copy.IsHybrid) ,IsMHMQ(copy.IsMHMQ), UsePardisoQ(copy.UsePardisoQ), UseFrontalQ(copy.UseFrontalQ),
     UseGmshMeshQ(copy.UseGmshMeshQ), NonAffineQ(copy.NonAffineQ), elemen_type(copy.elemen_type), n_h_levels(copy.n_h_levels), n_p_levels(copy.n_p_levels), n_acc_terms(copy.n_acc_terms), int_order(copy.int_order),n_threads(copy.n_threads),perturbation_type(copy.perturbation_type), mesh_type(copy.mesh_type), domain_type(copy.domain_type), conv_summary(copy.conv_summary),
     dump_folder(copy.dump_folder), omega_ids(copy.omega_ids), omega_dim(copy.omega_dim), gamma_ids(copy.gamma_ids), gamma_dim(copy.gamma_dim),
-    permeabilities(copy.permeabilities),
+    permeabilities(copy.permeabilities),porosities(copy.porosities),
     type(copy.type),
     vals(copy.vals)
     {
@@ -154,6 +155,7 @@ struct SimulationCase {
         gamma_ids = copy.gamma_ids;
         gamma_dim = copy.gamma_dim;
         permeabilities=copy.permeabilities;
+        porosities = copy.porosities;
         type=copy.type;
         vals=copy.vals;
         return *this;
@@ -180,7 +182,7 @@ void AdjustMaterialIdBoundary(TPZMultiphysicsCompMesh *cmesh);
 TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
 
 void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
-TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
+TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZStack<TFracture> & fracture_data ,SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
 void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel, bool is_BC);
 
 void UniformRefinement(TPZGeoMesh * geometry, int h_level);
@@ -227,10 +229,17 @@ void Pretty_cube(){
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
-    sim.n_threads = 8;
+    sim.n_threads = 0;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0);
+    sim.porosities.push_back(0.25);
+    
+    /// not used but inserted
+    sim.omega_ids.push_back(2);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0);
+    sim.porosities.push_back(0.25);
     
     int bc_inlet  = 3;
     int bc_outlet = 4;
@@ -288,21 +297,24 @@ void Pretty_cube(){
     TFracture fracture;
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 1.0;//0.001;
-    fracture.m_kappa_tangential = 1.0;//0.001;
+    fracture.m_kappa_normal     = 0.001;
+    fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
+    fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = 1.0;//0.001;
-    fracture.m_kappa_tangential = 1.0;//0.001;
+    fracture.m_kappa_normal     = 0.001;
+    fracture.m_kappa_tangential = 0.001;
     fracture.m_d_opening        = 1.0e-2;
+    fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
     fracture.m_id               = 8;
     fracture.m_dim              = 0;
     fracture.m_kappa_normal     = 0.00;
     fracture.m_kappa_tangential = 0.00;
     fracture.m_d_opening        = 1.0e-2;
+    fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
 
     
@@ -447,7 +459,7 @@ void Pretty_cube(){
     meshtrvec[1] = meshvec[1];
     meshtrvec[2] = s_cmesh;
     
-    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, sim, meshtrvec);
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
     TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     int n_steps = 10;
@@ -739,7 +751,8 @@ void Case_1(){
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
     meshtrvec[2] = cmesh_transport;
-    TPZMultiphysicsCompMesh *mp_tr_cmesh = MPTransportMesh(mp_cmesh, sim, meshtrvec);
+    TPZMultiphysicsCompMesh *mp_tr_cmesh = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+    DebugStop();
     InsertTransportInterfaceElements(mp_tr_cmesh);
     
 }
@@ -1722,7 +1735,6 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     for (int ivol=0; ivol<nvols; ivol++) {
 
         TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(sim_data.omega_ids[ivol],dimension);
-
         volume->SetPermeability(sim_data.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
         
@@ -1737,7 +1749,6 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     }
     
     cmesh->SetDimModel(dimension);
-    
     TPZManVector<TPZCompMesh * ,2> mesh_vec(2);
     mesh_vec[0] = FluxMesh(geometry, order, sim_data);
     mesh_vec[1] = PressureMesh(geometry, order, sim_data);
@@ -1751,7 +1762,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
     }
-    else{
+//    else{
 //        TPZCompMeshTools::GroupElements(cmesh);
 //        std::cout << "Created grouped elements\n";
 //        bool keepmatrix = false;
@@ -1760,7 +1771,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
 //        std::cout << "Created condensed elements\n";
 //        cmesh->CleanUpUnconnectedNodes();
 //        cmesh->ExpandSolution();
-    }
+//    }
     
 #ifdef PZDEBUG2
     std::stringstream file_name;
@@ -1773,7 +1784,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     return cmesh;
 }
 
-TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec){
+TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZStack<TFracture> & fracture_data ,SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec){
     
     
     TPZGeoMesh *geometry = mixed->Reference();
@@ -1781,18 +1792,32 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
     TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
 
     
-    std::set<int> volumetric_mat_ids = {1,2,6,7,8};
-    std::set<int> bc_inlet_mat_ids = {3,5,130,150,230,250};
-    std::set<int> bc_outlet_mat_ids = {4,140,240};
+    std::set<int> matrix_mat_ids;// = {1,2,6,7,8};
+    std::set<int> fracture_mat_ids;
     
-    REAL phi = 0.1;
-    
-    /// Inserting the materials
-    for (auto mat_id: volumetric_mat_ids) {
+
+    /// Inserting matrix materials
+    int n_vols = sim_data.omega_ids.size();
+    for (int i = 0; i < n_vols; i++) {
+        int mat_id = sim_data.omega_ids[i];
+        REAL phi = sim_data.porosities[i];
         TPZTracerFlow * volume = new TPZTracerFlow(mat_id,0);
         volume->SetPorosity(phi);
         cmesh->InsertMaterialObject(volume);
     }
+    
+    /// Inserting fracture materials
+    int n_fracs = fracture_data.size();
+    for (int i = 0; i < n_fracs; i++) {
+        int mat_id = fracture_data[i].m_id;
+        REAL phi = fracture_data[i].m_porosity;
+        TPZTracerFlow * volume = new TPZTracerFlow(mat_id,0);
+        volume->SetPorosity(phi);
+        cmesh->InsertMaterialObject(volume);
+    }
+    
+    std::set<int> bc_inlet_mat_ids = {3,5,130,150,230,250};
+    std::set<int> bc_outlet_mat_ids = {4,140,240};
     
     TPZMaterial * material = cmesh->FindMaterial(1);
     if (!material) {
