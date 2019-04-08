@@ -54,10 +54,21 @@ void TPZTracerFlow::FillBoundaryConditionDataRequirement(int type, TPZVec<TPZMat
     }
 }
 
+void TPZTracerFlow::FillDataRequirementsInterface(TPZMaterialData &data){
+    data.SetAllRequirements(false);
+    data.fNeedsSol = true;
+    data.fNeedsNormal = true;
+    if(fLinearContext == false){
+        data.fNeedsNeighborSol = true;
+    }
+}
+
 void TPZTracerFlow::FillDataRequirementsInterface(TPZMaterialData &data, TPZVec<TPZMaterialData > &datavec_left, TPZVec<TPZMaterialData > &datavec_right)
 {
     
     data.SetAllRequirements(false);
+    data.fNeedsSol = true;
+    data.fNeedsNormal = true;
     int nref_left = datavec_left.size();
     for(int iref = 0; iref<nref_left; iref++){
         datavec_left[iref].SetAllRequirements(false);
@@ -138,31 +149,25 @@ void TPZTracerFlow::Contribute(TPZVec<TPZMaterialData> &datavec, REAL weight, TP
     }
 #endif
 
-    int q_b = 0;
-    int p_b = 1;
     int s_b = 2;
     
     // Setting the phis
-    TPZFMatrix<REAL>  &phiP =  datavec[p_b].phi;
     TPZFMatrix<REAL>  &phiS =  datavec[s_b].phi;
-
-//    int n_phi_q = datavec[q_b].fVecShapeIndex.NElements();
-//    int n_phi_p = phiP.Rows();
     int n_phi_s = phiS.Rows();
     REAL s = datavec[s_b].sol[0][0];
 
     int firsts_s    = 0;
     
     // Time
-    REAL dt = 0.5;
+    REAL dt = 1.0e20;//0.5;
     REAL phi = 0.1;
-    bool current_state_Q = false;
+    bool current_state_Q = true;
 
     /// For last state
     if(!current_state_Q){
         for (int is = 0; is < n_phi_s; is++)
         {
-            ef(is + firsts_s) += weight * (1.0/dt) * (- phi*(s) )* phiS(is,0);
+            ef(is + firsts_s) += weight * (1.0/dt) * (phi*(s) )* phiS(is,0);
             for (int js = 0; js < n_phi_s; js++)
             {
                 ek(is + firsts_s, js + firsts_s) += weight * (1.0/dt) * (- phiS(js,0) )* phiS(is,0);
@@ -171,7 +176,7 @@ void TPZTracerFlow::Contribute(TPZVec<TPZMaterialData> &datavec, REAL weight, TP
     }else{
         for (int is = 0; is < n_phi_s; is++)
         {
-            ef(is + firsts_s) += weight * (1.0/dt) * (phi*(s) )* phiS(is,0);
+            ef(is + firsts_s) += weight * (1.0/dt) * (-phi*(s) )* phiS(is,0);
             for (int js = 0; js < n_phi_s; js++)
             {
                 ek(is + firsts_s, js + firsts_s) += weight * (1.0/dt) * (phiS(js,0) )* phiS(is,0);
@@ -213,23 +218,16 @@ void TPZTracerFlow::Read(TPZStream &buf, void *context){
 void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMaterialData> &datavecleft, TPZVec<TPZMaterialData> &datavecright, REAL weight, TPZFMatrix<STATE> &ek,TPZFMatrix<STATE> &ef){
     
     int q_b = 0;
-    int p_b = 1;
     int s_b = 2;
     
     // Getting phis and solution for left material data
-    TPZFMatrix<REAL>  &phiP_l =  datavecleft[p_b].phi;
     TPZFMatrix<REAL>  &phiS_l =  datavecleft[s_b].phi;
-//    int n_phi_q_l = datavecleft[q_b].fVecShapeIndex.NElements();
-//    int n_phi_p_l = phiP_l.Rows();
     int n_phi_s_l = phiS_l.Rows();
     REAL s_l = datavecleft[s_b].sol[0][0];
     int firsts_s_l    = 0;
 
     // Getting phis and solution for right material data
-    TPZFMatrix<REAL>  &phiP_r =  datavecright[p_b].phi;
     TPZFMatrix<REAL>  &phiS_r =  datavecright[s_b].phi;
-//    int n_phi_q_r = datavecright[q_b].fVecShapeIndex.NElements();
-//    int n_phi_p_r = phiP_r.Rows();
     int n_phi_s_r = phiS_r.Rows();
     REAL s_r = datavecright[s_b].sol[0][0];
     int firsts_s_r    = n_phi_s_l;
@@ -249,7 +247,7 @@ void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMateria
     
     for (int is = 0; is < n_phi_s_l; is++) {
         
-        ef(is + firsts_s_l) += +1.0*weight * (beta*s_l + (1.0-beta)*s_r)*phiS_l(is,0)*qn;
+        ef(is + firsts_s_l) += -1.0*weight * (beta*s_l + (1.0-beta)*s_r)*phiS_l(is,0)*qn;
         
         for (int js = 0; js < n_phi_s_l; js++) {
             ek(is + firsts_s_l, js + firsts_s_l) += +1.0*weight * beta * phiS_l(js,0) * phiS_l(is,0)*qn;
@@ -263,7 +261,7 @@ void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMateria
     
     for (int is = 0; is < n_phi_s_r; is++) {
         
-        ef(is + firsts_s_r) += -1.0*weight * (beta*s_l + (1.0-beta)*s_r)*phiS_r(is,0)*qn;
+        ef(is + firsts_s_r) += 1.0*weight * (beta*s_l + (1.0-beta)*s_r)*phiS_r(is,0)*qn;
         
         for (int js = 0; js < n_phi_s_l; js++) {
             ek(is + firsts_s_r, js + firsts_s_l) += -1.0*weight * beta * phiS_l(js,0) * phiS_r(is,0)*qn;
@@ -288,17 +286,13 @@ void TPZTracerFlow::ContributeInterface(TPZMaterialData &data, TPZVec<TPZMateria
 void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMaterialData> &datavecleft, REAL weight, TPZFMatrix<STATE> &ek, TPZFMatrix<STATE> &ef, TPZBndCond &bc){
     
     int q_b = 0;
-    int p_b = 1;
     int s_b = 2;
     
     // Getting phis and solution for left material data
-    TPZFMatrix<REAL>  &phiP_l =  datavecleft[p_b].phi;
     TPZFMatrix<REAL>  &phiS_l =  datavecleft[s_b].phi;
-    int n_phi_q_l = datavecleft[q_b].fVecShapeIndex.NElements();
-    int n_phi_p_l = phiP_l.Rows();
     int n_phi_s_l = phiS_l.Rows();
     REAL s_l = datavecleft[s_b].sol[0][0];
-    int firsts_s_l    = n_phi_q_l + n_phi_p_l;
+    int firsts_s_l    = 0;
     
 
     TPZManVector<REAL,3> n = data.normal;
@@ -313,12 +307,12 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
         case 0 :    // BC inlet
         {
             REAL s_inlet = bc.Val2()(0,0);
-            if (qn > 0.0) {
+            if (qn < 0.0 || IsZero(qn)) {
                 for (int is = 0; is < n_phi_s_l; is++) {
-                    ef(is + firsts_s_l) += +1.0*weight * s_inlet * phiS_l(is,0)*qn;
+                    ef(is + firsts_s_l) += -1.0*weight * s_inlet * phiS_l(is,0)*qn;
                 }
             }else{
-                DebugStop();
+                std::cout << "TPZTracerFlow:: Outlet flux in inlet boundary condition qn = " << qn << std::endl;
             }
  
             
@@ -327,17 +321,17 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
             
         case 1 :    // BC outlet
         {
-            if (qn > 0.0) {
+            if (qn > 0.0 || IsZero(qn)) {
                 for (int is = 0; is < n_phi_s_l; is++) {
                     
-                    ef(is + firsts_s_l) += +1.0*weight * s_l*phiS_l(is,0)*qn;
+                    ef(is + firsts_s_l) += -1.0*weight * s_l*phiS_l(is,0)*qn;
                     
                     for (int js = 0; js < n_phi_s_l; js++) {
                         ek(is + firsts_s_l, js + firsts_s_l) += +1.0*weight * phiS_l(js,0) * phiS_l(is,0)*qn;
                     }
                 }
             }else{
-                DebugStop();
+                std::cout << "TPZTracerFlow:: Inlet flux on outlet boundary condition qn = " << qn << std::endl;
             }
             
             

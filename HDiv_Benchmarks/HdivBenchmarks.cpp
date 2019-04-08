@@ -285,14 +285,14 @@ void Pretty_cube(){
     TFracture fracture;
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 0.001;
-    fracture.m_kappa_tangential = 0.001;
+    fracture.m_kappa_normal     = 1.0;//0.001;
+    fracture.m_kappa_tangential = 1.0;//0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = 0.001;
-    fracture.m_kappa_tangential = 0.001;
+    fracture.m_kappa_normal     = 1.0;//0.001;
+    fracture.m_kappa_tangential = 1.0;//0.001;
     fracture.m_d_opening        = 1.0e-2;
     fracture_data.push_back(fracture);
     fracture.m_id               = 8;
@@ -387,14 +387,14 @@ void Pretty_cube(){
         }
 #endif
         
-        TPZAnalysis *an = CreateAnalysis(cmeshm, sim);
-        std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
+        TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
+        std::cout << "Assembly neq = " << mp_cmesh->NEquations() << std::endl;
         an->Assemble();
         
         std::cout << "Solution of the system" << std::endl;
         an->Solve();
         
-        TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(mesh_vec, cmeshm);
+        mp_cmesh->LoadSolutionFromMultiPhysics();
         
 #ifdef PZDEBUG
         std::ofstream file_geo_hybrid("geometry_cube_hybrid.vtk");
@@ -451,11 +451,10 @@ void Pretty_cube(){
     std::cout << "Assembly neq = " << cmeshm->NEquations() << std::endl;
     tracer_analysis->Assemble();
     
-    
     std::cout << "Solution of the system" << std::endl;
     tracer_analysis->Solve();
-    
-    TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(meshtrvec, cmesh_transport);
+    tracer_analysis->Solution().Print("s = ",std::cout,EMathematicaInput);
+    cmesh_transport->LoadSolutionFromMultiPhysics();
     
     
     return;
@@ -1679,7 +1678,9 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
 
     
     std::set<int> allmat_ids = {1,2,6,7,8};
-    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250};
+//    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250};
+    std::set<int> bc_inlet_mat_ids = {3,5,130,150,230,250};
+    std::set<int> bc_outlet_mat_ids = {4,140,240};
     
     /// Inserting the materials
     for (auto mat_id: allmat_ids) {
@@ -1692,12 +1693,21 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
         DebugStop();
     }
     TPZFMatrix<STATE> val1(1,1,0);
-    TPZFMatrix<STATE> val2(1,1,1);
+    TPZFMatrix<STATE> val2(1,1,0);
     
-    int typ = 0; // inlet
+    int typ_inlet = 0; // inlet
     /// Inserting the materials
-    for (auto mat_id: bcmat_ids) {
-        TPZMaterial * bc = material->CreateBC(material, mat_id, typ, val1, val2);
+    val2(0,0) = 1.0;
+    for (auto mat_id: bc_inlet_mat_ids) {
+        TPZMaterial * bc = material->CreateBC(material, mat_id, typ_inlet, val1, val2);
+        cmesh->InsertMaterialObject(bc);
+    }
+    
+    int typ_outlet = 1; // outlet
+    /// Inserting the materials
+    val2(0,0) = 0.0;
+    for (auto mat_id: bc_outlet_mat_ids) {
+        TPZMaterial * bc = material->CreateBC(material, mat_id, typ_outlet, val1, val2);
         cmesh->InsertMaterialObject(bc);
     }
     
@@ -2033,10 +2043,18 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         s_cmesh->InsertMaterialObject(volume);
     }
     
+    TPZMaterial * material = s_cmesh->FindMaterial(1);
+    if (!material) {
+        DebugStop();
+    }
+    TPZFMatrix<STATE> val1(1,1,0);
+    TPZFMatrix<STATE> val2(1,1,1);
+    
+    int typ = 0; // inlet
     /// Inserting the materials
     for (auto mat_id: bcmat_ids) {
-        TPZL2Projection * volume = new TPZL2Projection(mat_id,0,nstate, sol);
-        s_cmesh->InsertMaterialObject(volume);
+        TPZMaterial * bc = material->CreateBC(material, mat_id, typ, val1, val2);
+        s_cmesh->InsertMaterialObject(bc);
     }
     geometry->ResetReference();
 
@@ -2111,16 +2129,14 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         }
         TPZConnect & c = cel->Connect(0);
         
-        if (c.NElConnected() > 2 && gel->MaterialId() == 8) { /// tototototototototo
+        if (c.NElConnected() > 2 && gel->MaterialId() == 8) {
             CreateTransportElement(s_order,s_cmesh, gel, false);
         }
         
         
     }
     geometry->ResetReference();
-    
     s_cmesh->InitializeBlock();
-    
     return s_cmesh;
 }
 
@@ -2230,8 +2246,16 @@ void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, s
                     continue;
                 }
                 {
+                    int mat_interface_id;
+                    int neigh_mat_id = neighgel->MaterialId();
+                    if (bcmat_ids.find(neigh_mat_id) != bcmat_ids.end()) {
+                        mat_interface_id = neigh_mat_id;
+                    }else{
+                        mat_interface_id = transport_matid;
+                    }
+                    
                     // we need to create the interface
-                    TPZGeoElBC gbc(gelside,transport_matid);
+                    TPZGeoElBC gbc(gelside,mat_interface_id);
                     int64_t index;
                     TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstack[stack_index]);
                     mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
