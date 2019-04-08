@@ -187,6 +187,8 @@ void UniformRefinement(TPZGeoMesh * geometry, int h_level);
 
 void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, std::vector<int> & cel_indexes);
 
+void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt);
+
 void FractureTest();
 
 /// Executes case 1
@@ -448,114 +450,119 @@ void Pretty_cube(){
     TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, sim, meshtrvec);
     TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
-    
-    {/// Time forward ensure s along n_steps
-        /// must provide s_0
-        
-        /// Compute mass matrix M.
-        TPZAutoPointer<TPZMatrix<STATE> > M;
-        {
-           
-            
-            bool mass_matrix_Q = true;
-            std::set<int> volumetric_mat_ids = {1,2,6,7,8};
-            
-            for (auto mat_id: volumetric_mat_ids) {
-                TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
-                TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
-                if (!volume) {
-                    DebugStop();
-                }
-                volume->SetMassMatrixAssembly(mass_matrix_Q);
-            }
-            
-            std::cout << "Computing Mass Matrix." << std::endl;
-            tracer_analysis->Assemble();
-            M = tracer_analysis->Solver().Matrix()->Clone();
-        }
-        //            M->Print("m = ",std::cout,EMathematicaInput);
-
-        {
-            bool mass_matrix_Q = false;
-            std::set<int> volumetric_mat_ids = {1,2,6,7,8};
-            
-            for (auto mat_id: volumetric_mat_ids) {
-                TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
-                TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
-                if (!volume) {
-                    DebugStop();
-                }
-                volume->SetMassMatrixAssembly(mass_matrix_Q);
-            }
-            
-            std::cout << "Computing transport operator K = M + T " << std::endl;
-            tracer_analysis->Assemble();
-        }
-        
-        /// Time evolution
-        std::string file_reservoir("transport_cube.vtk");
-        
-        {
-            int div = 0;
-            int n_steps = 100;
-            int64_t n_eq = tracer_analysis->Mesh()->NEquations();
-            TPZFMatrix<REAL> s_n(n_eq,1,0.0);
-            TPZFMatrix<REAL> last_state_mass;
-            TPZFMatrix<REAL> ds,s_np1;
-            
-            for (int i = 0; i < n_steps; i++) {
-                M->Multiply(s_n, last_state_mass);
-                
-                tracer_analysis->Rhs() -= last_state_mass;
-                tracer_analysis->Rhs() *= -1.0;
-                
-                tracer_analysis->Solve(); /// (LU decomposition)
-                ds = tracer_analysis->Solution();
-                s_np1 = s_n + ds;
-                tracer_analysis->LoadSolution(s_np1);
-                cmesh_transport->LoadSolutionFromMultiPhysics();
-                tracer_analysis->AssembleResidual();
-                
-                /// postprocess ...
-                TPZStack<std::string,10> scalnames, vecnames;
-                scalnames.Push("Sw");
-                scalnames.Push("So");
-
-                std::map<int,int> volumetric_ids;
-                volumetric_ids.insert(std::make_pair(1, 3));
-                
-                std::map<int,int> fracture_ids;
-                fracture_ids.insert(std::make_pair(6, 2));
-
-                std::map<int,int> fracture_intersections_ids;
-                fracture_intersections_ids.insert(std::make_pair(7, 1));
-        
-                for (auto data: volumetric_ids) {
-                    TPZMaterial * mat = cmesh_transport->FindMaterial(data.first);
-                    TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
-                    if (!volume) {
-                        DebugStop();
-                    }
-                    volume->SetDimension(data.second);
-                }
-                int dim = 3;
-                tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
-                tracer_analysis->PostProcess(div,dim);
-                
-                // configuring next time step
-                s_n = s_np1;
-            }
-            
-            
-        }
-        
-        std::cout << "Solution at last time value " << std::endl;
-        tracer_analysis->Solution().Print("s = ",std::cout,EMathematicaInput);
-    }
-    
+    int n_steps = 10;
+    REAL dt     = 0.1;
+    TimeFoward(tracer_analysis, n_steps, dt);
     
     return;
 
+}
+
+void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
+    
+    
+    TPZMultiphysicsCompMesh * cmesh_transport = dynamic_cast<TPZMultiphysicsCompMesh *>(tracer_analysis->Mesh());
+    
+    if (!cmesh_transport) {
+        DebugStop();
+    }
+    
+    /// Compute mass matrix M.
+    TPZAutoPointer<TPZMatrix<STATE> > M;
+    {
+        
+        
+        bool mass_matrix_Q = true;
+        std::set<int> volumetric_mat_ids = {1,2,6,7,8};
+        
+        for (auto mat_id: volumetric_mat_ids) {
+            TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
+            TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
+            if (!volume) {
+                DebugStop();
+            }
+            volume->SetMassMatrixAssembly(mass_matrix_Q);
+        }
+        
+        std::cout << "Computing Mass Matrix." << std::endl;
+        tracer_analysis->Assemble();
+        M = tracer_analysis->Solver().Matrix()->Clone();
+    }
+    
+    {
+        bool mass_matrix_Q = false;
+        std::set<int> volumetric_mat_ids = {1,2,6,7,8};
+        
+        for (auto mat_id: volumetric_mat_ids) {
+            TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
+            TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
+            if (!volume) {
+                DebugStop();
+            }
+            volume->SetTimeStep(dt);
+            volume->SetMassMatrixAssembly(mass_matrix_Q);
+        }
+        
+        std::cout << "Computing transport operator K = M + T " << std::endl;
+        tracer_analysis->Assemble();
+    }
+    
+    /// Time evolution
+    std::string file_reservoir("transport_cube.vtk");
+    
+    {
+        int div = 0;
+        int64_t n_eq = tracer_analysis->Mesh()->NEquations();
+        TPZFMatrix<REAL> s_n(n_eq,1,0.0);
+        TPZFMatrix<REAL> last_state_mass;
+        TPZFMatrix<REAL> ds,s_np1;
+        
+        for (int i = 0; i < n_steps; i++) {
+            M->Multiply(s_n, last_state_mass);
+            
+            tracer_analysis->Rhs() -= last_state_mass;
+            tracer_analysis->Rhs() *= -1.0;
+            
+            tracer_analysis->Solve(); /// (LU decomposition)
+            ds = tracer_analysis->Solution();
+            s_np1 = s_n + ds;
+            tracer_analysis->LoadSolution(s_np1);
+            cmesh_transport->LoadSolutionFromMultiPhysics();
+            tracer_analysis->AssembleResidual();
+            
+            /// postprocess ...
+            TPZStack<std::string,10> scalnames, vecnames;
+            scalnames.Push("Sw");
+            scalnames.Push("So");
+            
+            std::map<int,int> volumetric_ids;
+            volumetric_ids.insert(std::make_pair(1, 3));
+            
+            std::map<int,int> fracture_ids;
+            fracture_ids.insert(std::make_pair(6, 2));
+            
+            std::map<int,int> fracture_intersections_ids;
+            fracture_intersections_ids.insert(std::make_pair(7, 1));
+            
+            for (auto data: volumetric_ids) {
+                TPZMaterial * mat = cmesh_transport->FindMaterial(data.first);
+                TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
+                if (!volume) {
+                    DebugStop();
+                }
+                volume->SetDimension(data.second);
+            }
+            int dim = 3;
+            tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
+            tracer_analysis->PostProcess(div,dim);
+            
+            // configuring next time step
+            s_n = s_np1;
+        }
+        
+        
+    }
+    
 }
 
 
@@ -1779,13 +1786,11 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, Simul
     std::set<int> bc_outlet_mat_ids = {4,140,240};
     
     REAL phi = 0.1;
-    REAL dt = 0.01;
     
     /// Inserting the materials
     for (auto mat_id: volumetric_mat_ids) {
         TPZTracerFlow * volume = new TPZTracerFlow(mat_id,0);
         volume->SetPorosity(phi);
-        volume->SetTimeStep(dt);
         cmesh->InsertMaterialObject(volume);
     }
     
