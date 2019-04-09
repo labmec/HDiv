@@ -76,6 +76,10 @@ su_frac_1_2 = news; Plane Surface(su_frac_1_2) =
 su_frac_1_3 = news; Plane Surface(su_frac_1_3) = {frac_1_3_31};
 su_frac_1_4 = news; Plane Surface(su_frac_1_4) = {frac_1_4_32};
 
+
+
+
+
 frac_2_1_33 = newll; Line Loop(frac_2_1_33) = {7, 19, -9, -23};
 frac_2_2_34 = newll; Line Loop(frac_2_2_34) = {8, 25, -10, -19};
 frac_2_3_35 = newll; Line Loop(frac_2_3_35) = {9, 20, 11, -24};
@@ -678,9 +682,4 @@ Physical Curve("Fracture_Intersection") = {20, 19, 3, 4, 59, 58, 79, 80, 123, 14
 
 //+
 Physical Point("Points_Intersection") = {59, 40, 21};
-
-Transfinite Surface "*";
-Recombine Surface "*";
-Recombine Volume "*";
-
 
