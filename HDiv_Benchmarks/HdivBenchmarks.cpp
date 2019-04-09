@@ -252,7 +252,6 @@ void Pretty_cube(){
     sim.gamma_ids.push_back(bc_non_flux);
     sim.gamma_dim.push_back(3);
     
-    
     int bc_type_D = 0;    //    D = 0;
     int bc_type_N = 1;    //    N = 1;
     REAL p_inlet  = 2.0;
@@ -272,7 +271,6 @@ void Pretty_cube(){
     bc_ids_2d.push_back(std::make_tuple(bc_inlet,bc_type_D,p_inlet));
     bc_ids_2d.push_back(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
     bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
-    
     
     int bc_1d_inlet  = 130;
     int bc_1d_outlet = 140;
