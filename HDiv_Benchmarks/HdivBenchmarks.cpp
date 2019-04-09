@@ -224,7 +224,7 @@ int main(){
 /// Executes cube
 void Pretty_cube(){
     
-    int h_level = 1;
+    int h_level = 0;
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
@@ -232,13 +232,13 @@ void Pretty_cube(){
     sim.n_threads = 8;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0);
+    sim.permeabilities.push_back(1.0e-6);
     sim.porosities.push_back(0.25);
     
     /// not used but inserted
     sim.omega_ids.push_back(2);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0);
+    sim.permeabilities.push_back(1.0e-5);
     sim.porosities.push_back(0.25);
     
     int bc_inlet  = 3;
@@ -296,7 +296,7 @@ void Pretty_cube(){
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 1.0e20;
-    fracture.m_kappa_tangential = 1.0;
+    fracture.m_kappa_tangential = 1.0e-3;
     fracture.m_d_opening        = 1.0e-2;
     fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
@@ -343,7 +343,7 @@ void Pretty_cube(){
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
-//    UniformRefinement(gmesh, h_level);
+    UniformRefinement(gmesh, h_level);
     
 #ifdef PZDEBUG
     std::ofstream file("geometry_cube_base.vtk");
@@ -588,13 +588,13 @@ void Case_1(){
     sim.n_threads = 0;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0);
-    sim.porosities.push_back(0.25);
+    sim.permeabilities.push_back(1.0e-6);
+    sim.porosities.push_back(0.2);
     
     /// not used but inserted
     sim.omega_ids.push_back(2);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0);
+    sim.permeabilities.push_back(1.0e-5);
     sim.porosities.push_back(0.25);
     
     int bc_inlet  = 3;
@@ -610,7 +610,7 @@ void Case_1(){
     
     int bc_type_D = 0;    //    D = 0;
     int bc_type_N = 1;    //    N = 1;
-    REAL p_inlet  = 2.0;
+    REAL p_inlet  = 4.0;
     REAL p_outlet = 1.0;
     REAL qn       = 0.0;
     
@@ -651,25 +651,11 @@ void Case_1(){
     TFracture fracture;
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 1.0e20;
-    fracture.m_kappa_tangential = 1.0;
+    fracture.m_kappa_normal     = 20.0;
+    fracture.m_kappa_tangential = 1.0e-3;
     fracture.m_d_opening        = 1.0e-2;
-    fracture.m_porosity         = 0.25;
+    fracture.m_porosity         = 0.4;
     fracture_data.push_back(fracture);
-//    fracture.m_id               = 7;
-//    fracture.m_dim              = 1;
-//    fracture.m_kappa_normal     = 1.0e20;
-//    fracture.m_kappa_tangential = 1.0;
-//    fracture.m_d_opening        = 1.0e-2;
-//    fracture.m_porosity         = 0.25;
-//    fracture_data.push_back(fracture);
-//    fracture.m_id               = 8;
-//    fracture.m_dim              = 0;
-//    fracture.m_kappa_normal     = 1.0e20;
-//    fracture.m_kappa_tangential = 1.0;
-//    fracture.m_d_opening        = 1.0e-2;
-//    fracture.m_porosity         = 0.25;
-//    fracture_data.push_back(fracture);
     
     
     /// Benchmarks Material ID convention
@@ -807,7 +793,7 @@ void Case_1(){
     TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     int n_steps = 10;
-    REAL dt     = 0.1;
+    REAL dt     = 1.0e7;
     TimeFoward(tracer_analysis, n_steps, dt);
     
     return;
