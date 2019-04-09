@@ -213,9 +213,9 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
+    Pretty_cube();
 
-    Case_1();
+//    Case_1();
 
 //     Case_2();
 
@@ -232,13 +232,13 @@ void Pretty_cube(){
     sim.n_threads = 8;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-6);
+    sim.permeabilities.push_back(1.0);
     sim.porosities.push_back(0.25);
     
     /// not used but inserted
     sim.omega_ids.push_back(2);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-5);
+    sim.permeabilities.push_back(1.0);
     sim.porosities.push_back(0.25);
     
     int bc_inlet  = 3;
@@ -296,22 +296,22 @@ void Pretty_cube(){
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 1.0e20;
-    fracture.m_kappa_tangential = 1.0e-3;
-    fracture.m_d_opening        = 1.0e-2;
+    fracture.m_kappa_tangential = 1.0;
+    fracture.m_d_opening        = 1.0;
     fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
-    fracture.m_d_opening        = 1.0e-2;
+    fracture.m_d_opening        = 1.0;
     fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
     fracture.m_id               = 8;
     fracture.m_dim              = 0;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
-    fracture.m_d_opening        = 1.0e-2;
+    fracture.m_d_opening        = 1.0;
     fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
 
@@ -479,12 +479,13 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
     
     /// Compute mass matrix M.
     TPZAutoPointer<TPZMatrix<STATE> > M;
+    TPZFMatrix<REAL> F_inlet;
     {
         
         
         bool mass_matrix_Q = true;
-        std::set<int> volumetric_mat_ids = {1,2,6};
-//        std::set<int> volumetric_mat_ids = {1,2,6,7,8}; // pretty cube
+//        std::set<int> volumetric_mat_ids = {1,2,6};
+        std::set<int> volumetric_mat_ids = {1,2,6,7,8}; // pretty cube
         
         for (auto mat_id: volumetric_mat_ids) {
             TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
@@ -502,8 +503,8 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
     
     {
         bool mass_matrix_Q = false;
-        std::set<int> volumetric_mat_ids = {1,2,6};
-        //        std::set<int> volumetric_mat_ids = {1,2,6,7,8}; // pretty cube
+//        std::set<int> volumetric_mat_ids = {1,2,6};
+                std::set<int> volumetric_mat_ids = {1,2,6,7,8}; // pretty cube
         
         for (auto mat_id: volumetric_mat_ids) {
             TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
@@ -515,8 +516,9 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
             volume->SetMassMatrixAssembly(mass_matrix_Q);
         }
         
-        std::cout << "Computing transport operator K = M + T " << std::endl;
+        std::cout << "Computing transport operator K = M + T, and F_inlet " << std::endl;
         tracer_analysis->Assemble();
+        F_inlet = tracer_analysis->Rhs();
     }
     
     /// Time evolution
@@ -527,20 +529,18 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
         int64_t n_eq = tracer_analysis->Mesh()->NEquations();
         TPZFMatrix<REAL> s_n(n_eq,1,0.0);
         TPZFMatrix<REAL> last_state_mass;
-        TPZFMatrix<REAL> ds,s_np1;
+        TPZFMatrix<REAL> s_np1;
         
         for (int i = 0; i < n_steps; i++) {
             M->Multiply(s_n, last_state_mass);
             
-            tracer_analysis->Rhs() -= last_state_mass;
+            tracer_analysis->Rhs() = F_inlet - last_state_mass;
             tracer_analysis->Rhs() *= -1.0;
             
             tracer_analysis->Solve(); /// (LU decomposition)
-            ds = tracer_analysis->Solution();
-            s_np1 = s_n + ds;
+            s_np1 = tracer_analysis->Solution();
             tracer_analysis->LoadSolution(s_np1);
             cmesh_transport->LoadSolutionFromMultiPhysics();
-            tracer_analysis->AssembleResidual();
             
             /// postprocess ...
             TPZStack<std::string,10> scalnames, vecnames;
