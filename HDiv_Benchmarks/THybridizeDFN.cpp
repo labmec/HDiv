@@ -6,6 +6,8 @@
 //
 
 #include "THybridizeDFN.h"
+#include "pzelementgroup.h"
+#include "pzcondensedcompel.h"
 
 #include "pzlog.h"
 
@@ -231,13 +233,17 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
         
     }
     
-    /// Use this structure for get normal permeability
-    /// m_fracture_data
+    /// TODO:: Use this structure for get normal permeability
+    REAL kappa_normal = m_fracture_data[0].m_kappa_normal;
     if (!cmesh->FindMaterial(flux_resistivity_id)) {
         
-        auto flux_trace_mat = new TPZL2Projection(flux_resistivity_id, target_dim, n_state, sol);
-        flux_trace_mat->SetScaleFactor(0.0);
-        cmesh->InsertMaterialObject(flux_trace_mat);
+        auto normal_flux_mat = new TPZNormalDarcyFlow(flux_resistivity_id, target_dim);
+        normal_flux_mat->SetKappaNormal(kappa_normal);
+        cmesh->InsertMaterialObject(normal_flux_mat);
+        
+//        auto flux_trace_mat = new TPZL2Projection(flux_resistivity_id, target_dim, n_state, sol);
+//        flux_trace_mat->SetScaleFactor(0.0);
+//        cmesh->InsertMaterialObject(flux_trace_mat);
         
     }
     
@@ -1092,7 +1098,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
             if(!mpcel) continue;
             if(!mpcel->Element(0) && mpcel->Element(1))
             {
-                std::cout << "this element has a pressure but no flux\n";
+//                std::cout << "this element has a pressure but no flux\n";
                 TPZConnect &c = mpcel->Connect(0);
                 int nelcon = c.NElConnected();
                 if(nelcon <= 3)
@@ -1176,4 +1182,70 @@ void THybridizeDFN::BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, 
     
     mp_hybrid_cmesh->SetDimModel(dim);
     mp_hybrid_cmesh->BuildMultiphysicsSpace(approx_spaces, mesh_vec);
+}
+
+/// group and condense the elements
+void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
+{
+    TPZVec<int64_t> ConnectGroup(cmesh->NConnects(),-1);
+    TPZVec<int64_t> ElementGroup(cmesh->NElements());
+    int64_t nelem = cmesh->NElements();
+    int64_t igr = 0;
+    // each element that has a flux associated is the nucleus of a group
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        TPZCompEl *atom_cel_flux = mpel->Element(0);
+        if(!atom_cel_flux)
+        {
+            continue;
+        }
+        int ncon_flux = atom_cel_flux->NConnects();
+        for(int ic=0; ic<ncon_flux; ic++)
+        {
+            int64_t conindex = cel->ConnectIndex(ic);
+            ConnectGroup[conindex] = igr;
+        }
+        ElementGroup[el] = igr;
+        igr++;
+    }
+    int64_t numgroups = igr;
+    // an element that shares a connect with the nucleus element will belong to the group
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        int ncon = mpel->NConnects();
+        int64_t elgr = -1;
+        for(int ic=0; ic<ncon; ic++)
+        {
+            int64_t conindex = cel->ConnectIndex(ic);
+            if(ConnectGroup[conindex] != -1) elgr = ConnectGroup[conindex];
+        }
+        ElementGroup[el] = elgr;
+    }
+    TPZVec<TPZElementGroup *> groups(numgroups,0);
+    for (igr = 0; igr < numgroups; igr++) {
+        int64_t index;
+        TPZElementGroup *group = new TPZElementGroup(*cmesh,index);
+        groups[igr] = group;
+    }
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        if(ElementGroup[el] != -1)
+        {
+            int64_t group_index = ElementGroup[el];
+            TPZElementGroup *group = groups[group_index];
+            group->AddElement(cel);
+        }
+    }
+    cmesh->ComputeNodElCon();
+    for (int igr = 0; igr < numgroups; igr++) {
+        TPZElementGroup *group = groups[igr];
+        bool keep_matrix = false;
+        new TPZCondensedCompEl(group, keep_matrix);
+    }
 }

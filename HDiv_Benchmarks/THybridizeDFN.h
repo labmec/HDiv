@@ -23,6 +23,7 @@
 #include "TPZMixedDarcyFlow.h"
 #include "pzbndcond.h"
 #include "TPZVTKGeoMesh.h"
+#include "TPZNormalDarcyFlow.h"
 
 
 /// This class is dedicated for conformal geometrical partitions and mixed meshes.
@@ -116,7 +117,8 @@ public:
         m_bc_ids_0d = bc_ids_0d;
     }
     
-    
+    /// group and condense the elements
+    static void GroupElements(TPZMultiphysicsCompMesh *cmesh);
 };
 
 #endif /* THybridizeDFN_h */

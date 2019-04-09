@@ -1,6 +1,6 @@
 
 Mesh.Algorithm = 8;
-h = 50.0*0.0273;           
+h = 20.0*0.0273;           
 
 
 // Dimensions: x is left to right, y is front to back and z is top to bottom
@@ -128,15 +128,18 @@ Volume(66) = {65};
 vol_1[] = {42};
 vol_2[] = {66, 54};
 
+Surface {52} In Volume {54};
+Surface {52} In Volume {66};
+
 Coherence;
 
-Physical Volume("Vol1") = {vol_1[]};
-Physical Volume("Vol2") = {vol_2[]};
+Physical Volume("RockMatrix_1") = {vol_1[]};
+Physical Volume("RockMatrix_2") = {vol_2[]};
 
-Physical Surface("inlet") = {62};
-Physical Surface("outlet") = {30};
-Physical Surface("domain_box") = {32, 44, 50, 56, 58, 46, 60, 48, 162, 64, 36, 34, 38};
+Physical Surface("BCInlet") = {62};
+Physical Surface("BCOutlet") = {30};
+Physical Surface("BCImpervious") = {32, 44, 50, 56, 58, 46, 60, 48, 162, 64, 36, 34, 38};
 
-Physical Surface("fracture") = {52};
+Physical Surface("Fractures") = {52};
 
 
