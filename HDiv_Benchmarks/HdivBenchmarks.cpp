@@ -217,8 +217,8 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
-    Case_1();
+    Pretty_cube();
+//    Case_1();
 //     Case_2();
 
 }
@@ -365,22 +365,24 @@ void Pretty_cube(){
 #endif
     
     TPZCompMesh *cmeshm =NULL;
-    if(sim.IsHybrid){
-        
-        THybridizeDFN dfn_hybridzer;
-        dfn_hybridzer.SetFractureData(fracture_data);
-        
-        dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
-        dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
-        dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
-        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
-
-    }
-    else{
-        cmeshm=cmixedmesh;
-    }
+    THybridizeDFN dfn_hybridzer;
+    dfn_hybridzer.SetFractureData(fracture_data);
+    
+    dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
+    dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
+    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+    cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
+    
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
+    meshtrvec[0] = meshvec[0];
+    meshtrvec[1] = meshvec[1];
+    meshtrvec[2] = s_cmesh;
+    
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
 
     bool solve_dfn_problem_Q = true;
     if (solve_dfn_problem_Q) {
@@ -402,13 +404,30 @@ void Pretty_cube(){
         }
 #endif
         
+        std::cout << "Condensing DFN equations." << std::endl;
+        std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
+        dfn_hybridzer.GroupElements(mp_cmesh);
+        std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
+        
+#ifdef PZDEBUG
+        {
+
+            std::ofstream file_hybrid_condensed("Hybrid_mixed_condensed.txt");
+            mp_cmesh->ComputeNodElCon();
+            mp_cmesh->Print(file_hybrid_condensed);
+        }
+#endif
+        
+        std::cout << "DFN equations are condensed." << std::endl;
+        
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
-        std::cout << "Assembly neq = " << mp_cmesh->NEquations() << std::endl;
+        std::cout << "Assembly DFN problem neq = " << mp_cmesh->NEquations() << std::endl;
         an->Assemble();
+        std::cout << "Assembly for DFN complete." << std::endl;
         
-        std::cout << "Solution of the system" << std::endl;
+        std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
-        
+        std::cout << "DFN problem solved." << std::endl;
         mp_cmesh->LoadSolutionFromMultiPhysics();
         
 #ifdef PZDEBUG
@@ -453,14 +472,7 @@ void Pretty_cube(){
 #endif
     }
 
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
-    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
-    meshtrvec[0] = meshvec[0];
-    meshtrvec[1] = meshvec[1];
-    meshtrvec[2] = s_cmesh;
-    
-    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
-    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+
     
     int n_steps = 10;
     REAL dt     = 0.1;
@@ -693,8 +705,6 @@ void Case_1(){
     Geometry.PrintPartitionSummary(std::cout);
     
 
-//    check_mesh(gmesh, 3);
-
     Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
@@ -720,25 +730,29 @@ void Case_1(){
 #endif
     
     TPZCompMesh *cmeshm =NULL;
-    if(sim.IsHybrid){
-        
-        THybridizeDFN dfn_hybridzer;
-        dfn_hybridzer.SetFractureData(fracture_data);
-        
-        dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
-        dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
-//        dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
-        cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
-        
-    }
-    else{
-        cmeshm=cmixedmesh;
-    }
+    THybridizeDFN dfn_hybridzer;
+    dfn_hybridzer.SetFractureData(fracture_data);
+    
+    dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
+    dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
+//    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+    cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
     
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
+    /// Craate transpor computational mesh
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
+    meshtrvec[0] = meshvec[0];
+    meshtrvec[1] = meshvec[1];
+    meshtrvec[2] = s_cmesh;
+    
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+    
     bool solve_dfn_problem_Q = true;
     if (solve_dfn_problem_Q) {
+        
         TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
         
 #ifdef PZDEBUG
@@ -757,13 +771,18 @@ void Case_1(){
         }
 #endif
         
+        std::cout << "Condensing DFN equations." << std::endl;
+        dfn_hybridzer.GroupElements(mp_cmesh);
+        std::cout << "DFN equations are condensed." << std::endl;
+        
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
-        std::cout << "Assembly neq = " << mp_cmesh->NEquations() << std::endl;
+        std::cout << "Assembly DFN problem neq = " << mp_cmesh->NEquations() << std::endl;
         an->Assemble();
+        std::cout << "Assembly for DFN complete." << std::endl;
         
-        std::cout << "Solution of the system" << std::endl;
+        std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
-        
+        std::cout << "DFN problem solved." << std::endl;
         mp_cmesh->LoadSolutionFromMultiPhysics();
         
 #ifdef PZDEBUG
@@ -796,14 +815,7 @@ void Case_1(){
 #endif
     }
     
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
-    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
-    meshtrvec[0] = meshvec[0];
-    meshtrvec[1] = meshvec[1];
-    meshtrvec[2] = s_cmesh;
-    
-    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
-    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+
     
     int n_steps = 10;
     REAL dt     = 1.0e7;
@@ -1745,7 +1757,7 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     TPZBuildMultiphysicsMesh::AddConnects(meshvec, cmesh);
     TPZBuildMultiphysicsMesh::TransferFromMeshes(meshvec, cmesh);
     
-    std::cout << "Created multi physics mesh\n";
+    std::cout << "Created multi physics DFN mesh\n";
     if (sim_data.IsMHMQ) {
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
@@ -1812,7 +1824,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     active_approx_spaces[1] = 1;
     cmesh->BuildMultiphysicsSpace(active_approx_spaces,mesh_vec);
 
-    std::cout << "Created multi physics mesh\n";
+    std::cout << "Created multi physics DFN mesh\n";
     if (sim_data.IsMHMQ) {
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
@@ -1907,7 +1919,7 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZSt
     active_approx_spaces[2] = 1;
     cmesh->BuildMultiphysicsSpace(active_approx_spaces,meshvec);
     
-    std::cout << "Created multi physics mesh\n";
+    std::cout << "Created multi physics transport mesh\n";
     if (sim_data.IsMHMQ) {
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();

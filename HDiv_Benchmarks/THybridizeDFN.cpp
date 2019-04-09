@@ -1237,8 +1237,6 @@ void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
     }
     for (int64_t el=0; el<nelem; el++) {
         TPZCompEl *cel = cmesh->Element(el);
-        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
-        if(!mpel) continue;
         if(ElementGroup[el] != -1)
         {
             int64_t group_index = ElementGroup[el];
@@ -1252,4 +1250,5 @@ void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
         bool keep_matrix = false;
         new TPZCondensedCompEl(group, keep_matrix);
     }
+    cmesh->CleanUpUnconnectedNodes();
 }
