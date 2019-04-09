@@ -6,6 +6,8 @@
 //
 
 #include "THybridizeDFN.h"
+#include "pzelementgroup.h"
+#include "pzcondensedcompel.h"
 
 #include "pzlog.h"
 
@@ -1179,4 +1181,70 @@ void THybridizeDFN::BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, 
     
     mp_hybrid_cmesh->SetDimModel(dim);
     mp_hybrid_cmesh->BuildMultiphysicsSpace(approx_spaces, mesh_vec);
+}
+
+/// group and condense the elements
+void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
+{
+    TPZVec<int64_t> ConnectGroup(cmesh->NConnects(),-1);
+    TPZVec<int64_t> ElementGroup(cmesh->NElements());
+    int64_t nelem = cmesh->NElements();
+    int64_t igr = 0;
+    // each element that has a flux associated is the nucleus of a group
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        TPZCompEl *atom_cel_flux = mpel->Element(0);
+        if(!atom_cel_flux)
+        {
+            continue;
+        }
+        int ncon_flux = atom_cel_flux->NConnects();
+        for(int ic=0; ic<ncon_flux; ic++)
+        {
+            int64_t conindex = cel->ConnectIndex(ic);
+            ConnectGroup[conindex] = igr;
+        }
+        ElementGroup[el] = igr;
+        igr++;
+    }
+    int64_t numgroups = igr;
+    // an element that shares a connect with the nucleus element will belong to the group
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        int ncon = mpel->NConnects();
+        int64_t elgr = -1;
+        for(int ic=0; ic<ncon; ic++)
+        {
+            int64_t conindex = cel->ConnectIndex(ic);
+            if(ConnectGroup[conindex] != -1) elgr = ConnectGroup[conindex];
+        }
+        ElementGroup[el] = elgr;
+    }
+    TPZVec<TPZElementGroup *> groups(numgroups,0);
+    for (igr = 0; igr < numgroups; igr++) {
+        int64_t index;
+        TPZElementGroup *group = new TPZElementGroup(*cmesh,index);
+        groups[igr] = group;
+    }
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        if(ElementGroup[el] != -1)
+        {
+            int64_t group_index = ElementGroup[el];
+            TPZElementGroup *group = groups[group_index];
+            group->AddElement(cel);
+        }
+    }
+    cmesh->ComputeNodElCon();
+    for (int igr = 0; igr < numgroups; igr++) {
+        TPZElementGroup *group = groups[igr];
+        bool keep_matrix = false;
+        new TPZCondensedCompEl(group, keep_matrix);
+    }
 }

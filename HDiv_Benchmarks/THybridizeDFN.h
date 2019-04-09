@@ -117,7 +117,8 @@ public:
         m_bc_ids_0d = bc_ids_0d;
     }
     
-    
+    /// group and condense the elements
+    static void GroupElements(TPZMultiphysicsCompMesh *cmesh);
 };
 
 #endif /* THybridizeDFN_h */
