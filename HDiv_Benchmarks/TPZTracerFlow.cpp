@@ -322,6 +322,10 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
             
         case 1 :    // BC outlet
         {
+            if (fabs(qn) < 1.0e-6) {
+                qn = 0.0;
+            }
+            
             if (qn > 0.0 || IsZero(qn)) {
                 for (int is = 0; is < n_phi_s_l; is++) {
                     
