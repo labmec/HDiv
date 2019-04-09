@@ -678,3 +678,9 @@ Physical Curve("Fracture_Intersection") = {20, 19, 3, 4, 59, 58, 79, 80, 123, 14
 
 //+
 Physical Point("Points_Intersection") = {59, 40, 21};
+
+Transfinite Surface "*";
+Recombine Surface "*";
+Recombine Volume "*";
+
+
