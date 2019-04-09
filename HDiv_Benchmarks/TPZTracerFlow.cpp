@@ -308,23 +308,18 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
         case 0 :    // BC inlet
         {
             REAL s_inlet = bc.Val2()(0,0);
-            if (qn < 0.0 || IsZero(qn)) {
-                for (int is = 0; is < n_phi_s_l; is++) {
-                    ef(is + firsts_s_l) += +1.0* m_dt * weight * s_inlet * phiS_l(is,0)*qn;
-                }
-            }else{
-                std::cout << "TPZTracerFlow:: Outlet flux in inlet boundary condition qn = " << qn << std::endl;
+//            if (qn > 0.0 || IsZero(qn)) {
+//                std::cout << "TPZTracerFlow:: Outlet flux in inlet boundary condition qn = " << qn << std::endl;
+//            }
+            for (int is = 0; is < n_phi_s_l; is++) {
+                ef(is + firsts_s_l) += +1.0* m_dt * weight * s_inlet * phiS_l(is,0)*qn;
             }
- 
             
         }
             break;
             
         case 1 :    // BC outlet
         {
-            if (fabs(qn) < 1.0e-6) {
-                qn = 0.0;
-            }
             
             if (qn > 0.0 || IsZero(qn)) {
                 for (int is = 0; is < n_phi_s_l; is++) {
@@ -336,7 +331,7 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
                     }
                 }
             }else{
-                std::cout << "TPZTracerFlow:: Inlet flux on outlet boundary condition qn = " << qn << std::endl;
+//                std::cout << "TPZTracerFlow:: Inlet flux on outlet boundary condition qn = " << qn << std::endl;
             }
             
             

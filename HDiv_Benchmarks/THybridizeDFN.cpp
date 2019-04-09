@@ -1098,7 +1098,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
             if(!mpcel) continue;
             if(!mpcel->Element(0) && mpcel->Element(1))
             {
-                std::cout << "this element has a pressure but no flux\n";
+//                std::cout << "this element has a pressure but no flux\n";
                 TPZConnect &c = mpcel->Connect(0);
                 int nelcon = c.NElConnected();
                 if(nelcon <= 3)

@@ -585,7 +585,7 @@ void Case_1(){
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
-    sim.n_threads = 0;
+    sim.n_threads = 12;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0e-6);
@@ -653,7 +653,7 @@ void Case_1(){
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 20.0;
     fracture.m_kappa_tangential = 1.0e-3;
-    fracture.m_d_opening        = 1.0e-2;
+    fracture.m_d_opening        = 1.0e-0;
     fracture.m_porosity         = 0.4;
     fracture_data.push_back(fracture);
     
