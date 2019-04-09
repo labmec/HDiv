@@ -14,6 +14,7 @@ TPZTracerFlow::TPZTracerFlow(int matid, int dimension) : TPZDiscontinuousGalerki
     m_mass_matrix_Q = false;
     m_dt = 0.0;
     m_phi = 0.0;
+    m_fracture_epsilon = 0.0;
     
 }
 
@@ -24,6 +25,7 @@ TPZTracerFlow::TPZTracerFlow(const TPZTracerFlow &other) : TPZDiscontinuousGaler
     m_mass_matrix_Q = other.m_mass_matrix_Q;
     m_dt = other.m_dt;
     m_phi = other.m_phi;
+    m_fracture_epsilon = other.m_fracture_epsilon;
 }
 
 TPZTracerFlow & TPZTracerFlow::operator=(const TPZTracerFlow &other){
@@ -148,6 +150,25 @@ void TPZTracerFlow::Solution(TPZVec<TPZMaterialData> &datavec, int var, TPZVec<R
 
 }
 
+REAL TPZTracerFlow::FractureFactor(TPZMaterialData & data){
+    REAL alpha = 1.0;
+    int dim = data.axes.Rows();
+    switch (dim) {
+        case 0:
+            alpha = m_fracture_epsilon*m_fracture_epsilon*m_fracture_epsilon;
+            break;
+        case 1:
+            alpha = m_fracture_epsilon*m_fracture_epsilon;
+            break;
+        case 2:
+            alpha = m_fracture_epsilon;
+            break;
+        default:
+            break;
+    }
+    return alpha;
+}
+
 void TPZTracerFlow::Contribute(TPZVec<TPZMaterialData> &datavec, REAL weight, TPZFMatrix<STATE> &ek, TPZFMatrix<STATE> &ef){
 
 #ifdef PZDEBUG
@@ -159,6 +180,7 @@ void TPZTracerFlow::Contribute(TPZVec<TPZMaterialData> &datavec, REAL weight, TP
 #endif
 
     int s_b = 2;
+
     
     // Setting the phis
     TPZFMatrix<REAL>  &phiS =  datavec[s_b].phi;

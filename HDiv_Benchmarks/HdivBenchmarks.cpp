@@ -217,8 +217,8 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
-    Case_1();
+    Pretty_cube();
+//    Case_1();
 //     Case_2();
 
 }
@@ -484,7 +484,6 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
     TPZFMatrix<REAL> F_inlet;
     {
         
-        
         bool mass_matrix_Q = true;
         std::set<int> volumetric_mat_ids = {1,2,6,7,8};
         
@@ -500,6 +499,11 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
         std::cout << "Computing Mass Matrix." << std::endl;
         tracer_analysis->Assemble();
         M = tracer_analysis->Solver().Matrix()->Clone();
+    }
+    int n_rows = M->Rows();
+    TPZFMatrix<REAL> M_vec(n_rows,1);
+    for (int64_t i = 0; i < n_rows; i++) {
+        M_vec(i,0) = M->Get(i, i);
     }
     
     {
@@ -528,12 +532,15 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
         int div = 0;
         int64_t n_eq = tracer_analysis->Mesh()->NEquations();
         TPZFMatrix<REAL> s_n(n_eq,1,0.0);
-        TPZFMatrix<REAL> last_state_mass;
+        TPZFMatrix<REAL> last_state_mass(n_eq,1,0.0);
         TPZFMatrix<REAL> s_np1;
         
         for (int i = 0; i < n_steps; i++) {
-            M->Multiply(s_n, last_state_mass);
             
+            for (int64_t i = 0; i < n_eq; i++) {
+                 last_state_mass(i,0) = M_vec(i,0)*s_n(i,0);
+            }
+        
             tracer_analysis->Rhs() = F_inlet - last_state_mass;
             tracer_analysis->Rhs() *= -1.0;
             

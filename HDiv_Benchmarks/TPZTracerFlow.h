@@ -28,7 +28,7 @@ private:
     /** @brief Porosity  */
     REAL m_phi;
     
-    REAL m_fracture_cross_length;
+    REAL m_fracture_epsilon;
     
 public:
     
@@ -158,15 +158,17 @@ public:
         return m_phi;
     }
     
-    /** @brief Set oppening  */
-    void SetFractureCrossLength(REAL oppening){
-        m_fracture_cross_length = oppening;
+    /** @brief Set fracture cross length  */
+    void SetFractureCrossLength(REAL fracture_epsilon){
+        m_fracture_epsilon = fracture_epsilon;
     }
     
-    /** @brief Get oppening  */
+    /** @brief Get fracture cross length  */
     REAL GetFractureCrossLength(){
-        return m_fracture_cross_length;
+        return m_fracture_epsilon;
     }
+    
+    REAL FractureFactor(TPZMaterialData & data);
 
 };
 
