@@ -6,6 +6,8 @@
 //
 
 #include "THybridizeDFN.h"
+#include "pzelementgroup.h"
+#include "pzcondensedcompel.h"
 
 #include "pzlog.h"
 
@@ -108,7 +110,7 @@ void THybridizeDFN::SetFractureData(TPZStack<TFracture> & fracture_data){
 }
 
 
-void THybridizeDFN::ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift){
+void THybridizeDFN::ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id, int shift){
     
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
     if (!mp_cmesh) {
@@ -129,12 +131,13 @@ void THybridizeDFN::ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int 
         }
         flux_trace_id = maxMatId + 1 + shift;
         lagrange_id = maxMatId + 2 + shift;
-        mp_nterface_id = maxMatId + 3 + shift;
+        flux_resistivity_id = maxMatId + 3 + shift;
+        mp_nterface_id = maxMatId + 4 + shift;
     }
     
 }
 
-void THybridizeDFN::InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id){
+void THybridizeDFN::InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id){
     
     int n_state = 1;
     
@@ -153,6 +156,12 @@ void THybridizeDFN::InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & f
         }
         if (!flux_cmesh->FindMaterial(flux_trace_id)) {
             auto flux_trace_mat = new TPZL2Projection(flux_trace_id, target_dim, n_state, sol);
+            flux_trace_mat->SetScaleFactor(0.0);
+            flux_cmesh->InsertMaterialObject(flux_trace_mat);
+        }
+        
+        if (!flux_cmesh->FindMaterial(flux_resistivity_id)) {
+            auto flux_trace_mat = new TPZL2Projection(flux_resistivity_id, target_dim, n_state, sol);
             flux_trace_mat->SetScaleFactor(0.0);
             flux_cmesh->InsertMaterialObject(flux_trace_mat);
         }
@@ -209,7 +218,7 @@ void THybridizeDFN::CleanUpMultiphysicsCMesh(TPZCompMesh * cmesh){
     cmesh->SetReference(NULL);
 }
 
-void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id){
+void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id){
     
     int n_state = 1;
     TPZVec<STATE> sol(1,0);
@@ -221,6 +230,20 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
         auto flux_trace_mat = new TPZL2Projection(flux_trace_id, target_dim, n_state, sol);
         flux_trace_mat->SetScaleFactor(0.0);
         cmesh->InsertMaterialObject(flux_trace_mat);
+        
+    }
+    
+    /// TODO:: Use this structure for get normal permeability
+    REAL kappa_normal = m_fracture_data[0].m_kappa_normal;
+    if (!cmesh->FindMaterial(flux_resistivity_id)) {
+        
+        auto normal_flux_mat = new TPZNormalDarcyFlow(flux_resistivity_id, target_dim);
+        normal_flux_mat->SetKappaNormal(kappa_normal);
+        cmesh->InsertMaterialObject(normal_flux_mat);
+        
+//        auto flux_trace_mat = new TPZL2Projection(flux_resistivity_id, target_dim, n_state, sol);
+//        flux_trace_mat->SetScaleFactor(0.0);
+//        cmesh->InsertMaterialObject(flux_trace_mat);
         
     }
     
@@ -240,7 +263,7 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
     
 }
 
-void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id) {
+void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id) {
     
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
     if (!mp_cmesh) {
@@ -303,15 +326,27 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
                 TPZStack<TPZGeoElSide> gelsides;
                 gel_side.AllNeighbours(gelsides);
                 
+                bool fracture_detected_Q;
                 for (auto iside : gelsides) {
                     TPZGeoEl * neigh_gel = iside.Element();
                     int gel_mat_id = neigh_gel->MaterialId();
                     std::set<int>::iterator it = m_fracture_ids.find(gel_mat_id);
-                    bool fracture_detected_Q = it != m_fracture_ids.end();
+                    fracture_detected_Q = it != m_fracture_ids.end();
                     if (fracture_detected_Q && neigh_gel->Dimension() == gel->Dimension()) {
                         cel->SetReference(neigh_gel->Index());
                     }
                     
+                }
+                
+                if (fracture_detected_Q) { /// Change Hdivbound to Normal flux operator
+                    for (auto iside : gelsides) {
+                        TPZGeoEl * neigh_gel = iside.Element();
+                        int gel_mat_id = neigh_gel->MaterialId();
+                        if (gel_mat_id != flux_trace_id) {
+                            continue;
+                        }
+                        neigh_gel->SetMaterialId(flux_resistivity_id);
+                    }
                 }
                 
             }
@@ -846,7 +881,7 @@ int THybridizeDFN::CreateBCGeometricalElement(const TPZCompElSide & cel_side, TP
 }
 
 
-void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int & flux_trace_id, int & lagrange_id){
+void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id){
     
     flux_cmesh->SetDimModel(target_dim);
     flux_cmesh->SetAllCreateFunctionsHDiv();
@@ -964,16 +999,16 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     
     int target_dim = geometry->Dimension();
     int p_order = 1;
-    int flux_trace_id = 0, lagrange_id = 0, mp_nterface_id = 0;
+    int flux_trace_id = 0, lagrange_id = 0, flux_resistivity_id = 0, mp_nterface_id = 0;
     
     int matrix_dim = target_dim;
     
     /// Computes available material identifiers
     int shift = 1000000;
-    ComputeMaterialIds(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id, shift);
+    ComputeMaterialIds(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, flux_resistivity_id, mp_nterface_id, shift);
     
     /// Insert material identifiers for flux trace, lagrange multiplier and multiphysics interface
-    InsertMaterials(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
+    InsertMaterials(matrix_dim, mp_cmesh, flux_trace_id, lagrange_id, flux_resistivity_id);
     
     /// Hybridization for 3D elements
     /// load elements with dimension target_dim and target_dim - 1
@@ -983,18 +1018,16 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     TPZStack<std::pair<int, int>> gel_index_and_order_matrix;
     // hybridize the flux elements of target_dim
     // insert elements of bc_impervious_id if the element has no neighbour
-    ClassifyCompelSides(matrix_dim, q_cmesh, gel_index_and_order_matrix, flux_trace_id, lagrange_id);
+    ClassifyCompelSides(matrix_dim, q_cmesh, gel_index_and_order_matrix, flux_trace_id, lagrange_id, flux_resistivity_id);
     
     /// Creates the lagrange mulplier approximation space
-    CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_matrix);
-
-    
+    CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_matrix);
 
     /// Creates mixed operator on fractures 2D
     // switch the material id of the pressure elements if they are neighbour of 2d fracture elements
     // create boundary elements for the 2d fracture elements
     int fractures_dim = target_dim - 1;
-    BuildMixedOperatorOnFractures(p_order, fractures_dim, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
+    BuildMixedOperatorOnFractures(p_order, fractures_dim, cmesh, flux_trace_id, lagrange_id, flux_resistivity_id, mp_nterface_id);
 
 
 
@@ -1005,16 +1038,16 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     /// ClassifyCompelSides
     TPZStack<std::pair<int, int>> gel_index_and_order_fractures;
     // hybridize the 2d fracture elements
-    ClassifyCompelSides(fractures_dim, q_cmesh, gel_index_and_order_fractures, flux_trace_id, lagrange_id);
+    ClassifyCompelSides(fractures_dim, q_cmesh, gel_index_and_order_fractures, flux_trace_id, lagrange_id, flux_resistivity_id);
 
     /// Creates the lagrange mulplier approximation space
-    CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures);
+    CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures);
     
     
     // switch the material id of the pressure elements if they are neighbour of 1d fracture elements
     // create boundary elements for the 1d fracture elements
     int fractures_intersections_dim = target_dim - 2;
-    BuildMixedOperatorOnFractures(p_order, fractures_intersections_dim, cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
+    BuildMixedOperatorOnFractures(p_order, fractures_intersections_dim, cmesh, flux_trace_id, lagrange_id, flux_resistivity_id, mp_nterface_id);
     
     
     /// Hybridization for 1D fracture intersection elements
@@ -1025,10 +1058,10 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     TPZStack<std::pair<int, int>> gel_index_and_order_fractures_intersection;
     // list of pressure elements that need to be created
 
-    ClassifyCompelSides(fractures_intersections_dim, q_cmesh, gel_index_and_order_fractures_intersection, flux_trace_id, lagrange_id);
+    ClassifyCompelSides(fractures_intersections_dim, q_cmesh, gel_index_and_order_fractures_intersection, flux_trace_id, lagrange_id, flux_resistivity_id);
     
     /// Creates the lagrange mulplier approximation space
-    CreareLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
+    CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
 
     
     /// Computational multiphysics mesh reconstruction
@@ -1037,7 +1070,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     CleanUpMultiphysicsCMesh(cmesh);
     
     
-    InsertMaterialsForHibridization(target_dim, dfn_hybrid_cmesh, flux_trace_id, lagrange_id, mp_nterface_id);
+    InsertMaterialsForHibridization(target_dim, dfn_hybrid_cmesh, flux_trace_id, lagrange_id, flux_resistivity_id, mp_nterface_id);
     InsertMaterialsForMixedOperatorOnFractures(fractures_dim,dfn_hybrid_cmesh);
     InsertMaterialsForMixedOperatorOnFractures(fractures_intersections_dim,dfn_hybrid_cmesh);
     InsertMaterialsForMixedOperatorOnFractures(0,dfn_hybrid_cmesh);
@@ -1054,8 +1087,8 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
-
     dfn_hybrid_cmesh->ComputeNodElCon();
+    
     {
         int64_t nel = dfn_hybrid_cmesh->NElements();
         for(int64_t el=0; el<nel; el++)
@@ -1065,14 +1098,14 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
             if(!mpcel) continue;
             if(!mpcel->Element(0) && mpcel->Element(1))
             {
-                std::cout << "this element has a pressure but no flux\n";
+//                std::cout << "this element has a pressure but no flux\n";
                 TPZConnect &c = mpcel->Connect(0);
                 int nelcon = c.NElConnected();
                 if(nelcon <= 3)
                 {
                     continue;
                 }
-                mpcel->Print();
+
                 TPZGeoEl *gel = cel->Reference();
                 // find a neighbour with matid = 8
                 TPZGeoEl *gel8 = 0;
@@ -1091,7 +1124,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
                 if(!gel8)
                 {
                     std::cout << "no element found at the intersection of fractures\n";
-                    gel->Print();
                     gel->SetMaterialId(8);
                 }
                 else
@@ -1107,7 +1139,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     return dfn_hybrid_cmesh;
 }
 
-void THybridizeDFN::CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack){
+void THybridizeDFN::CreateLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack){
     
     TPZGeoMesh * geometry = p_cmesh->Reference();
     geometry->ResetReference();
@@ -1150,4 +1182,70 @@ void THybridizeDFN::BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, 
     
     mp_hybrid_cmesh->SetDimModel(dim);
     mp_hybrid_cmesh->BuildMultiphysicsSpace(approx_spaces, mesh_vec);
+}
+
+/// group and condense the elements
+void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
+{
+    TPZVec<int64_t> ConnectGroup(cmesh->NConnects(),-1);
+    TPZVec<int64_t> ElementGroup(cmesh->NElements());
+    int64_t nelem = cmesh->NElements();
+    int64_t igr = 0;
+    // each element that has a flux associated is the nucleus of a group
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        TPZCompEl *atom_cel_flux = mpel->Element(0);
+        if(!atom_cel_flux)
+        {
+            continue;
+        }
+        int ncon_flux = atom_cel_flux->NConnects();
+        for(int ic=0; ic<ncon_flux; ic++)
+        {
+            int64_t conindex = cel->ConnectIndex(ic);
+            ConnectGroup[conindex] = igr;
+        }
+        ElementGroup[el] = igr;
+        igr++;
+    }
+    int64_t numgroups = igr;
+    // an element that shares a connect with the nucleus element will belong to the group
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        int ncon = mpel->NConnects();
+        int64_t elgr = -1;
+        for(int ic=0; ic<ncon; ic++)
+        {
+            int64_t conindex = cel->ConnectIndex(ic);
+            if(ConnectGroup[conindex] != -1) elgr = ConnectGroup[conindex];
+        }
+        ElementGroup[el] = elgr;
+    }
+    TPZVec<TPZElementGroup *> groups(numgroups,0);
+    for (igr = 0; igr < numgroups; igr++) {
+        int64_t index;
+        TPZElementGroup *group = new TPZElementGroup(*cmesh,index);
+        groups[igr] = group;
+    }
+    for (int64_t el=0; el<nelem; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
+        if(!mpel) continue;
+        if(ElementGroup[el] != -1)
+        {
+            int64_t group_index = ElementGroup[el];
+            TPZElementGroup *group = groups[group_index];
+            group->AddElement(cel);
+        }
+    }
+    cmesh->ComputeNodElCon();
+    for (int igr = 0; igr < numgroups; igr++) {
+        TPZElementGroup *group = groups[igr];
+        bool keep_matrix = false;
+        new TPZCondensedCompEl(group, keep_matrix);
+    }
 }

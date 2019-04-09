@@ -23,6 +23,7 @@
 #include "TPZMixedDarcyFlow.h"
 #include "pzbndcond.h"
 #include "TPZVTKGeoMesh.h"
+#include "TPZNormalDarcyFlow.h"
 
 
 /// This class is dedicated for conformal geometrical partitions and mixed meshes.
@@ -64,9 +65,9 @@ public:
     
     void LoadReferencesByDimension(TPZCompMesh * flux_cmesh, int dim);
     
-    void ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id, int shift = 0);
+    void ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id, int shift = 0);
     
-    void InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
+    void InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id);
     
     
     TPZCompMesh * DuplicateMultiphysicsCMeshMaterials(TPZCompMesh * cmesh);
@@ -77,11 +78,11 @@ public:
     
     void CleanUpMultiphysicsCMesh(TPZCompMesh * cmesh);
     
-    void InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
+    void InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id);
     
     void InsertMaterialsForMixedOperatorOnFractures(int target_dim, TPZCompMesh * cmesh);
     
-    void BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & mp_nterface_id);
+    void BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id);
     
     /// Construct a lagrange multiplier approximation spaces for a DFN
     TPZCompMesh * Hybridize(TPZCompMesh * cmesh);
@@ -92,9 +93,9 @@ public:
     
     int CreateBCGeometricalElement(const TPZCompElSide & cel_side, TPZCompMesh * flux_cmesh,int & bc_impervious_id);
     
-    void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int & flux_trace_id, int & lagrange_id);
+    void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id);
     
-    void CreareLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
+    void CreateLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
     
     void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
     
@@ -116,7 +117,8 @@ public:
         m_bc_ids_0d = bc_ids_0d;
     }
     
-    
+    /// group and condense the elements
+    static void GroupElements(TPZMultiphysicsCompMesh *cmesh);
 };
 
 #endif /* THybridizeDFN_h */
