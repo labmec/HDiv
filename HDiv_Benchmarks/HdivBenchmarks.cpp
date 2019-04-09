@@ -185,6 +185,10 @@ void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZStack<TFracture> & fracture_data ,SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
 void CreateTransportElement(int p_order, TPZCompMesh *cmesh, TPZGeoEl *gel, bool is_BC);
 
+void check_mesh(TPZGeoMesh *gmesh, int dim);
+void CreateSkeletonElements(TPZGeoMesh *gmesh, int dimension, int matid);
+bool HasEqualDimensionNeighbour(TPZGeoElSide &gelside);
+
 void UniformRefinement(TPZGeoMesh * geometry, int h_level);
 
 void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, std::vector<int> & cel_indexes);
@@ -213,9 +217,9 @@ int main(){
 #endif
     
 
-    Pretty_cube();
+ //   Pretty_cube();
 
-//    Case_1();
+   Case_1();
 
 //     Case_2();
 
@@ -644,12 +648,14 @@ void Case_1(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
+    
+    check_mesh(gmesh, 3);
     
     UniformRefinement(gmesh, h_level);
     
@@ -2508,4 +2514,75 @@ void UniformRefinement(TPZGeoMesh * geometry, int h_level) {
     }
     geometry->ResetConnectivities();
     geometry->BuildConnectivity();
+}
+bool HasEqualDimensionNeighbour(TPZGeoElSide &gelside){
+    
+    int dimension = gelside.Dimension();
+    
+    if (gelside.Element()->Dimension() == dimension){
+        return true;
+    }
+    
+    TPZGeoElSide neighbour = gelside.Neighbour();
+    
+    while (neighbour != gelside){
+        if (neighbour.Element()->Dimension()==dimension){
+            return true;
+            neighbour = neighbour.Neighbour();
+        }
+        return false;
+    }
+}
+
+void CreateSkeletonElements(TPZGeoMesh *gmesh, int dimension, int matid){
+    
+    int nel = gmesh->NElements();
+    for(int iel=0; iel<nel; iel++){
+        TPZGeoEl *gel = gmesh->Element(iel);
+        int nsides = gel->NSides();
+        for(int iside=0; iside<nsides; iside++){
+            TPZGeoElSide gelside = gel->Neighbour(iside);
+            if (gelside.Dimension()==dimension){
+                bool haskel = HasEqualDimensionNeighbour(gelside);
+                if(haskel==false){
+                    int nel_mesh = gmesh->NElements();
+                    TPZGeoElBC(gelside,matid);
+                    
+                }
+            }
+        }
+    }
+}
+
+void check_mesh(TPZGeoMesh *gmesh, int dim){
+    
+    int nel = gmesh->NElements();
+    for (int iel=0; iel<nel; iel++) {
+        TPZGeoEl *gel = gmesh->Element(iel);
+        if (!gel) {continue;}
+        int gel_dim = gel->Dimension();
+        if (gel_dim==dim) {
+            int n_sides = gel->NSides();
+            for (int iside=0; iside<n_sides; iside++) {
+                int count =0;
+                TPZGeoElSide gelside(gel,iside);
+                if (gelside.Dimension() != dim-1) {continue;}
+                TPZGeoElSide neih = gelside.Neighbour();
+                while (neih != gelside) {
+                    int dim_neig = neih.Element()->Dimension();
+                    int mat_id_neig = neih.Element()->MaterialId();
+                    if (mat_id_neig==6) {
+                        TPZGeoElBC(gelside,60);
+                    }
+                    if (dim_neig==dim) {
+                        count++;
+                    }
+                    neih=neih.Neighbour();
+                }
+                if (dim ==3 && count !=1) {
+                    TPZGeoElBC(gelside,50);
+                }
+            }
+        }
+    }
 }
