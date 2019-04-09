@@ -299,21 +299,21 @@ void Pretty_cube(){
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
-    fracture.m_d_opening        = 1.0;
+    fracture.m_d_opening        = 1.0e-2;
     fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
-    fracture.m_d_opening        = 1.0;
+    fracture.m_d_opening        = 1.0e-2;
     fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
     fracture.m_id               = 8;
     fracture.m_dim              = 0;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
-    fracture.m_d_opening        = 1.0;
+    fracture.m_d_opening        = 1.0e-2;
     fracture.m_porosity         = 0.25;
     fracture_data.push_back(fracture);
 
@@ -1864,8 +1864,10 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZSt
     for (int i = 0; i < n_fracs; i++) {
         int mat_id = fracture_data[i].m_id;
         REAL phi = fracture_data[i].m_porosity;
+        REAL d_opening = fracture_data[i].m_d_opening;
         TPZTracerFlow * volume = new TPZTracerFlow(mat_id,0);
         volume->SetPorosity(phi);
+        volume->SetFractureCrossLength(d_opening);
         cmesh->InsertMaterialObject(volume);
     }
     
