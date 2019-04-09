@@ -683,7 +683,9 @@ void Case_1(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
@@ -691,7 +693,7 @@ void Case_1(){
     Geometry.PrintPartitionSummary(std::cout);
     
 
-    check_mesh(gmesh, 3);
+//    check_mesh(gmesh, 3);
 
     Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
