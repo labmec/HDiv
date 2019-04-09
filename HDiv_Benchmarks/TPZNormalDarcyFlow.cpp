@@ -8,7 +8,7 @@
 #include "TPZNormalDarcyFlow.h"
 
 
-TPZNormalDarcyFlow::TPZNormalDarcyFlow(int mat_id, int dim) : TPZMaterial(mat_id){
+TPZNormalDarcyFlow::TPZNormalDarcyFlow(int mat_id, int dim) : TPZDiscontinuousGalerkin(mat_id){
     
     m_mat_id = mat_id;
     m_dim = dim;
@@ -20,7 +20,7 @@ TPZNormalDarcyFlow::~TPZNormalDarcyFlow(){
     
 }
 
-TPZNormalDarcyFlow::TPZNormalDarcyFlow(const TPZNormalDarcyFlow & other) : TPZMaterial(other){
+TPZNormalDarcyFlow::TPZNormalDarcyFlow(const TPZNormalDarcyFlow & other) : TPZDiscontinuousGalerkin(other){
     m_mat_id        = other.m_mat_id;
     m_dim           = other.m_dim;
     m_kappa_normal  = other.m_kappa_normal;
@@ -30,7 +30,7 @@ TPZNormalDarcyFlow & TPZNormalDarcyFlow::operator=(const TPZNormalDarcyFlow & ot
  
     if (this != & other) // prevent self-assignment
     {
-        TPZMaterial::operator=(other);
+        TPZDiscontinuousGalerkin::operator=(other);
         m_mat_id        = other.m_mat_id;
         m_dim           = other.m_dim;
         m_kappa_normal  = other.m_kappa_normal;
