@@ -213,9 +213,9 @@ int main(){
 #endif
     
 
-    Pretty_cube();
+//    Pretty_cube();
 
-//    Case_1();
+    Case_1();
 
 //     Case_2();
 
@@ -484,14 +484,13 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
         
         
         bool mass_matrix_Q = true;
-//        std::set<int> volumetric_mat_ids = {1,2,6};
-        std::set<int> volumetric_mat_ids = {1,2,6,7,8}; // pretty cube
+        std::set<int> volumetric_mat_ids = {1,2,6,7,8};
         
         for (auto mat_id: volumetric_mat_ids) {
             TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
             TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
             if (!volume) {
-                DebugStop();
+                continue;
             }
             volume->SetMassMatrixAssembly(mass_matrix_Q);
         }
@@ -503,14 +502,13 @@ void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
     
     {
         bool mass_matrix_Q = false;
-//        std::set<int> volumetric_mat_ids = {1,2,6};
-                std::set<int> volumetric_mat_ids = {1,2,6,7,8}; // pretty cube
+        std::set<int> volumetric_mat_ids = {1,2,6,7,8};
         
         for (auto mat_id: volumetric_mat_ids) {
             TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
             TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
             if (!volume) {
-                DebugStop();
+               continue;
             }
             volume->SetTimeStep(dt);
             volume->SetMassMatrixAssembly(mass_matrix_Q);
