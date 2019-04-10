@@ -1079,10 +1079,10 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     dfn_hybrid_cmesh->MaterialVec().erase(8);
     BuildMultiphysicsCMesh(matrix_dim,dfn_hybrid_cmesh,active_approx_spaces,dfn_mixed_mesh_vec);
     dfn_hybrid_cmesh->InsertMaterialObject(mat8);
-    {
-        std::ofstream out("darcy_mesh_before_interfaces.txt");
-        dfn_hybrid_cmesh->Print(out);
-    }
+//    {
+//        std::ofstream out("darcy_mesh_before_interfaces.txt");
+//        dfn_hybrid_cmesh->Print(out);
+//    }
     
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);

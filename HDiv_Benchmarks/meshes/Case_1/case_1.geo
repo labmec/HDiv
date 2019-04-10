@@ -1,20 +1,13 @@
 
 Mesh.Algorithm = 6;
 
-//h = 13.75*0.0273;   /// approx 100k tet : 100273 tetrahera
-//nf = 50;        
-//nv = 5;
-//nh = 50;
+//h = 1.5;   /// approx 1k tet : 1054 tetrahera and 526 triangles
 
-//h = 27.0*0.0273;   /// approx 10k tet  : 10083 tetrahera
-//nf = 20;        
-//nv = 2;
-//nh = 20;
+h = 0.55;   /// approx 1k tet : 10589 tetrahera and 2884 triangles
 
-h = 80.0*0.0273;   /// approx 1k tet : 1039 tetrahera
-nf = 8;        
-nv = 1;
-nh = 8;
+//h = 0.24;   /// approx 1k tet : 101524 tetrahera and 13436 triangles
+
+
 
 
 // Dimensions: x is left to right, y is front to back and z is top to bottom
@@ -152,10 +145,6 @@ inlet_vl[] = {9,10};
 inlet_hl[] = {112,28};
 outlet_vl[] = {3,1};
 outlet_hl[] = {14,13};
-
-Transfinite Line {fracture_l[]} = nf Using Progression 1.0;
-Transfinite Line {inlet_vl[],outlet_vl[]} = nv Using Progression 1.0;
-Transfinite Line {inlet_hl[],outlet_hl[]} = nh Using Progression 1.0;
 
 
 Physical Volume("RockMatrix_1") = {vol_1[]};

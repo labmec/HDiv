@@ -502,14 +502,14 @@ void Pretty_cube(){
         if (!s_cmesh) {
             DebugStop();
         }
-        TPZGeoMesh * geometry = cmesh_transport->Reference();
+        TPZGeoMesh * geometry = s_cmesh->Reference();
         if (!geometry) {
             DebugStop();
         }
         geometry->ResetReference();
-        cmesh_transport->LoadReferences();
+        s_cmesh->LoadReferences();
         
-        for (auto cel : cmesh_transport->ElementVec()) {
+        for (auto cel : s_cmesh->ElementVec()) {
             if (!cel) {
                 continue;
             }
@@ -573,6 +573,10 @@ void Pretty_cube(){
 }
 
 void Case_1(){
+    
+    
+    /// Execution logger.
+    std::ofstream log_file("case_1_results.txt");
     
     int h_level = 0;
     
@@ -673,21 +677,17 @@ void Case_1(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/single.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
-    gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
-    Geometry.PrintPartitionSummary(std::cout);
-    
-
     Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
-
     
     UniformRefinement(gmesh, h_level);
     
@@ -703,10 +703,10 @@ void Case_1(){
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
-#ifdef PZDEBUG
-    std::ofstream filemixed("mixed_cmesh.txt");
-    cmixedmesh->Print(filemixed);
-#endif
+//#ifdef PZDEBUG
+//    std::ofstream filemixed("mixed_cmesh.txt");
+//    cmixedmesh->Print(filemixed);
+//#endif
     
     TPZCompMesh *cmeshm =NULL;
     THybridizeDFN dfn_hybridzer;
@@ -734,21 +734,21 @@ void Case_1(){
         
         TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
         
-#ifdef PZDEBUG
-        {
-            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-            mesh_vec[0]->ComputeNodElCon();
-            mesh_vec[0]->Print(file_hybrid_mixed_q);
-            
-            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-            mesh_vec[1]->ComputeNodElCon();
-            mesh_vec[1]->Print(file_hybrid_mixed_p);
-            
-            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
-            cmeshm->ComputeNodElCon();
-            cmeshm->Print(file_hybrid_mixed);
-        }
-#endif
+//#ifdef PZDEBUG
+//        {
+//            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+//            mesh_vec[0]->ComputeNodElCon();
+//            mesh_vec[0]->Print(file_hybrid_mixed_q);
+//
+//            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+//            mesh_vec[1]->ComputeNodElCon();
+//            mesh_vec[1]->Print(file_hybrid_mixed_p);
+//
+//            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+//            cmeshm->ComputeNodElCon();
+//            cmeshm->Print(file_hybrid_mixed);
+//        }
+//#endif
         
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
@@ -760,15 +760,12 @@ void Case_1(){
         an->Assemble();
         std::cout << "Assembly for DFN complete." << std::endl;
         
+//        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
+        
         std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
         std::cout << "DFN problem solved." << std::endl;
         mp_cmesh->LoadSolutionFromMultiPhysics();
-        
-#ifdef PZDEBUG
-        std::ofstream file_geo_hybrid("geometry_case_1_hybrid.vtk");
-        TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
-#endif
         
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
@@ -795,7 +792,7 @@ void Case_1(){
 #endif
     }
     
-    int n_steps = 1;
+    int n_steps = 100;
     REAL dt     = 1.0e7;
     TPZFMatrix<STATE> M_diag;
     TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
@@ -808,14 +805,14 @@ void Case_1(){
         if (!s_cmesh) {
             DebugStop();
         }
-        TPZGeoMesh * geometry = cmesh_transport->Reference();
+        TPZGeoMesh * geometry = s_cmesh->Reference();
         if (!geometry) {
             DebugStop();
         }
         geometry->ResetReference();
-        cmesh_transport->LoadReferences();
+        s_cmesh->LoadReferences();
         
-        for (auto cel : cmesh_transport->ElementVec()) {
+        for (auto cel : s_cmesh->ElementVec()) {
             if (!cel) {
                 continue;
             }
@@ -912,6 +909,8 @@ void Case_1(){
     
     std::ofstream file_4("item_4.txt");
     item_4.Print("it4 = ",file_4,EMathematicaInput);
+    
+    
     
     return;
 }
@@ -1259,6 +1258,10 @@ void IntegrateFluxAndPressure(int target_mat_id, TPZManVector<TPZCompMesh * ,3> 
         for (auto cel_side : cel_stack) {
             cel_vol = cel_side.Element();
             int neigh_mat_id = cel_vol->Reference()->MaterialId();
+            int vol_dim = cel_vol->Dimension();
+            if (vol_dim != gel->Dimension() +1) {
+                continue;
+            }
             if(volumes.find(neigh_mat_id) != volumes.end()){
                 break;
             }
@@ -1440,6 +1443,7 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
         
         std::cout << "Computing Mass Matrix." << std::endl;
         tracer_analysis->Assemble();
+        std::cout << "Mass Matrix is computed." << std::endl;
         M = tracer_analysis->Solver().Matrix()->Clone();
     }
     int n_rows = M->Rows();
@@ -1514,14 +1518,17 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 }
                 volume->SetDimension(data.second);
             }
-            int dim = 3;
-//            tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
-//            tracer_analysis->PostProcess(div,dim);
+            if(it == n_steps - 1){
+                int dim = 3;
+                tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
+                tracer_analysis->PostProcess(div,dim);
+            }
+
             
             // configuring next time step
             s_n = s_np1;
             for (int64_t i = 0; i < n_eq; i++) {
-                saturations(i,it) = s_np1(i,0);
+                saturations(i,it) = meshtrvec[2]->Solution()(i,0);
             }
             
         }
@@ -2437,7 +2444,6 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
     TPZBuildMultiphysicsMesh::AddConnects(meshvec, cmesh);
     TPZBuildMultiphysicsMesh::TransferFromMeshes(meshvec, cmesh);
     
-    std::cout << "Created multi physics DFN mesh\n";
     if (sim_data.IsMHMQ) {
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
@@ -2452,6 +2458,8 @@ TPZCompMesh * CMeshMixed(TPZGeoMesh * geometry, int order, SimulationCase sim_da
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
     }
+    
+    std::cout << "Created multi-physics DFN mesh\n";
     
 #ifdef PZDEBUG2
     std::stringstream file_name;
@@ -2504,7 +2512,6 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     active_approx_spaces[1] = 1;
     cmesh->BuildMultiphysicsSpace(active_approx_spaces,mesh_vec);
 
-    std::cout << "Created multi physics DFN mesh\n";
     if (sim_data.IsMHMQ) {
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
@@ -2519,6 +2526,8 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
 //        cmesh->CleanUpUnconnectedNodes();
 //        cmesh->ExpandSolution();
 //    }
+    
+    std::cout << "Created multi-physics DFN mesh\n";
     
 #ifdef PZDEBUG2
     std::stringstream file_name;
@@ -2594,7 +2603,7 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZSt
     active_approx_spaces[2] = 1;
     cmesh->BuildMultiphysicsSpace(active_approx_spaces,meshvec);
     
-    std::cout << "Created multi physics transport mesh\n";
+
     if (sim_data.IsMHMQ) {
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
@@ -2611,6 +2620,8 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZSt
     }
     
     InsertTransportInterfaceElements(cmesh);
+    
+    std::cout << "Created multi-physics transport mesh\n";
     
 #ifdef PZDEBUG
     std::ofstream transport("transport_cmesh.txt");

@@ -1654,7 +1654,6 @@ TPZCompMesh *DualMesh(TPZGeoMesh * geometry, int p, SimulationCase sim_data, TPZ
     TPZBuildMultiphysicsMesh::AddConnects(meshvector, cmesh);
     TPZBuildMultiphysicsMesh::TransferFromMeshes(meshvector, cmesh);
     
-    std::cout << "Created multi physics mesh\n";
     if (sim_data.IsMHMQ) {
 //        BuildMacroElements(cmesh);
         cmesh->CleanUpUnconnectedNodes();
@@ -1671,6 +1670,8 @@ TPZCompMesh *DualMesh(TPZGeoMesh * geometry, int p, SimulationCase sim_data, TPZ
         cmesh->ExpandSolution();
     }
 
+    std::cout << "Created multi-physics mesh\n";
+    
 #ifdef PZDEBUG2
     std::stringstream file_name;
     file_name   << sim_data.dump_folder << "/" << "Dual_cmesh" << ".txt";
