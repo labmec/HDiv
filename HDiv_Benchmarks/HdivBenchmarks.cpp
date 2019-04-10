@@ -196,7 +196,7 @@ void UniformRefinement(TPZGeoMesh * geometry, int h_level);
 
 void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, std::vector<int> & cel_indexes);
 
-void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt);
+void TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt);
 
 void IntegrateSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn ,std::map<int, REAL> & gel_index_to_int_s);
 
@@ -487,7 +487,7 @@ void Pretty_cube(){
     
     int n_steps = 1;
     REAL dt     = 1.0;
-    TimeFoward(tracer_analysis, n_steps, dt);
+    TimeForward(tracer_analysis, n_steps, dt);
     
     std::map<int, REAL> gel_index_to_int_qn;
     std::map<int, REAL> gel_index_to_int_p;
@@ -495,7 +495,7 @@ void Pretty_cube(){
     int target_mat_id = 4;
     IntegrateFluxAndPressure(target_mat_id, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
     IntegrateSaturation(target_mat_id, meshtrvec, gel_index_to_int_qn, gel_index_to_int_s);
-    int aka;
+    
     return;
 
 }
@@ -715,7 +715,7 @@ TPZTransform<REAL> Transform_Face_To_Volume(TPZGeoEl * gel_face, TPZGeoEl * gel_
     return t3;
 }
 
-void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
+void TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
     
     
     TPZMultiphysicsCompMesh * cmesh_transport = dynamic_cast<TPZMultiphysicsCompMesh *>(tracer_analysis->Mesh());
@@ -1053,7 +1053,7 @@ void Case_1(){
     
     int n_steps = 10;
     REAL dt     = 1.0e7;
-    TimeFoward(tracer_analysis, n_steps, dt);
+    TimeForward(tracer_analysis, n_steps, dt);
     
     return;
 }
@@ -1310,7 +1310,7 @@ void Case_2(){
     
     int n_steps = 10;
     REAL dt     = 0.1;
-    TimeFoward(tracer_analysis, n_steps, dt);
+    TimeForward(tracer_analysis, n_steps, dt);
     
     return;
 }
