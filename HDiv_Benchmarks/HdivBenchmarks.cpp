@@ -111,8 +111,9 @@ struct SimulationCase {
     TPZStack<REAL>   porosities;
     TPZStack<REAL>   type;
     TPZStack<REAL>   vals;
+    REAL            c_inlet;
     
-    SimulationCase() : IsMHMQ(false), UsePardisoQ(true), IsHybrid(false),UseFrontalQ(false), UseGmshMeshQ(false), NonAffineQ(false), elemen_type(0), n_h_levels(0), n_p_levels(1), n_acc_terms(0), int_order(1), n_threads(0),perturbation_type(0), mesh_type(""), domain_type(""),conv_summary(""),dump_folder(""),omega_ids(),omega_dim(),gamma_ids(), gamma_dim(), permeabilities(),porosities(), type(), vals()
+    SimulationCase() : IsMHMQ(false), UsePardisoQ(true), IsHybrid(false),UseFrontalQ(false), UseGmshMeshQ(false), NonAffineQ(false), elemen_type(0), n_h_levels(0), n_p_levels(1), n_acc_terms(0), int_order(1), n_threads(0),perturbation_type(0), mesh_type(""), domain_type(""),conv_summary(""),dump_folder(""),omega_ids(),omega_dim(),gamma_ids(), gamma_dim(), permeabilities(),porosities(), type(), vals(), c_inlet(0)
     {
         
     }
@@ -122,7 +123,7 @@ struct SimulationCase {
     dump_folder(copy.dump_folder), omega_ids(copy.omega_ids), omega_dim(copy.omega_dim), gamma_ids(copy.gamma_ids), gamma_dim(copy.gamma_dim),
     permeabilities(copy.permeabilities),porosities(copy.porosities),
     type(copy.type),
-    vals(copy.vals)
+    vals(copy.vals),c_inlet(copy.c_inlet)
     {
         
     }
@@ -159,6 +160,7 @@ struct SimulationCase {
         porosities = copy.porosities;
         type=copy.type;
         vals=copy.vals;
+        c_inlet=copy.c_inlet;
         return *this;
     }
 };
@@ -196,6 +198,10 @@ void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, s
 
 void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt);
 
+void IntegrateFluxAndPressure(int target_mat_id, TPZManVector<TPZCompMesh * > & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn, std::map<int, REAL> & gel_index_to_int_p);
+
+TPZTransform<REAL> Transform_Face_To_Volume(TPZGeoEl * gel_face, TPZGeoEl * gel_vol);
+
 void FractureTest();
 
 /// Executes case 1
@@ -217,8 +223,8 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
-    Case_1();
+    Pretty_cube();
+//    Case_1();
 //     Case_2();
 
 }
@@ -242,6 +248,9 @@ void Pretty_cube(){
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0);
     sim.porosities.push_back(0.25);
+    
+    /// C inlet value
+    sim.c_inlet = 1.0;
     
     int bc_inlet  = 3;
     int bc_outlet = 4;
@@ -435,6 +444,12 @@ void Pretty_cube(){
         TPZVTKGeoMesh::PrintGMeshVTK(cmeshm->Reference(), file_geo_hybrid);
 #endif
         
+        
+        std::map<int, REAL> gel_index_to_int_qn;
+        std::map<int, REAL> gel_index_to_int_p;
+        int target_mat_id = 4;
+        IntegrateFluxAndPressure(target_mat_id, mesh_vec, gel_index_to_int_qn, gel_index_to_int_p);
+        
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
         vecnames.Push("kappa");
@@ -480,6 +495,140 @@ void Pretty_cube(){
     
     return;
 
+}
+
+void IntegrateFluxAndPressure(int target_mat_id, TPZManVector<TPZCompMesh * > & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn, std::map<int, REAL> & gel_index_to_int_p){
+    std::set<int> volumes = {1,2};
+    int int_order = 10;
+    int int_type = 0;
+    int var = 0;
+    
+    /// Flux integration
+    TPZCompMesh * flux_mesh = mesh_vec[0];
+    if (!flux_mesh) {
+        DebugStop();
+    }
+    TPZGeoMesh * geometry = flux_mesh->Reference();
+    if (!geometry) {
+        DebugStop();
+    }
+    geometry->ResetReference();
+    flux_mesh->LoadReferences();
+    
+    for(auto cel: flux_mesh->ElementVec()){
+        if (!cel) {
+            continue;
+        }
+        TPZGeoEl * gel = cel->Reference();
+        if (!gel) {
+            DebugStop();
+        }
+        int mat_id = gel->MaterialId();
+        if (mat_id != target_mat_id) {
+            continue;
+        }
+        int dim = gel->Dimension();
+        flux_mesh->SetDimModel(dim);
+        TPZManVector<REAL> qn  = cel->IntegrateSolution(var);
+        
+        int gel_index = gel->Index();
+        REAL qn_val = qn[0];
+        gel_index_to_int_qn.insert(std::make_pair(gel_index, qn_val));
+    }
+    
+    /// Pressure integration
+    TPZCompMesh * pressure_mesh = mesh_vec[1];
+    if (!pressure_mesh) {
+        DebugStop();
+    }
+    geometry->ResetReference();
+    pressure_mesh->LoadReferences();
+    TPZManVector<STATE,1> sol;
+    for(auto pair: gel_index_to_int_qn){
+        int64_t gel_index = pair.first;
+        TPZGeoEl * gel = geometry->Element(gel_index);
+        if (!gel) {
+            DebugStop();
+        }
+        
+        TPZGeoElSide gel_side(gel,gel->NSides()-1);
+        TPZStack<TPZCompElSide> cel_stack;
+        gel_side.ConnectedCompElementList(cel_stack, 0, 0);
+        
+        REAL int_p = 0;
+        TPZCompEl * cel_vol;
+        for (auto cel_side : cel_stack) {
+            cel_vol = cel_side.Element();
+            int neigh_mat_id = cel_vol->Reference()->MaterialId();
+            if(volumes.find(neigh_mat_id) != volumes.end()){
+                break;
+            }
+        }
+        TPZGeoEl * gel_vol = cel_vol->Reference();
+        if (!gel_vol) {
+            DebugStop();
+        }
+        TPZTransform<REAL> afine_transformation = Transform_Face_To_Volume(gel,gel_vol);
+        
+        int side = gel->NSides() - 1;
+        TPZIntPoints * NumericIntegral = gel->CreateSideIntegrationRule(side, int_order);
+        NumericIntegral->SetType(int_type, int_order);
+        
+        // Creating the integration rule
+        int dimension   = NumericIntegral->Dimension();
+        int npoints     = NumericIntegral->NPoints();
+        
+        if (dimension != gel->Dimension()) {
+            std::cout << "Incompatible dimensions." << std::endl;
+            DebugStop();
+        }
+        
+        // compute the integrals
+        TPZManVector<REAL,3> xi_face(dimension,0.0);
+        TPZManVector<REAL,3> xi_vol(gel_vol->Dimension(),0.0);
+        REAL weight = 0.0;
+        for (int it = 0 ; it < npoints; it++) {
+            
+            TPZFMatrix<REAL> jac;
+            TPZFMatrix<REAL> axes;
+            REAL detjac;
+            TPZFMatrix<REAL> jacinv;
+            NumericIntegral->Point(it, xi_face, weight);
+            gel->Jacobian(xi_face, jac, axes, detjac, jacinv);
+            
+            afine_transformation.Apply(xi_face, xi_vol);
+            
+            cel_vol->Solution(xi_vol, var, sol);
+            int_p += weight * detjac * sol[0];
+            
+        }
+        gel_index_to_int_p.insert(std::make_pair(gel_index, int_p));
+    }
+}
+
+TPZTransform<REAL> Transform_Face_To_Volume(TPZGeoEl * gel_face, TPZGeoEl * gel_vol){
+    
+    int itself_face = gel_face->NSides()-1;
+    int itself_vol = gel_vol->NSides()-1;
+    int dim  = gel_vol->Dimension();
+    TPZGeoElSide gel_side_face(gel_face,itself_face);
+    TPZGeoElSide gel_side_vol(gel_vol,itself_vol);
+    TPZGeoElSide neigh = gel_side_face.Neighbour();
+    TPZGeoEl * gel_target;
+    while(neigh != neigh.Neighbour()){
+        gel_target =  neigh.Element();
+        if(gel_target->Dimension() == dim)
+        {
+            break;
+        }
+        neigh = neigh.Neighbour();
+    }
+    
+    TPZTransform<> t1 = gel_side_face.NeighbourSideTransform(neigh);
+    TPZTransform<> t2 = neigh.SideToSideTransform(gel_side_vol);
+    TPZTransform<> t3 = t2.Multiply(t1);
+    
+    return t3;
 }
 
 void TimeFoward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt){
@@ -2094,7 +2243,7 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZSt
     
     int typ_inlet = 0; // inlet
     /// Inserting the materials
-    val2(0,0) = 1.0;
+    val2(0,0) = sim_data.c_inlet;
     for (auto mat_id: bc_inlet_mat_ids) {
         TPZMaterial * bc = material->CreateBC(material, mat_id, typ_inlet, val1, val2);
         cmesh->InsertMaterialObject(bc);
