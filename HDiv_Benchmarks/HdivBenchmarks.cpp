@@ -231,8 +231,8 @@ int main(){
 #endif
     
 
-    Pretty_cube();
-//    Case_1();
+//    Pretty_cube();
+    Case_1();
 //     Case_2();
 
 }
@@ -536,22 +536,41 @@ void Pretty_cube(){
         }
     }
     
+    int target_mat_id_in = 3;
+    std::map<int, REAL> gel_index_to_int_qn_inlet;
+    std::map<int, REAL> gel_index_to_int_p_inlet;
+    IntegrateFluxAndPressure(target_mat_id_in, meshtrvec, gel_index_to_int_qn_inlet, gel_index_to_int_p_inlet);
+    
+    REAL qn_inlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn_inlet) {
+        qn_inlet_integral += pair.second;
+    }
+    
+    REAL p_inlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_p_inlet) {
+        p_inlet_integral += pair.second;
+    }
+    
+    int target_mat_id_out = 4;
     std::map<int, REAL> gel_index_to_int_qn;
     std::map<int, REAL> gel_index_to_int_p;
-    std::map<int, REAL> gel_index_to_int_s;
-    int target_mat_id = 4;
-    IntegrateFluxAndPressure(target_mat_id, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
-    IntegrateSaturation(target_mat_id, meshtrvec, gel_index_to_int_qn, gel_index_to_int_s);
+    IntegrateFluxAndPressure(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
+    
+    REAL qn_outlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn) {
+        qn_outlet_integral += pair.second;
+    }
+    
+    REAL p_outlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_p) {
+        p_outlet_integral += pair.second;
+    }
     
     REAL int_s_vol_1 = IntegrateSaturations(n_steps-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
     REAL vol_1 = IntegratePorousVolume(dim_mat_id_dof_indexes[2][6], M_diag);
     
-    int aka= 0;
-    
     return;
 }
-
-
 
 void Case_1(){
     
@@ -563,14 +582,17 @@ void Case_1(){
     sim.n_threads = 12;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-6);
-    sim.porosities.push_back(0.2);
+    sim.permeabilities.push_back(1.0e-5);
+    sim.porosities.push_back(0.25);
     
     /// not used but inserted
     sim.omega_ids.push_back(2);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-5);
-    sim.porosities.push_back(0.25);
+    sim.permeabilities.push_back(1.0e-6);
+    sim.porosities.push_back(0.2);
+    
+    /// C inlet value
+    sim.c_inlet = 0.01;
     
     int bc_inlet  = 3;
     int bc_outlet = 4;
@@ -628,7 +650,7 @@ void Case_1(){
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 20.0;
     fracture.m_kappa_tangential = 1.0e-3;
-    fracture.m_d_opening        = 1.0e-0;
+    fracture.m_d_opening        = 0.01;
     fracture.m_porosity         = 0.4;
     fracture_data.push_back(fracture);
     
@@ -651,6 +673,7 @@ void Case_1(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
     std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
@@ -772,12 +795,123 @@ void Case_1(){
 #endif
     }
     
-
-    
-    int n_steps = 10;
+    int n_steps = 1;
     REAL dt     = 1.0e7;
     TPZFMatrix<STATE> M_diag;
     TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    
+    ///// Post-processing data
+    std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
+    {
+        std::set<int> volumetric_mat_ids = {1,2,6,7,8}; /// Available materials
+        TPZCompMesh * s_cmesh = meshtrvec[2];
+        if (!s_cmesh) {
+            DebugStop();
+        }
+        TPZGeoMesh * geometry = cmesh_transport->Reference();
+        if (!geometry) {
+            DebugStop();
+        }
+        geometry->ResetReference();
+        cmesh_transport->LoadReferences();
+        
+        for (auto cel : cmesh_transport->ElementVec()) {
+            if (!cel) {
+                continue;
+            }
+            TPZGeoEl * gel = cel->Reference();
+            if (!gel) {
+                DebugStop();
+            }
+            int mat_id = gel->MaterialId();
+            int gel_dim = gel->Dimension();
+            
+            int n_connects = cel->NConnects();
+            if (n_connects==0 || n_connects==2) {
+                continue;
+            }
+            
+            if (n_connects!=1) {
+                DebugStop();
+            }
+            
+            TPZConnect & c = cel->Connect(0);
+            int64_t equ = c.SequenceNumber(); // because polynomial order is zero, i.e. block size = 1.
+            dim_mat_id_dof_indexes[gel_dim][mat_id].push_back(equ);
+            
+        }
+    }
+    
+    int target_mat_id_in = 3;
+    std::map<int, REAL> gel_index_to_int_qn_inlet;
+    std::map<int, REAL> gel_index_to_int_p_inlet;
+    IntegrateFluxAndPressure(target_mat_id_in, meshtrvec, gel_index_to_int_qn_inlet, gel_index_to_int_p_inlet);
+    
+    REAL qn_inlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn_inlet) {
+        qn_inlet_integral += pair.second;
+    }
+    
+    REAL p_inlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_p_inlet) {
+        p_inlet_integral += pair.second;
+    }
+    
+    int target_mat_id_out = 4;
+    std::map<int, REAL> gel_index_to_int_qn;
+    std::map<int, REAL> gel_index_to_int_p;
+    IntegrateFluxAndPressure(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
+    
+    REAL qn_outlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn) {
+        qn_outlet_integral += pair.second;
+    }
+    
+    REAL p_outlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_p) {
+        p_outlet_integral += pair.second;
+    }
+    
+    TPZFMatrix<REAL> item_2(n_steps+1,2,0.0);
+    TPZFMatrix<REAL> item_3(n_steps+1,2,0.0);
+    TPZFMatrix<REAL> item_4(n_steps+1,2,0.0);
+    int n_equ = meshtrvec[2]->NEquations();
+    for (int it = 1; it <= n_steps; it++) {
+
+        REAL time = (it*dt)/(86400*365);
+        REAL int_c3_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][1], saturations, M_diag);
+        REAL int_c2_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
+        
+        item_2(it,0) = time;
+        item_2(it,1) = int_c3_vol_1;
+
+        item_3(it,0) = time;
+        item_3(it,1) = int_c2_vol_1;
+        
+        for (int i = 0; i <n_equ; i++) {
+            meshtrvec[2]->Solution()(i,0) = saturations(i,it-1);
+        }
+        std::map<int, REAL> gel_index_to_int_s;
+        IntegrateSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_s);
+        
+        REAL c_integral = 0.0;
+        for (auto pair : gel_index_to_int_qn) {
+            c_integral += pair.second * gel_index_to_int_s[pair.first];
+        }
+        
+        item_4(it,0) = time;
+        item_4(it,1) = c_integral;
+
+    }
+    
+    std::ofstream file_2("item_2.txt");
+    item_2.Print("it2 = ",file_2,EMathematicaInput);
+    
+    std::ofstream file_3("item_3.txt");
+    item_3.Print("it3 = ",file_3,EMathematicaInput);
+    
+    std::ofstream file_4("item_4.txt");
+    item_4.Print("it4 = ",file_4,EMathematicaInput);
     
     return;
 }
@@ -1381,8 +1515,8 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 volume->SetDimension(data.second);
             }
             int dim = 3;
-            tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
-            tracer_analysis->PostProcess(div,dim);
+//            tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
+//            tracer_analysis->PostProcess(div,dim);
             
             // configuring next time step
             s_n = s_np1;
@@ -2403,11 +2537,6 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZSt
     TPZGeoMesh *geometry = mixed->Reference();
     int dimension = geometry->Dimension();
     TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(geometry);
-
-    
-    std::set<int> matrix_mat_ids;// = {1,2,6,7,8};
-    std::set<int> fracture_mat_ids;
-    
 
     /// Inserting matrix materials
     int n_vols = sim_data.omega_ids.size();
