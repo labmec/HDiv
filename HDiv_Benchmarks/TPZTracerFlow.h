@@ -28,6 +28,8 @@ private:
     /** @brief Porosity  */
     REAL m_phi;
     
+    REAL m_fracture_epsilon;
+    
 public:
     
     /** @brief Default constructor */
@@ -155,8 +157,19 @@ public:
     REAL GetPorosity(){
         return m_phi;
     }
-
     
+    /** @brief Set fracture cross length  */
+    void SetFractureCrossLength(REAL fracture_epsilon){
+        m_fracture_epsilon = fracture_epsilon;
+    }
+    
+    /** @brief Get fracture cross length  */
+    REAL GetFractureCrossLength(){
+        return m_fracture_epsilon;
+    }
+    
+    REAL FractureFactor(TPZMaterialData & data);
+
 };
 
 #endif /* defined(TPZTracerFlow) */

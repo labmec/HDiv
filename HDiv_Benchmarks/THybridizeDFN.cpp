@@ -1098,14 +1098,15 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
             if(!mpcel) continue;
             if(!mpcel->Element(0) && mpcel->Element(1))
             {
-//                std::cout << "this element has a pressure but no flux\n";
+                
                 TPZConnect &c = mpcel->Connect(0);
                 int nelcon = c.NElConnected();
                 if(nelcon <= 3)
                 {
                     continue;
                 }
-
+                std::cout << "this element has a pressure but no flux\n";
+                
                 TPZGeoEl *gel = cel->Reference();
                 // find a neighbour with matid = 8
                 TPZGeoEl *gel8 = 0;
@@ -1202,6 +1203,10 @@ void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
             continue;
         }
         int ncon_flux = atom_cel_flux->NConnects();
+        if(ncon_flux == 1)
+        {
+            continue;
+        }
         for(int ic=0; ic<ncon_flux; ic++)
         {
             int64_t conindex = cel->ConnectIndex(ic);
@@ -1214,9 +1219,8 @@ void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
     // an element that shares a connect with the nucleus element will belong to the group
     for (int64_t el=0; el<nelem; el++) {
         TPZCompEl *cel = cmesh->Element(el);
-        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
-        if(!mpel) continue;
-        int ncon = mpel->NConnects();
+        if(!cel) continue;
+        int ncon = cel->NConnects();
         int64_t elgr = -1;
         for(int ic=0; ic<ncon; ic++)
         {
@@ -1233,8 +1237,6 @@ void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
     }
     for (int64_t el=0; el<nelem; el++) {
         TPZCompEl *cel = cmesh->Element(el);
-        TPZMultiphysicsElement *mpel = dynamic_cast<TPZMultiphysicsElement *>(cel);
-        if(!mpel) continue;
         if(ElementGroup[el] != -1)
         {
             int64_t group_index = ElementGroup[el];
@@ -1248,4 +1250,5 @@ void THybridizeDFN::GroupElements(TPZMultiphysicsCompMesh *cmesh)
         bool keep_matrix = false;
         new TPZCondensedCompEl(group, keep_matrix);
     }
+    cmesh->CleanUpUnconnectedNodes();
 }
