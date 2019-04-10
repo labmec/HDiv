@@ -677,9 +677,8 @@ void Case_1(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/single.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
@@ -750,10 +749,23 @@ void Case_1(){
 //        }
 //#endif
         
+        
+        int n_vols_els = Geometry.m_n_pyramid_els + Geometry.m_n_prism_els + Geometry.m_n_hexahedron_els + Geometry.m_n_tetrahedron_els;
+        int n_surf_els = Geometry.m_n_triangle_els + Geometry.m_n_quadrilateral_els;
+        log_file << "Number of elements by dimension : " << std::endl;
+        log_file << "3D elements : " << n_vols_els << std::endl;
+        log_file << "2D elements : " << n_surf_els << std::endl;
+        log_file << "1D elements : " << Geometry.m_n_line_els << std::endl;
+        log_file << "0D elements : " << Geometry.m_n_point_els << std::endl;
+        
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
+        log_file << "DFN neq without condensation = " << mp_cmesh->NEquations() << std::endl;
         dfn_hybridzer.GroupElements(mp_cmesh);
         std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
+        log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
+        
+        
         
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
         std::cout << "Assembly DFN problem neq = " << mp_cmesh->NEquations() << std::endl;
@@ -792,7 +804,7 @@ void Case_1(){
 #endif
     }
     
-    int n_steps = 100;
+    int n_steps = 10;
     REAL dt     = 1.0e7;
     TPZFMatrix<STATE> M_diag;
     TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
@@ -869,6 +881,15 @@ void Case_1(){
         p_outlet_integral += pair.second;
     }
     
+    log_file << std::endl;
+    log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
+    log_file << "Inlet boundary : " << std::endl;
+    log_file << "Integrated flux q on inlet boundary = " << qn_inlet_integral << std::endl;
+    log_file << "Integrated pressure p on inlet boundary = " << p_inlet_integral << std::endl;
+    log_file << "Outlet boundary : " << std::endl;
+    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
+    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
+    
     TPZFMatrix<REAL> item_2(n_steps+1,2,0.0);
     TPZFMatrix<REAL> item_3(n_steps+1,2,0.0);
     TPZFMatrix<REAL> item_4(n_steps+1,2,0.0);
@@ -901,6 +922,22 @@ void Case_1(){
 
     }
     
+    log_file << std::endl;
+    log_file << "Appeding items 2, 3 and 4 (pag 6/17 Flemisch (2018)) : " << std::endl;
+    log_file << "Integral of concentration for each time value : " << std::endl;
+    item_2.Print("it2 = ",log_file,EMathematicaInput);
+    log_file << std::endl;
+    log_file << std::endl;
+    log_file << "Integral of concentration on fracture for each time value : " << std::endl;
+    item_3.Print("it3 = ",log_file,EMathematicaInput);
+    log_file << std::endl;
+    log_file << std::endl;
+    log_file << "Integral of concentration flux on outlet boundary for each time value : " << std::endl;
+    item_4.Print("it4 = ",log_file,EMathematicaInput);
+    log_file << std::endl;
+    log_file << std::endl;
+    log_file.flush();
+    
     std::ofstream file_2("item_2.txt");
     item_2.Print("it2 = ",file_2,EMathematicaInput);
     
@@ -909,8 +946,6 @@ void Case_1(){
     
     std::ofstream file_4("item_4.txt");
     item_4.Print("it4 = ",file_4,EMathematicaInput);
-    
-    
     
     return;
 }
