@@ -1,6 +1,6 @@
 Geometry.Tolerance = 3.33333333333e-05;
 
-h = 0.0152;
+h = 152;
 ymax = 2.25;
 
 // Fracture 1 points
@@ -183,7 +183,9 @@ out_line_hi = newl; Line(out_line_hi) = {pout01, pout11};
 //Physical bodies 
 Curve Loop(1) = {9, 11, 12, -13, -10};
 Plane Surface(1) = {1};
-Physical Surface("Fracture_1") = {1};
+Physical Surface("fracture_1") = {1};
+
+Line{66} In Surface{1};
 
 Curve Loop(2) = {2, -4, 3, -14, -1};
 Plane Surface(2) = {2};
@@ -191,9 +193,14 @@ Curve Loop(3) = {5, -14, -7, 8, -68, 69, 72, -6};
 Plane Surface(3) = {3};
 Physical Surface("fracture_2", 80) = {2, 3};
 
+Line{71} In Surface{3};
+Line{73} In Surface{3};
+Line{70} In Surface{3};
+Line{67} In Surface{3};
+
 Curve Loop(4) = {15, -17, -16, -14};
 Plane Surface(4) = {4};
-Physical Surface("Fracture_3") = {4};
+Physical Surface("fracture_3") = {4};
 
 Curve Loop(5) = {20, 21, -19, 18};
 Plane Surface(5) = {5};
@@ -203,17 +210,25 @@ Curve Loop(6) = {44, -42, 41, -45, -43};
 Plane Surface(6) = {6};
 Physical Surface("fracture_5") = {6};
 
+Line{73} In Surface{5};
+
 Curve Loop(7) = {38, 40, -36, 37, -39};
 Plane Surface(7) = {7};
 Physical Surface("fracture_6") = {7};
 
+Line{71} In Surface{7};
+
 Curve Loop(8) = {25, -27, 26, 28, -23, 22, -24};
 Plane Surface(8) = {8};
-Physical Surface("Fracture_7") = {8};
+Physical Surface("fracture_7") = {8};
+
+Line{67} In Surface{8};
 
 Curve Loop(9) = {33, 35, -30, 29, -31, 32, -34};
 Plane Surface(9) = {9};
-Physical Surface("Fracture_8") = {9};
+Physical Surface("fracture_8") = {9};
+
+Line{70} In Surface{9};
 
 Curve Loop(10) = {76, 59, -75, -47};
 Plane Surface(10) = {10};
@@ -221,37 +236,29 @@ Physical Surface("inlet") = {10};
 
 Curve Loop(11) = {65, -57, -55, 78};
 Plane Surface(11) = {11};
-Physical Surface("outlet_upper") = {11};
-
 Curve Loop(12) = {77, -63, -56, 53};
 Plane Surface(12) = {12};
-Physical Surface("outlet_lower") = {12};
+Physical Surface("outlet") = {11, 12};
 
-Curve Loop(13) = {49, -55, -54, -53, -51, -48, -47, -46};
-Curve Loop(14) = {61, -65, -64, -63, -62, -60, -59, -58};
-Plane Surface(13) = {14};
-Physical Surface("bc_front") = {13};
-
-Curve Loop(15) = {57, -65, -64, -63, -56, 53, 54, 55};
-Plane Surface(14) = {15};
-Physical Surface("bc_right") = {14};
-
-Plane Surface(15) = {13};
-Physical Surface("bc_back") = {15};
-
-Curve Loop(16) = {46, 47, 48, 52, -60, -59, -58, -50};
+Curve Loop(13) = {61, -65, -64, -63, -62, -60, -59, -58};
+Plane Surface(13) = {13};
+Curve Loop(14) = {64, -78, -54, 77};
+Plane Surface(14) = {14};
+Curve Loop(15) = {49, -55, -54, -53, -51, -48, -47, -46};
+Plane Surface(15) = {15};
+Curve Loop(16) = {58, -76, -46, 50};
 Plane Surface(16) = {16};
-Physical Surface("bc_left") = {16};
-
 Curve Loop(17) = {51, 56, -62, -52};
 Plane Surface(17) = {17};
-Physical Surface("bc_bottom") = {17};
-
 Curve Loop(18) = {49, 57, -61, -50};
 Plane Surface(18) = {18};
-Physical Surface("bc_top") = {18};
+Curve Loop(19) = {48, 52, -60, -75};
+Plane Surface(19) = {19};
+Physical Surface("Domain") = {13, 14, 15, 16, 17, 18, 19};
 
 //Volume body
-Surface Loop(1) = {17, 15, 18, 13, 14, 16};
+Surface Loop(1) = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 Volume(1) = {1};
-Physical Volume("vol1", 96) = {1};
+Physical Volume("vol1") = {1};
+
+
