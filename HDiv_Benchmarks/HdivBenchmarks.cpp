@@ -1042,13 +1042,13 @@ void Case_2(){
     fracture.m_d_opening        = 1.0;
     fracture.m_porosity         = 1.0;
     fracture_data.push_back(fracture);
-//    fracture.m_id               = 8;
-//    fracture.m_dim              = 0;
-//    fracture.m_kappa_normal     = 1.0e20;
-//    fracture.m_kappa_tangential = 1.0;
-//    fracture.m_d_opening        = 1.0;
-//    fracture.m_porosity         = 1.0;
-//    fracture_data.push_back(fracture);
+    fracture.m_id               = 8;
+    fracture.m_dim              = 0;
+    fracture.m_kappa_normal     = 1.0e20;
+    fracture.m_kappa_tangential = 1.0;
+    fracture.m_d_opening        = 1.0;
+    fracture.m_porosity         = 1.0;
+    fracture_data.push_back(fracture);
     
     
     /// Benchmarks Material ID convention

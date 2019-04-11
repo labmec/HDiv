@@ -713,6 +713,8 @@ Plane Surface(337) = {338};
 Surface Loop(22) = {209, 248, 228, 336, 337, 277, 335, 278, 331, 329, 330, 334, 279, 332, 333};
 Volume(22) = {22};
 
+Coherence;
+
 Physical Volume("RockMatrix_1") = {16, 17, 20, 21, 22, 29, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3};
 Physical Volume("RockMatrix_2") = {1, 2, 13, 15, 18, 19};
 Physical Surface("BCInlet") = {277, 278, 279};
