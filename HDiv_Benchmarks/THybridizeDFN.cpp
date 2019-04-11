@@ -166,6 +166,13 @@ void THybridizeDFN::InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & f
             flux_cmesh->InsertMaterialObject(flux_trace_mat);
         }
         
+        int impervious_bc_id = -1942;
+        if (!flux_cmesh->FindMaterial(impervious_bc_id)) {
+            auto flux_null_mat = new TPZL2Projection(impervious_bc_id, target_dim, n_state, sol);
+            flux_null_mat->SetScaleFactor(0.0);
+            flux_cmesh->InsertMaterialObject(flux_null_mat);
+        }
+        
         TPZCompMesh * pressure_cmesh = dfn_mixed_mesh_vec[1];
         if (!pressure_cmesh) {
             DebugStop();
@@ -240,10 +247,6 @@ void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh 
         auto normal_flux_mat = new TPZNormalDarcyFlow(flux_resistivity_id, target_dim);
         normal_flux_mat->SetKappaNormal(kappa_normal);
         cmesh->InsertMaterialObject(normal_flux_mat);
-        
-//        auto flux_trace_mat = new TPZL2Projection(flux_resistivity_id, target_dim, n_state, sol);
-//        flux_trace_mat->SetScaleFactor(0.0);
-//        cmesh->InsertMaterialObject(flux_trace_mat);
         
     }
     
@@ -624,6 +627,15 @@ void THybridizeDFN::InsertMaterialsForMixedOperatorOnFractures(int target_dim, T
                         }
 
                     }
+                    
+                    int impervious_bc_id = -1942;
+                    if (!cmesh->FindMaterial(impervious_bc_id)) {
+                        int bc_type = 1;
+                        val2(0,0) = 0.0;
+                        auto bc = fracture_material->CreateBC(fracture_material, impervious_bc_id, bc_type, val1, val2);
+                        cmesh->InsertMaterialObject(bc);
+                    }
+                    
                 }
             }
             else // the fracture dimension is zero, create an L2 material
@@ -887,6 +899,8 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
     flux_cmesh->SetAllCreateFunctionsHDiv();
     LoadReferencesByDimension(flux_cmesh, target_dim);
     
+    int impervious_bc_id = -1942;
+    
     std::pair<int, int> gel_index_and_order;
     TPZGeoMesh * geometry = flux_cmesh->Reference();
     for (auto gel : geometry->ElementVec()) {
@@ -917,6 +931,11 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
             
             bool needs_bc_Q = n_candidates == 1;
             if (needs_bc_Q) {
+                
+                TPZGeoElBC gbc(gel,is,impervious_bc_id);
+                int64_t index;
+                flux_cmesh->CreateCompEl(gbc.CreatedElement(), index);
+                
 #ifdef LOG4CXX
                 if(dfn_logger->isDebugEnabled())
                 {
@@ -927,7 +946,7 @@ void THybridizeDFN::ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh
                     LOGPZ_DEBUG(dfn_logger, sout.str())
                 }
 #endif
-                DebugStop();
+                continue;
             }
             
             // means there is only the element/side and a boundary condition. No hybridization needed

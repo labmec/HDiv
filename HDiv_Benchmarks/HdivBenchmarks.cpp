@@ -232,8 +232,8 @@ int main(){
     
 
 //    Pretty_cube();
-//    Case_1();
-     Case_2();
+    Case_1();
+//     Case_2();
 
 }
 
@@ -1006,23 +1006,23 @@ void Case_2(){
     bc_ids_2d.push_back(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
     bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
     
-    //    int bc_1d_inlet  = 130;
-    //    int bc_1d_outlet = 140;
+    int bc_1d_inlet  = 130;
+    int bc_1d_outlet = 140;
     int bc_1d_non_flux = 150;
     
-    //    int bc_0d_inlet  = 230;
-    //    int bc_0d_outlet = 240;
-    //    int bc_0d_non_flux = 250;
+    int bc_0d_inlet  = 230;
+    int bc_0d_outlet = 240;
+    int bc_0d_non_flux = 250;
     
     std::map<int,int> bc_ids_1d_map;
-    //    bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
-    //    bc_ids_1d_map.insert(std::make_pair(bc_outlet,bc_1d_outlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_outlet,bc_1d_outlet));
     bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
     
-    //    std::map<int,int> bc_ids_0d_map;
-    //    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
-    //    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
-    //    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
+    std::map<int,int> bc_ids_0d_map;
+    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
     
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
@@ -1054,23 +1054,20 @@ void Case_2(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
-    //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
-    //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
-    Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
+//    Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
     UniformRefinement(gmesh, h_level);
     
 #ifdef PZDEBUG
-    std::ofstream file("geometry_case_1_base.vtk");
+    std::ofstream file("geometry_case_2_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
-    std::ofstream file_txt("geometry_case_1_base.txt");
+    std::ofstream file_txt("geometry_case_2_base.txt");
     gmesh->Print(file_txt);
 #endif
     
@@ -1102,8 +1099,8 @@ void Case_2(){
     meshtrvec[1] = meshvec[1];
     meshtrvec[2] = s_cmesh;
     
-    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
-    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+//    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+//    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     bool solve_dfn_problem_Q = true;
     if (solve_dfn_problem_Q) {
@@ -1180,6 +1177,9 @@ void Case_2(){
         }
 #endif
     }
+    
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     int n_steps = 100;
     REAL dt     = 1.0e7;
