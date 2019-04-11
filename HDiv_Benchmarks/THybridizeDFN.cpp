@@ -1061,24 +1061,24 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
 
     /// Creates the lagrange mulplier approximation space
     CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures);
-    
-    
+
+
     // switch the material id of the pressure elements if they are neighbour of 1d fracture elements
     // create boundary elements for the 1d fracture elements
     int fractures_intersections_dim = target_dim - 2;
     BuildMixedOperatorOnFractures(p_order, fractures_intersections_dim, cmesh, flux_trace_id, lagrange_id, flux_resistivity_id, mp_nterface_id);
-    
-    
+
+
     /// Hybridization for 1D fracture intersection elements
     /// load elements with dimension target_dim and target_dim - 1
     LoadReferencesByDimension(q_cmesh,fractures_intersections_dim);
-    
+
     /// ClassifyCompelSides
     TPZStack<std::pair<int, int>> gel_index_and_order_fractures_intersection;
     // list of pressure elements that need to be created
 
     ClassifyCompelSides(fractures_intersections_dim, q_cmesh, gel_index_and_order_fractures_intersection, flux_trace_id, lagrange_id, flux_resistivity_id);
-    
+
     /// Creates the lagrange mulplier approximation space
     CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
 
@@ -1098,17 +1098,17 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     dfn_hybrid_cmesh->MaterialVec().erase(8);
     BuildMultiphysicsCMesh(matrix_dim,dfn_hybrid_cmesh,active_approx_spaces,dfn_mixed_mesh_vec);
     dfn_hybrid_cmesh->InsertMaterialObject(mat8);
-//    {
-//        std::ofstream out("darcy_mesh_before_interfaces.txt");
-//        dfn_hybrid_cmesh->Print(out);
-//    }
+    {
+        std::ofstream out("darcy_mesh_before_interfaces.txt");
+        dfn_hybrid_cmesh->Print(out);
+    }
     
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     dfn_hybrid_cmesh->ComputeNodElCon();
     
-    {
+    if(0){
         int64_t nel = dfn_hybrid_cmesh->NElements();
         for(int64_t el=0; el<nel; el++)
         {

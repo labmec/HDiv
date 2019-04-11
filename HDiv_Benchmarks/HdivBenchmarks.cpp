@@ -232,8 +232,8 @@ int main(){
     
 
 //    Pretty_cube();
-    Case_1();
-//     Case_2();
+//    Case_1();
+     Case_2();
 
 }
 
@@ -1058,7 +1058,7 @@ void Case_2(){
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
-//    Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
+    Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
@@ -1076,10 +1076,10 @@ void Case_2(){
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
-    //#ifdef PZDEBUG
-    //    std::ofstream filemixed("mixed_cmesh.txt");
-    //    cmixedmesh->Print(filemixed);
-    //#endif
+//#ifdef PZDEBUG
+//    std::ofstream filemixed("mixed_cmesh.txt");
+//    cmixedmesh->Print(filemixed);
+//#endif
     
     TPZCompMesh *cmeshm =NULL;
     THybridizeDFN dfn_hybridzer;
@@ -1107,21 +1107,21 @@ void Case_2(){
         
         TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
         
-        //#ifdef PZDEBUG
-        //        {
-        //            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-        //            mesh_vec[0]->ComputeNodElCon();
-        //            mesh_vec[0]->Print(file_hybrid_mixed_q);
-        //
-        //            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-        //            mesh_vec[1]->ComputeNodElCon();
-        //            mesh_vec[1]->Print(file_hybrid_mixed_p);
-        //
-        //            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
-        //            cmeshm->ComputeNodElCon();
-        //            cmeshm->Print(file_hybrid_mixed);
-        //        }
-        //#endif
+#ifdef PZDEBUG
+        {
+            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+            mesh_vec[0]->ComputeNodElCon();
+            mesh_vec[0]->Print(file_hybrid_mixed_q);
+
+            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+            mesh_vec[1]->ComputeNodElCon();
+            mesh_vec[1]->Print(file_hybrid_mixed_p);
+
+            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+            cmeshm->ComputeNodElCon();
+            cmeshm->Print(file_hybrid_mixed);
+        }
+#endif
         
         
         int n_vols_els = Geometry.m_n_pyramid_els + Geometry.m_n_prism_els + Geometry.m_n_hexahedron_els + Geometry.m_n_tetrahedron_els;
@@ -1135,7 +1135,7 @@ void Case_2(){
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq without condensation = " << mp_cmesh->NEquations() << std::endl;
-        dfn_hybridzer.GroupElements(mp_cmesh);
+//        dfn_hybridzer.GroupElements(mp_cmesh);
         std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
         
@@ -2492,7 +2492,7 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     }
     cmesh->InitializeBlock();
     
-#ifdef PZDEBUG2
+#ifdef PZDEBUG
     std::stringstream file_name;
     file_name << "q_cmesh_raw" << ".txt";
     std::ofstream sout(file_name.str().c_str());
@@ -2535,9 +2535,9 @@ TPZCompMesh * PressureMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_
         newnod.SetLagrangeMultiplier(1);
     }
     
-#ifdef PZDEBUG2
+#ifdef PZDEBUG
     std::stringstream file_name;
-    file_name   << sim_data.dump_folder << "/" << "p_cmesh" << ".txt";
+    file_name << "p_cmesh_raw" << ".txt";
     std::ofstream sout(file_name.str().c_str());
     cmesh->Print(sout);
 #endif
@@ -2673,6 +2673,8 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     active_approx_spaces[1] = 1;
     cmesh->BuildMultiphysicsSpace(active_approx_spaces,mesh_vec);
 
+
+    
     if (sim_data.IsMHMQ) {
         cmesh->CleanUpUnconnectedNodes();
         cmesh->ExpandSolution();
