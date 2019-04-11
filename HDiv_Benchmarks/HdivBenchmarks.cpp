@@ -200,7 +200,7 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
 
 void VolumeMatrix(TPZAnalysis * tracer_analysis, TPZFMatrix<STATE> & M_vol_diag);
 
-void IntegrateSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn ,std::map<int, REAL> & gel_index_to_int_s);
+void GetSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn ,std::map<int, REAL> & gel_index_to_s);
 
 void IntegrateFluxAndPressure(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn, std::map<int, REAL> & gel_index_to_int_p);
 
@@ -678,9 +678,9 @@ void Case_1(){
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
@@ -910,12 +910,12 @@ void Case_1(){
             cmesh_transport->Solution()(i,0) = saturations(i,it-1);
         }
         cmesh_transport->LoadSolutionFromMultiPhysics();
-        std::map<int, REAL> gel_index_to_int_s;
-        IntegrateSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_s);
+        std::map<int, REAL> gel_index_to_s;
+        GetSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_s);
         
         REAL c_integral = 0.0;
         for (auto pair : gel_index_to_int_qn) {
-            c_integral += pair.second * gel_index_to_int_s[pair.first];
+            c_integral += pair.second * gel_index_to_s[pair.first];
         }
         
         item_4(it,0) = time;
@@ -1344,10 +1344,10 @@ void IntegrateFluxAndPressure(int target_mat_id, TPZManVector<TPZCompMesh * ,3> 
     }
 }
 
-void IntegrateSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn ,std::map<int, REAL> & gel_index_to_int_s){
+void GetSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn ,std::map<int, REAL> & gel_index_to_s){
     std::set<int> volumes = {1,2};
-    int int_order = 2;
-    int int_type = 0;
+//    int int_order = 2;
+//    int int_type = 0;
     int var = 0;
     TPZManVector<STATE,1> sol;
     /// Saturation integration
@@ -1374,7 +1374,7 @@ void IntegrateSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mes
         TPZStack<TPZCompElSide> cel_stack;
         gel_side.ConnectedCompElementList(cel_stack, 0, 0);
         
-        REAL int_s = 0;
+
         TPZCompEl * cel_vol;
         for (auto cel_side : cel_stack) {
             cel_vol = cel_side.Element();
@@ -1387,41 +1387,48 @@ void IntegrateSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mes
         if (!gel_vol) {
             DebugStop();
         }
-        TPZTransform<REAL> afine_transformation = Transform_Face_To_Volume(gel,gel_vol);
         
-        int side = gel->NSides() - 1;
-        TPZIntPoints * NumericIntegral = gel->CreateSideIntegrationRule(side, int_order);
-        NumericIntegral->SetType(int_type, int_order);
-        
-        // Creating the integration rule
-        int dimension   = NumericIntegral->Dimension();
-        int npoints     = NumericIntegral->NPoints();
-        
-        if (dimension != gel->Dimension()) {
-            std::cout << "Incompatible dimensions." << std::endl;
-            DebugStop();
-        }
-        
-        // compute the integrals
-        TPZManVector<REAL,3> xi_face(dimension,0.0);
         TPZManVector<REAL,3> xi_vol(gel_vol->Dimension(),0.0);
-        REAL weight = 0.0;
-        for (int it = 0 ; it < npoints; it++) {
-            
-            TPZFMatrix<REAL> jac;
-            TPZFMatrix<REAL> axes;
-            REAL detjac;
-            TPZFMatrix<REAL> jacinv;
-            NumericIntegral->Point(it, xi_face, weight);
-            gel->Jacobian(xi_face, jac, axes, detjac, jacinv);
-            
-            afine_transformation.Apply(xi_face, xi_vol);
-            
-            cel_vol->Solution(xi_vol, var, sol);
-            int_s += weight * detjac * sol[0];
-            
-        }
-        gel_index_to_int_s.insert(std::make_pair(gel_index, int_s));
+        cel_vol->Solution(xi_vol, var, sol);
+        REAL s_val = sol[0];
+        gel_index_to_s.insert(std::make_pair(gel_index, s_val));
+        
+//        REAL int_s = 0;
+//        TPZTransform<REAL> afine_transformation = Transform_Face_To_Volume(gel,gel_vol);
+//
+//        int side = gel->NSides() - 1;
+//        TPZIntPoints * NumericIntegral = gel->CreateSideIntegrationRule(side, int_order);
+//        NumericIntegral->SetType(int_type, int_order);
+//
+//        // Creating the integration rule
+//        int dimension   = NumericIntegral->Dimension();
+//        int npoints     = NumericIntegral->NPoints();
+//
+//        if (dimension != gel->Dimension()) {
+//            std::cout << "Incompatible dimensions." << std::endl;
+//            DebugStop();
+//        }
+//
+//        // compute the integrals
+//        TPZManVector<REAL,3> xi_face(dimension,0.0);
+//        TPZManVector<REAL,3> xi_vol(gel_vol->Dimension(),0.0);
+//        REAL weight = 0.0;
+//        for (int it = 0 ; it < npoints; it++) {
+//
+//            TPZFMatrix<REAL> jac;
+//            TPZFMatrix<REAL> axes;
+//            REAL detjac;
+//            TPZFMatrix<REAL> jacinv;
+//            NumericIntegral->Point(it, xi_face, weight);
+//            gel->Jacobian(xi_face, jac, axes, detjac, jacinv);
+//
+//            afine_transformation.Apply(xi_face, xi_vol);
+//
+//            cel_vol->Solution(xi_vol, var, sol);
+//            int_s += weight * detjac * sol[0];
+//
+//        }
+//        gel_index_to_int_s.insert(std::make_pair(gel_index, int_s));
     }
 }
 
