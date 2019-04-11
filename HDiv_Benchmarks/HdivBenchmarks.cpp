@@ -232,8 +232,8 @@ int main(){
     
 
 //    Pretty_cube();
-    Case_1();
-//     Case_2();
+//    Case_1();
+      Case_2();
 
 }
 
@@ -757,23 +757,23 @@ void Case_1(){
         log_file << "2D elements : " << n_surf_els << std::endl;
         log_file << "1D elements : " << Geometry.m_n_line_els << std::endl;
         log_file << "0D elements : " << Geometry.m_n_point_els << std::endl;
-        
+
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq without condensation = " << mp_cmesh->NEquations() << std::endl;
         dfn_hybridzer.GroupElements(mp_cmesh);
         std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
-        
-        
-        
+
+
+
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
         std::cout << "Assembly DFN problem neq = " << mp_cmesh->NEquations() << std::endl;
         an->Assemble();
         std::cout << "Assembly for DFN complete." << std::endl;
-        
+
 //        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
-        
+
         std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
         std::cout << "DFN problem solved." << std::endl;
@@ -1059,11 +1059,17 @@ void Case_2(){
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
 //    Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
+    
+    
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
+    
+    check_mesh(gmesh, 3);
+    std::ofstream file2("geometry_case_2_base.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file2);
     Geometry.PrintPartitionSummary(std::cout);
     
     UniformRefinement(gmesh, h_level);
-    
+    check_mesh(gmesh, 3);
 #ifdef PZDEBUG
     std::ofstream file("geometry_case_2_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
@@ -3501,32 +3507,68 @@ void CreateSkeletonElements(TPZGeoMesh *gmesh, int dimension, int matid){
 void check_mesh(TPZGeoMesh *gmesh, int dim){
     
     int nel = gmesh->NElements();
-    for (int iel=0; iel<nel; iel++) {
+    for (int iel = 0; iel<nel; iel++) {
         TPZGeoEl *gel = gmesh->Element(iel);
         if (!gel) {continue;}
-        int gel_dim = gel->Dimension();
-        if (gel_dim==dim) {
-            int n_sides = gel->NSides();
-            for (int iside=0; iside<n_sides; iside++) {
-                int count =0;
-                TPZGeoElSide gelside(gel,iside);
-                if (gelside.Dimension() != dim-1) {continue;}
-                TPZGeoElSide neih = gelside.Neighbour();
-                while (neih != gelside) {
-                    int dim_neig = neih.Element()->Dimension();
-                    int mat_id_neig = neih.Element()->MaterialId();
-                    if (mat_id_neig==6) {
-                        TPZGeoElBC(gelside,60);
-                    }
-                    if (dim_neig==dim) {
-                        count++;
-                    }
-                    neih=neih.Neighbour();
+        int el_dim = gel->Dimension();
+        int gel_id = gel->MaterialId();
+        //6= fracture id
+        if (gel_id==6) {
+            int side_an = gel->NSides()-1;
+            TPZGeoElSide gelside(gel,side_an);
+            TPZGeoElSide neig = gelside.Neighbour();
+            int count_2d=0;
+            int count_3d=0;
+            while (neig != gelside) {
+                int dim_neih = neig.Element()->Dimension();
+                if (dim_neih==2) {
+                    count_2d++;
                 }
-                if (dim ==3 && count !=1) {
-                    TPZGeoElBC(gelside,50);
+                if (dim_neih==3) {
+                    count_3d++;
                 }
+                neig=neig.Neighbour();
+            }
+            if (count_2d!=0) {
+                TPZGeoElBC(gelside,6000);
+                std::cout<<"ERROR: Fracture Element Index: "<<gel->Index()<<" with "<<count_2d << " 2D Neighbours."<<std::endl;
+            }
+            if (count_3d!=2) {
+                TPZGeoElBC(gelside,7000);
+                std::cout<<"ERROR: Fracture Element Index: "<<gel->Index()<<" with "<<count_3d << " 3D Neighbours."<<std::endl;
             }
         }
     }
+
+    
+    
+//    int nel = gmesh->NElements();
+//    for (int iel=0; iel<nel; iel++) {
+//        TPZGeoEl *gel = gmesh->Element(iel);
+//        if (!gel) {continue;}
+//        int gel_dim = gel->Dimension();
+//        if (gel_dim==dim) {
+//            int n_sides = gel->NSides();
+//            for (int iside=0; iside<n_sides; iside++) {
+//                int count =0;
+//                TPZGeoElSide gelside(gel,iside);
+//                if (gelside.Dimension() != dim-1) {continue;}
+//                TPZGeoElSide neih = gelside.Neighbour();
+//                while (neih != gelside) {
+//                    int dim_neig = neih.Element()->Dimension();
+//                    int mat_id_neig = neih.Element()->MaterialId();
+//                    if (mat_id_neig==6) {
+//                        TPZGeoElBC(gelside,60);
+//                    }
+//                    if (dim_neig==dim) {
+//                        count++;
+//                    }
+//                    neih=neih.Neighbour();
+//                }
+//                if (dim ==3 && count !=1) {
+//                    TPZGeoElBC(gelside,50);
+//                }
+//            }
+//        }
+//    }
 }
