@@ -231,10 +231,10 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
+    Pretty_cube();
 //    Case_1();
 
-     Case_2();
+//     Case_2();
 
 }
 
@@ -372,7 +372,6 @@ void Pretty_cube(){
     gmesh->Print(file_txt);
 #endif
     
-    
     int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
@@ -455,39 +454,27 @@ void Pretty_cube(){
         
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
-        vecnames.Push("kappa");
         scalnames.Push("p");
         
         int div = 0;
+        std::set<int> mat_id_3D;
+        mat_id_3D.insert(1);
+        mat_id_3D.insert(2);
         std::string file_reservoir("cube.vtk");
-        an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
+        an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
-#ifdef PZDEBUG
-        { /// fracture postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("fracture.vtk");
-            auto material = mesh_vec[1]->FindMaterial(6);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(2);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,2);
-        }
-        
-        { /// lagrange postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("lagrange_1d.vtk");
-            auto material = mesh_vec[1]->FindMaterial(7);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(1);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,1);
-        }
-#endif
+        std::set<int> mat_id_2D;
+        mat_id_2D.insert(6);
+        std::string file_frac("fracture.vtk");
+        an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+        an->PostProcess(div,2);
+
+        std::set<int> mat_id_1D;
+        mat_id_1D.insert(7);
+        std::string file_frac_intersections("fracture_intersections.vtk");
+        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
+        an->PostProcess(div,1);
     }
     
     int n_steps = 10;
@@ -751,13 +738,13 @@ void Case_1(){
 //#endif
         
         
-        int n_vols_els = Geometry.m_n_pyramid_els + Geometry.m_n_prism_els + Geometry.m_n_hexahedron_els + Geometry.m_n_tetrahedron_els;
-        int n_surf_els = Geometry.m_n_triangle_els + Geometry.m_n_quadrilateral_els;
+        int n_vols_els = Geometry.NPyramids() + Geometry.NPrisms() + Geometry.NHexahedra() + Geometry.NTetrahera();
+        int n_surf_els = Geometry.NTriangles() + Geometry.NQuadrilaterals();
         log_file << "Number of elements by dimension : " << std::endl;
         log_file << "3D elements : " << n_vols_els << std::endl;
         log_file << "2D elements : " << n_surf_els << std::endl;
-        log_file << "1D elements : " << Geometry.m_n_line_els << std::endl;
-        log_file << "0D elements : " << Geometry.m_n_point_els << std::endl;
+        log_file << "1D elements : " << Geometry.NLines() << std::endl;
+        log_file << "0D elements : " << Geometry.NPoints() << std::endl;
 
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
@@ -1138,13 +1125,13 @@ void Case_2(){
 #endif
         
         
-        int n_vols_els = Geometry.m_n_pyramid_els + Geometry.m_n_prism_els + Geometry.m_n_hexahedron_els + Geometry.m_n_tetrahedron_els;
-        int n_surf_els = Geometry.m_n_triangle_els + Geometry.m_n_quadrilateral_els;
+        int n_vols_els = Geometry.NPyramids() + Geometry.NPrisms() + Geometry.NHexahedra() + Geometry.NTetrahera();
+        int n_surf_els = Geometry.NTriangles() + Geometry.NQuadrilaterals();
         log_file << "Number of elements by dimension : " << std::endl;
         log_file << "3D elements : " << n_vols_els << std::endl;
         log_file << "2D elements : " << n_surf_els << std::endl;
-        log_file << "1D elements : " << Geometry.m_n_line_els << std::endl;
-        log_file << "0D elements : " << Geometry.m_n_point_els << std::endl;
+        log_file << "1D elements : " << Geometry.NLines() << std::endl;
+        log_file << "0D elements : " << Geometry.NPoints() << std::endl;
         
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
@@ -1709,11 +1696,24 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 }
                 volume->SetDimension(data.second);
             }
-//            if(it == n_steps - 1){
-                int dim = 3;
-                tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
-                tracer_analysis->PostProcess(div,dim);
-//            }
+            if(it == n_steps - 1)
+            {
+                
+                int div = 0;
+                std::set<int> mat_id_3D;
+                mat_id_3D.insert(1);
+                mat_id_3D.insert(2);
+                std::string file_reservoir("cube_s.vtk");
+                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+                tracer_analysis->PostProcess(div,3);
+                
+                std::set<int> mat_id_2D;
+                mat_id_2D.insert(6);
+                std::string file_frac("fracture_s.vtk");
+                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+                tracer_analysis->PostProcess(div,2);
+                
+            }
 
             
             // configuring next time step
