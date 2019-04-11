@@ -1039,6 +1039,13 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     // insert elements of bc_impervious_id if the element has no neighbour
     ClassifyCompelSides(matrix_dim, q_cmesh, gel_index_and_order_matrix, flux_trace_id, lagrange_id, flux_resistivity_id);
     
+#ifdef PZDEBUG
+    std::ofstream file("geometry_case_2_base_classify_1.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(q_cmesh->Reference(), file);
+    std::ofstream file_txt("geometry_case_2_base_classify_1.txt");
+    q_cmesh->Reference()->Print(file_txt);
+#endif
+    
     /// Creates the lagrange mulplier approximation space
     CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_matrix);
 

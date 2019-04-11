@@ -1054,7 +1054,7 @@ void Case_2(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_c.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
@@ -1159,7 +1159,7 @@ void Case_2(){
         scalnames.Push("p");
         
         int div = 0;
-        std::string file_reservoir("case_1.vtk");
+        std::string file_reservoir("case_2.vtk");
         an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
@@ -1167,7 +1167,7 @@ void Case_2(){
         { /// fracture postprocessor
             TPZStack<std::string,10> scalnames, vecnames;
             scalnames.Push("state");
-            std::string file_frac("case_1_fracture.vtk");
+            std::string file_frac("case_2_fracture.vtk");
             auto material = mesh_vec[1]->FindMaterial(6);
             TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
             fract_2d->SetDimension(2);
@@ -1175,6 +1175,18 @@ void Case_2(){
             frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
             frac_an.PostProcess(div,2);
         }
+        
+//        { /// lagrange postprocessor
+//            TPZStack<std::string,10> scalnames, vecnames;
+//            scalnames.Push("state");
+//            std::string file_frac("lagrange_1d.vtk");
+//            auto material = mesh_vec[1]->FindMaterial(7);
+//            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
+//            fract_2d->SetDimension(1);
+//            TPZAnalysis frac_an(mesh_vec[1],false);
+//            frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
+//            frac_an.PostProcess(div,1);
+//        }
 #endif
     }
     
