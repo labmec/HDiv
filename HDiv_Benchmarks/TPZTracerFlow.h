@@ -55,7 +55,7 @@ public:
     
     virtual void FillDataRequirementsInterface(TPZMaterialData &data) override;
     
-    virtual void FillDataRequirementsInterface(TPZMaterialData &data, TPZVec<TPZMaterialData > &datavec_left, TPZVec<TPZMaterialData > &datavec_right) override;
+    virtual void FillDataRequirementsInterface(TPZMaterialData &data, TPZVec<TPZMaterialData > &datavec_left, TPZVec<TPZMaterialData > &datavec_right) ;
     
     /** @brief Returns the name of the material */
     virtual std::string Name() override{
