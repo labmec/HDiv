@@ -1114,8 +1114,8 @@ void Case_2(){
     meshtrvec[1] = meshvec[1];
     meshtrvec[2] = s_cmesh;
     
-//    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
-//    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     bool solve_dfn_problem_Q = true;
     if (solve_dfn_problem_Q) {
@@ -1150,7 +1150,7 @@ void Case_2(){
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq without condensation = " << mp_cmesh->NEquations() << std::endl;
-//        dfn_hybridzer.GroupElements(mp_cmesh);
+        dfn_hybridzer.GroupElements(mp_cmesh);
         std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
         
@@ -1210,8 +1210,7 @@ void Case_2(){
 #endif
     }
     
-    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
-    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+
     
     int n_steps = 100;
     REAL dt     = 1.0e7;

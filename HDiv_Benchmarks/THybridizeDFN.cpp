@@ -1109,7 +1109,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     dfn_hybrid_cmesh->ComputeNodElCon();
     
-    if(0){
+    if(1){
         int64_t nel = dfn_hybrid_cmesh->NElements();
         for(int64_t el=0; el<nel; el++)
         {
