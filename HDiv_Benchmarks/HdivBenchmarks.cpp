@@ -961,20 +961,20 @@ void Case_2(){
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
-    sim.n_threads = 0;
+    sim.n_threads = 8;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-5);
-    sim.porosities.push_back(0.25);
+    sim.permeabilities.push_back(1.0);
+    sim.porosities.push_back(1.0);
     
     /// not used but inserted
     sim.omega_ids.push_back(2);
     sim.omega_dim.push_back(3);
-    sim.permeabilities.push_back(1.0e-6);
-    sim.porosities.push_back(0.2);
+    sim.permeabilities.push_back(1.0);
+    sim.porosities.push_back(1.0);
     
     /// C inlet value
-    sim.c_inlet = 0.01;
+    sim.c_inlet = 1.0;
     
     int bc_inlet  = 3;
     int bc_outlet = 4;
@@ -989,7 +989,7 @@ void Case_2(){
     
     int bc_type_D = 0;    //    D = 0;
     int bc_type_N = 1;    //    N = 1;
-    REAL p_inlet  = 4.0;
+    REAL p_inlet  = 2.0;
     REAL p_outlet = 1.0;
     REAL qn       = 0.0;
     
@@ -1030,11 +1030,25 @@ void Case_2(){
     TFracture fracture;
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 20.0;
-    fracture.m_kappa_tangential = 1.0e-3;
-    fracture.m_d_opening        = 1.0e-2;
-    fracture.m_porosity         = 0.4;
+    fracture.m_kappa_normal     = 1.0e20;
+    fracture.m_kappa_tangential = 1.0;
+    fracture.m_d_opening        = 1.0;
+    fracture.m_porosity         = 0.5;
     fracture_data.push_back(fracture);
+    fracture.m_id               = 7;
+    fracture.m_dim              = 1;
+    fracture.m_kappa_normal     = 1.0e20;
+    fracture.m_kappa_tangential = 1.0;
+    fracture.m_d_opening        = 1.0;
+    fracture.m_porosity         = 1.0;
+    fracture_data.push_back(fracture);
+//    fracture.m_id               = 8;
+//    fracture.m_dim              = 0;
+//    fracture.m_kappa_normal     = 1.0e20;
+//    fracture.m_kappa_tangential = 1.0;
+//    fracture.m_d_opening        = 1.0;
+//    fracture.m_porosity         = 1.0;
+//    fracture_data.push_back(fracture);
     
     
     /// Benchmarks Material ID convention
@@ -1059,19 +1073,12 @@ void Case_2(){
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
-
-
     Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
-
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
-    
-    check_mesh(gmesh, 3);
-    std::ofstream file2("geometry_case_2_base.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file2);
     Geometry.PrintPartitionSummary(std::cout);
     
     UniformRefinement(gmesh, h_level);
-    check_mesh(gmesh, 3);
+    
 #ifdef PZDEBUG
     std::ofstream file("geometry_case_2_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
@@ -1095,7 +1102,7 @@ void Case_2(){
     
     dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
     dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
-    //    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
     cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
     
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
@@ -1147,7 +1154,12 @@ void Case_2(){
         std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
         
-        
+#ifdef PZDEBUG
+        std::ofstream file("geometry_case_2_base_dfn.vtk");
+        TPZVTKGeoMesh::PrintGMeshVTK(mp_cmesh->Reference(), file);
+        std::ofstream file_txt("geometry_case_2_base_dfn.txt");
+        mp_cmesh->Reference()->Print(file_txt);
+#endif
         
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
         std::cout << "Assembly DFN problem neq = " << mp_cmesh->NEquations() << std::endl;
@@ -1184,17 +1196,17 @@ void Case_2(){
             frac_an.PostProcess(div,2);
         }
         
-//        { /// lagrange postprocessor
-//            TPZStack<std::string,10> scalnames, vecnames;
-//            scalnames.Push("state");
-//            std::string file_frac("lagrange_1d.vtk");
-//            auto material = mesh_vec[1]->FindMaterial(7);
-//            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-//            fract_2d->SetDimension(1);
-//            TPZAnalysis frac_an(mesh_vec[1],false);
-//            frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
-//            frac_an.PostProcess(div,1);
-//        }
+        { /// lagrange postprocessor
+            TPZStack<std::string,10> scalnames, vecnames;
+            scalnames.Push("state");
+            std::string file_frac("lagrange_1d.vtk");
+            auto material = mesh_vec[1]->FindMaterial(7);
+            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
+            fract_2d->SetDimension(1);
+            TPZAnalysis frac_an(mesh_vec[1],false);
+            frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
+            frac_an.PostProcess(div,1);
+        }
 #endif
     }
     

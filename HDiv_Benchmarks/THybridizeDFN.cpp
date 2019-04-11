@@ -1039,13 +1039,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     // insert elements of bc_impervious_id if the element has no neighbour
     ClassifyCompelSides(matrix_dim, q_cmesh, gel_index_and_order_matrix, flux_trace_id, lagrange_id, flux_resistivity_id);
     
-#ifdef PZDEBUG
-    std::ofstream file("geometry_case_2_base_classify_1.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(q_cmesh->Reference(), file);
-    std::ofstream file_txt("geometry_case_2_base_classify_1.txt");
-    q_cmesh->Reference()->Print(file_txt);
-#endif
-    
     /// Creates the lagrange mulplier approximation space
     CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_matrix);
 
@@ -1074,7 +1067,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     // create boundary elements for the 1d fracture elements
     int fractures_intersections_dim = target_dim - 2;
     BuildMixedOperatorOnFractures(p_order, fractures_intersections_dim, cmesh, flux_trace_id, lagrange_id, flux_resistivity_id, mp_nterface_id);
-
 
     /// Hybridization for 1D fracture intersection elements
     /// load elements with dimension target_dim and target_dim - 1
@@ -1109,6 +1101,8 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
         std::ofstream out("darcy_mesh_before_interfaces.txt");
         dfn_hybrid_cmesh->Print(out);
     }
+    
+
     
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
