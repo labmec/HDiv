@@ -583,7 +583,7 @@ void Case_1(){
     SimulationCase sim;
     sim.UsePardisoQ=true;
     sim.IsHybrid=true;
-    sim.n_threads = 12;
+    sim.n_threads = 24;
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(3);
     sim.permeabilities.push_back(1.0e-5);
@@ -654,7 +654,7 @@ void Case_1(){
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 20.0;
     fracture.m_kappa_tangential = 1.0e-3;
-    fracture.m_d_opening        = 0.01;
+    fracture.m_d_opening        = 1.0e-2;
     fracture.m_porosity         = 0.4;
     fracture_data.push_back(fracture);
     
@@ -804,7 +804,7 @@ void Case_1(){
 #endif
     }
     
-    int n_steps = 10;
+    int n_steps = 100;
     REAL dt     = 1.0e7;
     TPZFMatrix<STATE> M_diag;
     TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
@@ -817,14 +817,14 @@ void Case_1(){
         if (!s_cmesh) {
             DebugStop();
         }
-        TPZGeoMesh * geometry = s_cmesh->Reference();
+        TPZGeoMesh * geometry = cmesh_transport->Reference();
         if (!geometry) {
             DebugStop();
         }
         geometry->ResetReference();
-        s_cmesh->LoadReferences();
+        cmesh_transport->LoadReferences();
         
-        for (auto cel : s_cmesh->ElementVec()) {
+        for (auto cel : cmesh_transport->ElementVec()) {
             if (!cel) {
                 continue;
             }
@@ -907,8 +907,9 @@ void Case_1(){
         item_3(it,1) = int_c2_vol_1;
         
         for (int i = 0; i <n_equ; i++) {
-            meshtrvec[2]->Solution()(i,0) = saturations(i,it-1);
+            cmesh_transport->Solution()(i,0) = saturations(i,it-1);
         }
+        cmesh_transport->LoadSolutionFromMultiPhysics();
         std::map<int, REAL> gel_index_to_int_s;
         IntegrateSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_s);
         
@@ -1529,7 +1530,6 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
             tracer_analysis->Solve(); /// (LU decomposition)
             s_np1 = tracer_analysis->Solution();
             tracer_analysis->LoadSolution(s_np1);
-            cmesh_transport->LoadSolutionFromMultiPhysics();
             
             /// postprocess ...
             TPZStack<std::string,10> scalnames, vecnames;
@@ -1563,7 +1563,7 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
             // configuring next time step
             s_n = s_np1;
             for (int64_t i = 0; i < n_eq; i++) {
-                saturations(i,it) = meshtrvec[2]->Solution()(i,0);
+                saturations(i,it) = cmesh_transport->Solution()(i,0);
             }
             
         }
