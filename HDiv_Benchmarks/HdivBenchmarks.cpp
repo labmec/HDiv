@@ -212,6 +212,8 @@ REAL IntegratePorousVolume(std::vector<int> & dof_indexes, TPZFMatrix<STATE> & M
 
 void FractureTest();
 
+void ColorMeshCase3(TPZGeoMesh * gmesh);
+
 /// Executes case 1
 void Case_1();
 
@@ -1040,14 +1042,14 @@ void Case_2(){
     dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
     
     TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag_auxiliary(4); // From 0D to 3D
-    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_1"] = -1;
-    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_2"] = -1;
-    dim_name_and_physical_tag_auxiliary[2]["BCInlet"] = -1;
-    dim_name_and_physical_tag_auxiliary[2]["BCOutlet"] = -1;
-    dim_name_and_physical_tag_auxiliary[2]["BCImpervious"] = -1;
-    dim_name_and_physical_tag_auxiliary[2]["Fractures"] = -1;
-    dim_name_and_physical_tag_auxiliary[1]["FracturesIntersections"] = -1;
-    dim_name_and_physical_tag_auxiliary[0]["CrossingIntresections"] = -1;
+    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_1"] = -1986;
+    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_2"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["BCInlet"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["BCOutlet"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["BCImpervious"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["Fractures"] = -1986;
+    dim_name_and_physical_tag_auxiliary[1]["FracturesIntersections"] = -1986;
+    dim_name_and_physical_tag_auxiliary[0]["CrossingIntresections"] = -1986;
     
     TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
@@ -1063,12 +1065,7 @@ void Case_2(){
     TPZGeoMesh * gmesh_aux = Geometry_aux.GeometricGmshMesh(file_gmsh.c_str());
     Geometry_aux.PrintPartitionSummary(std::cout);
     
-    {
-//        for (auto; <#condition#>; <#increment#>) {
-//            <#statements#>
-//        }
-        
-    }
+    ColorMeshCase3(gmesh_aux);
     
     /// Geometry description for FEM
     Geometry.SetFormatVersion(version);
@@ -1219,16 +1216,26 @@ void Case_2(){
         geometry->ResetReference();
         cmesh_transport->LoadReferences();
         
-        for (auto cel : cmesh_transport->ElementVec()) {
-            if (!cel) {
+        for (auto gel_aux : gmesh_aux->ElementVec()) {
+            if (!gel_aux) {
                 continue;
             }
-            TPZGeoEl * gel = cel->Reference();
+            int gel_aux_index = gel_aux->Index();
+            int mat_id = gel_aux->MaterialId();
+            if (mat_id == -1986) {
+                continue;
+            }
+            TPZGeoEl * gel = geometry->Element(gel_aux_index);
             if (!gel) {
                 DebugStop();
             }
-            int mat_id = gel->MaterialId();
-            int gel_dim = gel->Dimension();
+            
+            TPZCompEl * cel = gel->Reference();
+            if (!cel) {
+                continue;
+            }
+
+            int gel_dim = gel_aux->Dimension();
             
             int n_connects = cel->NConnects();
             if (n_connects==0 || n_connects==2) {
@@ -1285,65 +1292,133 @@ void Case_2(){
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
     
-    TPZFMatrix<REAL> item_2(n_steps+1,2,0.0);
-    TPZFMatrix<REAL> item_3(n_steps+1,2,0.0);
-    TPZFMatrix<REAL> item_4(n_steps+1,2,0.0);
-    int n_equ = meshtrvec[2]->NEquations();
+    TPZFMatrix<REAL> item_3(n_steps+1,23,0.0);
     for (int it = 1; it <= n_steps; it++) {
         
-        REAL time = (it*dt)/(86400*365);
-        REAL int_c3_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][1], saturations, M_diag);
-        REAL int_c2_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
-        
-        item_2(it,0) = time;
-        item_2(it,1) = int_c3_vol_1;
+        REAL time = it*dt;
         
         item_3(it,0) = time;
-        item_3(it,1) = int_c2_vol_1;
-        
-        for (int i = 0; i <n_equ; i++) {
-            cmesh_transport->Solution()(i,0) = saturations(i,it-1);
+        for (int idata = 1; idata <= 22; idata++) {
+            REAL int_c3 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][idata-1], saturations, M_diag);
+            item_3(it,idata) = int_c3;
         }
-        cmesh_transport->LoadSolutionFromMultiPhysics();
-        std::map<int, REAL> gel_index_to_s;
-        GetSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_s);
-        
-        REAL c_integral = 0.0;
-        for (auto pair : gel_index_to_int_qn) {
-            c_integral += pair.second * gel_index_to_s[pair.first];
-        }
-        
-        item_4(it,0) = time;
-        item_4(it,1) = c_integral;
         
     }
     
-    log_file << std::endl;
-    log_file << "Appeding items 2, 3 and 4 (pag 6/17 Flemisch (2018)) : " << std::endl;
-    log_file << "Integral of concentration for each time value : " << std::endl;
-    item_2.Print("it2 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
     log_file << std::endl;
     log_file << "Integral of concentration on fracture for each time value : " << std::endl;
     item_3.Print("it3 = ",log_file,EMathematicaInput);
     log_file << std::endl;
     log_file << std::endl;
-    log_file << "Integral of concentration flux on outlet boundary for each time value : " << std::endl;
-    item_4.Print("it4 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
-    log_file << std::endl;
     log_file.flush();
-    
-    std::ofstream file_2("item_2.txt");
-    item_2.Print("it2 = ",file_2,EMathematicaInput);
     
     std::ofstream file_3("item_3.txt");
     item_3.Print("it3 = ",file_3,EMathematicaInput);
     
-    std::ofstream file_4("item_4.txt");
-    item_4.Print("it4 = ",file_4,EMathematicaInput);
-    
     return;
+}
+
+void ColorMeshCase3(TPZGeoMesh * gmesh){
+    if (!gmesh) {
+        DebugStop();
+    }
+    for (auto gel : gmesh->ElementVec()) {
+        
+        bool is_not_3D = gel->Dimension() != 3;
+        
+        if (is_not_3D) {
+            continue;
+        }
+        TPZManVector<REAL,3> x_qsi(3,0.0),x_c(3,0.0);
+        int side = gel->NSides() - 1;
+        gel->CenterPoint(side, x_qsi);
+        gel->X(x_qsi, x_c);
+        
+        REAL x = x_c[0];
+        REAL y = x_c[1];
+        REAL z = x_c[2];
+        
+        bool check_0 = (x < 0.5 && y < 0.5 && z < 0.5);
+        bool check_1 = (x > 0.5 && y < 0.5 && z < 0.5);
+        bool check_2 = (x < 0.5 && y > 0.5 && z < 0.5);
+        bool check_3 = (x > 0.5 && y > 0.5 && z < 0.5);
+        bool check_4 = (x < 0.5 && y < 0.5 && z > 0.5);
+        bool check_5 = (x > 0.5 && y < 0.5 && z > 0.5);
+        bool check_6 = (x < 0.5 && y > 0.5 && z > 0.5);
+        bool check_7 = (x > 0.75 && y > 0.75 && z > 0.75);
+        bool check_8 = (x > 0.75 && (y > 0.5 && y<0.75) && z > 0.75);
+        bool check_9 = ((x > 0.5 && x< 0.75) &&  y>0.75 && z > 0.75);
+        bool check_10 = ((x > 0.5 && x< 0.75) &&  (y > 0.5 && y<0.75) && z > 0.75);
+        bool check_11 = (x > 0.75 && y > 0.75) && (z > 0.5 && z < 0.75);
+        bool check_12 = (x > 0.75 && y > 0.5 && y < 0.75) && (z > 0.5 && z < 0.75);
+        bool check_13 = (x > 0.5 && x < 0.75 && y > 0.75) && (z > 0.5 && z < 0.75);
+        bool check_14 = (x > 0.5 && x < 0.625 && y > 0.5 && y < 0.625) && (z > 0.5 && z < 0.625);
+        bool check_15 = (x > 0.625 && x < 0.75 && y > 0.5 && y < 0.625) && (z > 0.5 && z < 0.625);
+        bool check_16 = (x > 0.5 && x < 0.625 && y > 0.625 && y < 0.75) && (z > 0.5 && z < 0.625);
+        bool check_17 = (x > 0.625 && x < 0.75 && y > 0.625 && y < 0.75) && (z > 0.5 && z < 0.625);
+        bool check_18 = (x > 0.5 && x < 0.625 && y > 0.5 && y < 0.625) && (z > 0.625 && z < 0.75);
+        bool check_19 = (x > 0.625 && x < 0.75 && y > 0.5 && y < 0.625) && (z > 0.625 && z < 0.75);
+        bool check_20 = (x > 0.5 && x < 0.625 && y > 0.625 && y < 0.75) && (z > 0.625 && z < 0.75);
+        bool check_21 = (x > 0.625 && x < 0.75 && y > 0.625 && y < 0.75) && (z > 0.625 && z < 0.75);
+        
+        if (check_0) {
+            gel->SetMaterialId(0);
+        }else if (check_1){
+            gel->SetMaterialId(1);
+        }else if (check_2){
+            gel->SetMaterialId(2);
+        }else if (check_3){
+            gel->SetMaterialId(3);
+        }else if (check_4){
+            gel->SetMaterialId(4);
+        }else if (check_5){
+            gel->SetMaterialId(5);
+        }else if (check_6){
+            gel->SetMaterialId(6);
+        }else if (check_7){
+            gel->SetMaterialId(7);
+        }else if (check_8){
+            gel->SetMaterialId(8);
+        }else if (check_9){
+            gel->SetMaterialId(9);
+        }else if (check_10){
+            gel->SetMaterialId(10);
+        }else if (check_11){
+            gel->SetMaterialId(11);
+        }else if (check_12){
+            gel->SetMaterialId(12);
+        }else if (check_13){
+            gel->SetMaterialId(13);
+        }else if (check_14){
+            gel->SetMaterialId(14);
+        }else if (check_15){
+            gel->SetMaterialId(15);
+        }else if (check_16){
+            gel->SetMaterialId(16);
+        }else if (check_17){
+            gel->SetMaterialId(17);
+        }else if (check_18){
+            gel->SetMaterialId(18);
+        }else if (check_19){
+            gel->SetMaterialId(19);
+        }else if (check_20){
+            gel->SetMaterialId(20);
+        }else if (check_21){
+            gel->SetMaterialId(21);
+        }else {
+            DebugStop();
+        }
+        
+        
+    }
+    
+#ifdef PZDEBUG
+    std::ofstream file("geometry_case_2_base_aux.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
+    std::ofstream file_txt("geometry_case_2_base_aux.txt");
+    gmesh->Print(file_txt);
+#endif
+    
 }
 
 REAL IntegrateSaturations(int i_time_step, std::vector<int> & dof_indexes, TPZFMatrix<STATE> & saturations, TPZFMatrix<STATE> & M_diagonal){
