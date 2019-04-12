@@ -1,134 +1,95 @@
 Geometry.Tolerance = 3.33333333333e-05;
 
-s = 10.0;
-
-// Domain corners
-h_domain = 1.0;
-
-// Fracture 1, left (low x) and right ends
-h_1_left = s*0.1;
-h_1_right = s*0.1;
-
-// Fracture 2
-h_2 = s*0.1;
-
-// Intersection of 1 and 2
-h_1_2 = s*0.05;
-
-// Intersection of fractures 1 and 3
-h_1_3 = s*0.04;
-// Other points on fracture 3
-h_3 = s*0.1;
-
-// Points on fracture 4, close to f1 and far away
-h_4_close = s*0.04;
-h_4_away = s*0.1;
-
-// Endpoints of fractures 5 and 6. Not intersection (below)
-h_5_6 = s*0.04;
-// Intersection between 5 and 6
-h_5_6_isect = s*0.03;
-
-// Intersection of 1 with 5 and 6
-h_1_5_6 = s*0.03;
-
-// Fracture 7
-h_7 = s*0.06;
-// Fracture 8
-h_8 = s*0.06;
-// Intersection between 1 and 7 and 8
-h_1_7 = s*0.06;
-h_1_8 = s*0.06;
-
+h = 1.0;
 ymax = 2.25;
 
 // Fracture 1 points
-p0 = newp; Point(p0) = {0.05, 0.25, 0.5, 0.1 , h_1_left };
-p1 = newp; Point(p1) = {0.95, 0.25, 0.5, 0.1 , h_1_left };
-p2 = newp; Point(p2) = {0.95, 2.0, 0.5, 0.1 , h_1_right };
-p3 = newp; Point(p3) = {0.05, 2.0, 0.5, 0.1 , h_1_right };
+p0 = newp; Point(p0) = {0.05, 0.25, 0.5, 0.1 };
+p1 = newp; Point(p1) = {0.95, 0.25, 0.5, 0.1 };
+p2 = newp; Point(p2) = {0.95, 2.0, 0.5, 0.1 };
+p3 = newp; Point(p3) = {0.05, 2.0, 0.5, 0.1 };
 
 // Fracture 2 points
-p4 = newp; Point(p4) = {0.5, 0.05, 0.95, 0.1 , h_2 };
-p5 = newp; Point(p5) = {0.5, 0.05, 0.05, 0.1 , h_2 };
-p6 = newp; Point(p6) = {0.5, 0.3, 0.05, 0.1 , h_2 };
-p7 = newp; Point(p7) = {0.5, 0.3, 0.95, 0.1 , h_2 };
+p4 = newp; Point(p4) = {0.5, 0.05, 0.95, 0.1 };
+p5 = newp; Point(p5) = {0.5, 0.05, 0.05, 0.1 };
+p6 = newp; Point(p6) = {0.5, 0.3, 0.05, 0.1 };
+p7 = newp; Point(p7) = {0.5, 0.3, 0.95, 0.1 };
 
 // Intersection of fracture 1 and fracture 3 points
-p8 = newp; Point(p8) = {0.05, 1.0, 0.5, 0.04 , h_1_3 };
-p9 = newp; Point(p9) = {0.95, 1.0, 0.5, 0.04 , h_1_3 };
+p8 = newp; Point(p8) = {0.05, 1.0, 0.5, 0.04 };
+p9 = newp; Point(p9) = {0.95, 1.0, 0.5, 0.04 };
 
 // Other points of fracture 3
-p10 = newp; Point(p10) = {0.95, 2.2, 0.85, 0.1 , h_3 };
-p11 = newp; Point(p11) = {0.05, 2.2, 0.85, 0.1 , h_3 };
+p10 = newp; Point(p10) = {0.95, 2.2, 0.85, 0.1 };
+p11 = newp; Point(p11) = {0.05, 2.2, 0.85, 0.1 };
 
 // Fracture 4 points
-p12 = newp; Point(p12) = {0.05, 1.0, 0.48, 0.04 , h_4_close };
-p13 = newp; Point(p13) = {0.95, 1.0, 0.48, 0.04 , h_4_close };
-p14 = newp; Point(p14) = {0.95, 2.2, 0.14, 0.1 , h_4_away };
-p15 = newp; Point(p15) = {0.05, 2.2, 0.14, 0.1 , h_4_away };
+p12 = newp; Point(p12) = {0.05, 1.0, 0.48, 0.04 };
+p13 = newp; Point(p13) = {0.95, 1.0, 0.48, 0.04 };
+p14 = newp; Point(p14) = {0.95, 2.2, 0.14, 0.1 };
+p15 = newp; Point(p15) = {0.05, 2.2, 0.14, 0.1 };
 
 // Fractures 5 and 6 points
-p16 = newp; Point(p16) = {0.23, 1.9, 0.3, 0.04, h_5_6 };
-p17 = newp; Point(p17) = {0.23, 1.9, 0.7, 0.04, h_5_6 };
-p18 = newp; Point(p18) = {0.17, 2.2, 0.7, 0.04, h_5_6 };
-p19 = newp; Point(p19) = {0.17, 2.2, 0.3, 0.04, h_5_6 };
-p20 = newp; Point(p20) = {0.17, 1.9, 0.3, 0.04, h_5_6 };
-p21 = newp; Point(p21) = {0.17, 1.9, 0.7, 0.04, h_5_6 };
-p22 = newp; Point(p22) = {0.23, 2.2, 0.7, 0.04, h_5_6 };
-p23 = newp; Point(p23) = {0.23, 2.2, 0.3, 0.04, h_5_6 };
+p16 = newp; Point(p16) = {0.23, 1.9, 0.3, 0.04};
+p17 = newp; Point(p17) = {0.23, 1.9, 0.7, 0.04};
+p18 = newp; Point(p18) = {0.17, 2.2, 0.7, 0.04};
+p19 = newp; Point(p19) = {0.17, 2.2, 0.3, 0.04};
+p20 = newp; Point(p20) = {0.17, 1.9, 0.3, 0.04};
+p21 = newp; Point(p21) = {0.17, 1.9, 0.7, 0.04};
+p22 = newp; Point(p22) = {0.23, 2.2, 0.7, 0.04};
+p23 = newp; Point(p23) = {0.23, 2.2, 0.3, 0.04};
 
 // Fracture 7 points
-p24 = newp; Point(p24) = {.77, 1.9, 0.3, 0.06 , h_7 };
-p25 = newp; Point(p25) = {.77, 1.9, 0.7, 0.06 , h_7 };
-p26 = newp; Point(p26) = {.77, 2.2, 0.7, 0.06, h_7 };
-p27 = newp; Point(p27) = {.77, 2.2, 0.3, 0.06, h_7 };
+p24 = newp; Point(p24) = {.77, 1.9, 0.3, 0.06 };
+p25 = newp; Point(p25) = {.77, 1.9, 0.7, 0.06 };
+p26 = newp; Point(p26) = {.77, 2.2, 0.7, 0.06 };
+p27 = newp; Point(p27) = {.77, 2.2, 0.3, 0.06 };
 
 // Fracture 8 points
-p28 = newp; Point(p28) = {0.83, 1.9, 0.3, 0.06, h_8 };
-p29 = newp; Point(p29) = {0.83, 1.9, 0.7, 0.06, h_8 };
-p30 = newp; Point(p30) = {0.83, 2.2, 0.7, 0.06, h_8 };
-p31 = newp; Point(p31) = {0.83, 2.2, 0.3, 0.06 , h_8 };
+p28 = newp; Point(p28) = {0.83, 1.9, 0.3, 0.06 };
+p29 = newp; Point(p29) = {0.83, 1.9, 0.7, 0.06 };
+p30 = newp; Point(p30) = {0.83, 2.2, 0.7, 0.06 };
+p31 = newp; Point(p31) = {0.83, 2.2, 0.3, 0.06 };
 
 // Domain corner points
-p32 = newp; Point(p32) = {0.0, 0.0, 1.0, h_domain };
-p33 = newp; Point(p33) = {0.0, 0.0, 0.0, h_domain };
-p34 = newp; Point(p34) = {0.0, ymax, 0.0, h_domain };
-p35 = newp; Point(p35) = {0.0, ymax, 1.0, h_domain };
-p36 = newp; Point(p36) = {1.0, 0.0, 1.0, h_domain };
-p37 = newp; Point(p37) = {1.0, 0.0, 0.0, h_domain };
-p38 = newp; Point(p38) = {1.0, ymax, 0.0, h_domain };
-p39 = newp; Point(p39) = {1.0, ymax, 1.0, h_domain };
+p32 = newp; Point(p32) = {0.0, 0.0, 1.0, h };
+p33 = newp; Point(p33) = {0.0, 0.0, 0.0, h };
+p34 = newp; Point(p34) = {0.0, ymax, 0.0, h };
+p35 = newp; Point(p35) = {0.0, ymax, 1.0, h };
+p36 = newp; Point(p36) = {1.0, 0.0, 1.0, h };
+p37 = newp; Point(p37) = {1.0, 0.0, 0.0, h };
+p38 = newp; Point(p38) = {1.0, ymax, 0.0, h };
+p39 = newp; Point(p39) = {1.0, ymax, 1.0, h };
 
 // Intersection of Fractures 1 and 2 points
-p40 = newp; Point(p40) = {0.5, 0.3, 0.5, 0.05 , h_1_2 };
-p41 = newp; Point(p41) = {0.5, 0.25, 0.5, 0.05 , h_1_2 };
+p40 = newp; Point(p40) = {0.5, 0.3, 0.5, 0.05 };
+p41 = newp; Point(p41) = {0.5, 0.25, 0.5, 0.05 };
 
 // Intersections between fractures 1 and 5 and 6 points
-p42 = newp; Point(p42) = {0.23, 1.9, 0.5, 0.03 , h_1_5_6 };
-p43 = newp; Point(p43) = {0.21, 2.0, 0.5, 0.03 , h_1_5_6 };
-p44 = newp; Point(p44) = {0.17, 1.9, 0.5, 0.03 , h_1_5_6 };
-p45 = newp; Point(p45) = {0.19, 2.0, 0.5, 0.03 , h_1_5_6 };
+p42 = newp; Point(p42) = {0.23, 1.9, 0.5, 0.03 };
+p43 = newp; Point(p43) = {0.21, 2.0, 0.5, 0.03 };
+p44 = newp; Point(p44) = {0.17, 1.9, 0.5, 0.03 };
+p45 = newp; Point(p45) = {0.19, 2.0, 0.5, 0.03 };
 
 // Intersections between fractures 1 and 7 and 8 points
-p46 = newp; Point(p46) = {0.77, 1.9, 0.5, 0.06, h_1_7 };
-p47 = newp; Point(p47) = {0.77, 2.0, 0.5, 0.06, h_1_7 };
-p48 = newp; Point(p48) = {0.83, 1.9, 0.5, 0.06, h_1_8 };
-p49 = newp; Point(p49) = {0.83, 2.0, 0.5, 0.06, h_1_8 };
+p46 = newp; Point(p46) = {0.77, 1.9, 0.5, 0.06 };
+p47 = newp; Point(p47) = {0.77, 2.0, 0.5, 0.06 };
+p48 = newp; Point(p48) = {0.83, 1.9, 0.5, 0.06 };
+p49 = newp; Point(p49) = {0.83, 2.0, 0.5, 0.06 };
 
 // Intersection of fractures 5 and 6 points
-p50 = newp; Point(p50) = {0.2, 2.05, 0.7, 0.03 , h_5_6_isect };
-p51 = newp; Point(p51) = {0.2, 2.05, 0.3, 0.03 , h_5_6_isect };
+p50 = newp; Point(p50) = {0.2, 2.05, 0.7, 0.03 };
+p51 = newp; Point(p51) = {0.2, 2.05, 0.3, 0.03 };
 
 // Domain boundaries conditions points
-pin00 = newp; Point(pin00) = {0., 0., 0.333333, h_domain};
-pin01 = newp; Point(pin01) = {0., 0., 0.666667, h_domain};
-pin11 = newp; Point(pin11) = {1., 0., 0.666667, h_domain};
-pin10 = newp; Point(pin10) = {1., 0., 0.333333, h_domain};
-pout00 = newp; Point(pout00) = {0., ymax, 0.333333, h_domain};
-pout01 = newp; Point(pout01) = {0., ymax, 0.666667, h_domain};
-pout11 = newp; Point(pout11) = {1., ymax, 0.666667, h_domain};
-pout10 = newp; Point(pout10) = {1., ymax, 0.333333, h_domain};
+pin00 = newp; Point(pin00) = {0., 0., 0.333333, h};
+pin01 = newp; Point(pin01) = {0., 0., 0.666667, h};
+pin11 = newp; Point(pin11) = {1., 0., 0.666667, h};
+pin10 = newp; Point(pin10) = {1., 0., 0.333333, h};
+pout00 = newp; Point(pout00) = {0., ymax, 0.333333, h};
+pout01 = newp; Point(pout01) = {0., ymax, 0.666667, h};
+pout11 = newp; Point(pout11) = {1., ymax, 0.666667, h};
+pout10 = newp; Point(pout10) = {1., ymax, 0.333333, h};
 
 // End of point specification
 
