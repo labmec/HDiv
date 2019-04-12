@@ -923,7 +923,7 @@ void Case_1(){
     return;
 }
 
-#define Case_2_0
+//#define Case_2_0
 
 void Case_2(){
     
@@ -1105,24 +1105,24 @@ void Case_2(){
     TFracture fracture;
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = (2.0e8)*(2.0/eps_2);
-    fracture.m_kappa_tangential = 1.0;
+    fracture.m_kappa_normal     = (2.0)*(2.0/eps_2);
+    fracture.m_kappa_tangential = 1.0e-8;
     fracture.m_d_opening        = eps_2;
-    fracture.m_porosity         = 0.9;
+    fracture.m_porosity         = 0.01;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = (2.0e4)*(2.0/eps_1);
-    fracture.m_kappa_tangential = 1.0e-4;
+    fracture.m_kappa_normal     = (2.0e-4)*(2.0/eps_1);
+    fracture.m_kappa_tangential = 1.0e-12;
     fracture.m_d_opening        = eps_2;
-    fracture.m_porosity         = 0.9;
+    fracture.m_porosity         = 0.01;
     fracture_data.push_back(fracture);
     fracture.m_id               = 8;
     fracture.m_dim              = 0;
-    fracture.m_kappa_normal     = (2.0)*(2.0/eps_0);
-    fracture.m_kappa_tangential = 2.0;
+    fracture.m_kappa_normal     = (2.0-8)*(2.0/eps_0);
+    fracture.m_kappa_tangential = 2.0-8;
     fracture.m_d_opening        = eps_2;
-    fracture.m_porosity         = 0.9;
+    fracture.m_porosity         = 0.01;
     fracture_data.push_back(fracture);
     
 #endif
@@ -1155,9 +1155,9 @@ void Case_2(){
     
     TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
