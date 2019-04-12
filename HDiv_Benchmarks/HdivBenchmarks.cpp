@@ -212,11 +212,16 @@ REAL IntegratePorousVolume(std::vector<int> & dof_indexes, TPZFMatrix<STATE> & M
 
 void FractureTest();
 
+void ColorMeshCase3(TPZGeoMesh * gmesh);
+
 /// Executes case 1
 void Case_1();
 
 /// Executes case 2
 void Case_2();
+
+/// Executes case 3
+void Case_3();
 
 /// Executes cube
 void Pretty_cube();
@@ -231,10 +236,10 @@ int main(){
 #endif
     
 
-    Pretty_cube();
+//    Pretty_cube();
 //    Case_1();
-
 //     Case_2();
+    Case_3();
 
 }
 
@@ -378,7 +383,6 @@ void Pretty_cube(){
     gmesh->Print(file_txt);
 #endif
     
-    
     int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
@@ -479,39 +483,27 @@ void Pretty_cube(){
         
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
-        vecnames.Push("kappa");
         scalnames.Push("p");
         
         int div = 0;
+        std::set<int> mat_id_3D;
+        mat_id_3D.insert(1);
+        mat_id_3D.insert(2);
         std::string file_reservoir("cube.vtk");
-        an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
+        an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
-#ifdef PZDEBUG
-        { /// fracture postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("fracture.vtk");
-            auto material = mesh_vec[1]->FindMaterial(6);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(2);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,2);
-        }
-        
-        { /// lagrange postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("lagrange_1d.vtk");
-            auto material = mesh_vec[1]->FindMaterial(7);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(1);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,1);
-        }
-#endif
+        std::set<int> mat_id_2D;
+        mat_id_2D.insert(6);
+        std::string file_frac("fracture.vtk");
+        an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+        an->PostProcess(div,2);
+
+        std::set<int> mat_id_1D;
+        mat_id_1D.insert(7);
+        std::string file_frac_intersections("fracture_intersections.vtk");
+        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
+        an->PostProcess(div,1);
     }
     
     int n_steps = 10;
@@ -591,8 +583,8 @@ void Pretty_cube(){
         p_outlet_integral += pair.second;
     }
     
-    REAL int_s_vol_1 = IntegrateSaturations(n_steps-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
-    REAL vol_1 = IntegratePorousVolume(dim_mat_id_dof_indexes[2][6], M_diag);
+//    REAL int_s_vol_1 = IntegrateSaturations(n_steps-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
+//    REAL vol_1 = IntegratePorousVolume(dim_mat_id_dof_indexes[2][6], M_diag);
     
     return;
 }
@@ -703,9 +695,9 @@ void Case_1(){
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
@@ -758,30 +750,13 @@ void Case_1(){
         
         TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
         
-//#ifdef PZDEBUG
-//        {
-//            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-//            mesh_vec[0]->ComputeNodElCon();
-//            mesh_vec[0]->Print(file_hybrid_mixed_q);
-//
-//            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-//            mesh_vec[1]->ComputeNodElCon();
-//            mesh_vec[1]->Print(file_hybrid_mixed_p);
-//
-//            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
-//            cmeshm->ComputeNodElCon();
-//            cmeshm->Print(file_hybrid_mixed);
-//        }
-//#endif
-        
-        
-        int n_vols_els = Geometry.m_n_pyramid_els + Geometry.m_n_prism_els + Geometry.m_n_hexahedron_els + Geometry.m_n_tetrahedron_els;
-        int n_surf_els = Geometry.m_n_triangle_els + Geometry.m_n_quadrilateral_els;
+        int n_vols_els = Geometry.NPyramids() + Geometry.NPrisms() + Geometry.NHexahedra() + Geometry.NTetrahera();
+        int n_surf_els = Geometry.NTriangles() + Geometry.NQuadrilaterals();
         log_file << "Number of elements by dimension : " << std::endl;
         log_file << "3D elements : " << n_vols_els << std::endl;
         log_file << "2D elements : " << n_surf_els << std::endl;
-        log_file << "1D elements : " << Geometry.m_n_line_els << std::endl;
-        log_file << "0D elements : " << Geometry.m_n_point_els << std::endl;
+        log_file << "1D elements : " << Geometry.NLines() << std::endl;
+        log_file << "0D elements : " << Geometry.NPoints() << std::endl;
 
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
@@ -789,7 +764,6 @@ void Case_1(){
         dfn_hybridzer.GroupElements(mp_cmesh);
         std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
         log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
-
 
 
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
@@ -806,27 +780,27 @@ void Case_1(){
         
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
-        vecnames.Push("kappa");
         scalnames.Push("p");
         
         int div = 0;
-        std::string file_reservoir("case_1.vtk");
-        an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
+        std::set<int> mat_id_3D;
+        mat_id_3D.insert(1);
+        mat_id_3D.insert(2);
+        std::string file_reservoir("cube.vtk");
+        an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
-#ifdef PZDEBUG
-        { /// fracture postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("case_1_fracture.vtk");
-            auto material = mesh_vec[1]->FindMaterial(6);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(2);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,2);
-        }
-#endif
+        std::set<int> mat_id_2D;
+        mat_id_2D.insert(6);
+        std::string file_frac("fracture.vtk");
+        an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+        an->PostProcess(div,2);
+        
+//        std::set<int> mat_id_1D;
+//        mat_id_1D.insert(7);
+//        std::string file_frac_intersections("fracture_intersections.vtk");
+//        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
+//        an->PostProcess(div,1);
     }
     
     int n_steps = 100;
@@ -976,11 +950,15 @@ void Case_1(){
     return;
 }
 
+#define Case_2_0
+
 void Case_2(){
     
     /// Execution logger.
     std::ofstream log_file("case_2_results.txt");
     int h_level = 0;
+    
+#ifdef Case_2_0
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
@@ -1048,31 +1026,133 @@ void Case_2(){
     bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
     bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
     
+    REAL eps_2 = 1.0e-4;
+//    REAL eps_1 = eps_2*eps_2;
+//    REAL eps_0 = eps_2*eps_2*eps_2;
+    
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
     fracture.m_id.insert(6);
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 2.0e8;
+    fracture.m_kappa_normal     = 2.0*(2.0e8);
     fracture.m_kappa_tangential = 1.0;
-    fracture.m_d_opening        = 1.0e-4;
+    fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.9;
     fracture_data.push_back(fracture);
     fracture.m_id.insert(7);
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = 2.0e4;
+    fracture.m_kappa_normal     = 2.0*(2.0e4);
     fracture.m_kappa_tangential = 1.0e-4;
-    fracture.m_d_opening        = 1.0e-4;
-    fracture.m_porosity         = 1.0;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.9;
     fracture_data.push_back(fracture);
     fracture.m_id.insert(8);
     fracture.m_dim              = 0;
-    fracture.m_kappa_normal     = 2.0;
+    fracture.m_kappa_normal     = 2.0*(2.0);
     fracture.m_kappa_tangential = 2.0;
-    fracture.m_d_opening        = 1.0e-4;
-    fracture.m_porosity         = 1.0;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.9;
     fracture_data.push_back(fracture);
     
+#else
+    
+    SimulationCase sim;
+    sim.UsePardisoQ=true;
+    sim.IsHybrid=true;
+    sim.n_threads = 12;
+    sim.omega_ids.push_back(1);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0);
+    sim.porosities.push_back(0.1);
+    
+    sim.omega_ids.push_back(2);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0e-1);
+    sim.porosities.push_back(0.1);
+    
+    /// C inlet value
+    sim.c_inlet = 1.0;
+    
+    int bc_inlet  = 3;
+    int bc_outlet = 4;
+    int bc_non_flux = 5;
+    
+    sim.gamma_ids.push_back(bc_inlet);
+    sim.gamma_dim.push_back(3);
+    sim.gamma_ids.push_back(bc_outlet);
+    sim.gamma_dim.push_back(3);
+    sim.gamma_ids.push_back(bc_non_flux);
+    sim.gamma_dim.push_back(3);
+    
+    int bc_type_D = 0;    //    D = 0;
+    int bc_type_N = 1;    //    N = 1;
+    REAL qn_inlet  = 1.0;
+    REAL p_outlet = 1.0;
+    REAL qn       = 0.0;
+    
+    sim.type.push_back(bc_type_N);
+    sim.type.push_back(bc_type_D);
+    sim.type.push_back(bc_type_N);
+    
+    sim.vals.push_back(qn_inlet);
+    sim.vals.push_back(p_outlet);
+    sim.vals.push_back(qn);
+    
+    /// Defining DFN boundary data (id,bc_type,data)
+    std::vector<std::tuple<int,int,REAL>> bc_ids_2d;
+    bc_ids_2d.push_back(std::make_tuple(bc_inlet,bc_type_N,qn_inlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
+    
+    int bc_1d_inlet  = 130;
+    int bc_1d_outlet = 140;
+    int bc_1d_non_flux = 150;
+    
+    int bc_0d_inlet  = 230;
+    int bc_0d_outlet = 240;
+    int bc_0d_non_flux = 250;
+    
+    std::map<int,int> bc_ids_1d_map;
+    bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_outlet,bc_1d_outlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
+    
+    std::map<int,int> bc_ids_0d_map;
+    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
+    
+    REAL eps_2 = 1.0e-4;
+    REAL eps_1 = eps_2*eps_2;
+    REAL eps_0 = eps_2*eps_2*eps_2;
+    
+    /// Defining DFN data
+    TPZStack<TFracture> fracture_data;
+    TFracture fracture;
+    fracture.m_id               = 6;
+    fracture.m_dim              = 2;
+    fracture.m_kappa_normal     = 2.0*(2.0);//*(2.0/eps_2);
+    fracture.m_kappa_tangential = (1.0e-8);//*eps_2;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.01;
+    fracture_data.push_back(fracture);
+    fracture.m_id               = 7;
+    fracture.m_dim              = 1;
+    fracture.m_kappa_normal     = 2.0*(2.0e-4);//*(2.0/(eps_1*eps_1));
+    fracture.m_kappa_tangential = (1.0e-12);//*eps_1;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.01;
+    fracture_data.push_back(fracture);
+    fracture.m_id               = 8;
+    fracture.m_dim              = 0;
+    fracture.m_kappa_normal     = 2.0*(2.0e-8);//*(2.0/(eps_0*eps_0*eps_0));
+    fracture.m_kappa_tangential = (2.0e-8);//*eps_0;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.01;
+    fracture_data.push_back(fracture);
+    
+#endif
     
     /// Benchmarks Material ID convention
     /// 1 and 2 for 3D matrix
@@ -1090,11 +1170,33 @@ void Case_2(){
     dim_name_and_physical_tag[1]["FracturesIntersections"] = 7;
     dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
     
-    TPZGmshReader Geometry;
+    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag_auxiliary(4); // From 0D to 3D
+    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_1"] = -1986;
+    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_2"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["BCInlet"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["BCOutlet"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["BCImpervious"] = -1986;
+    dim_name_and_physical_tag_auxiliary[2]["Fractures"] = -1986;
+    dim_name_and_physical_tag_auxiliary[1]["FracturesIntersections"] = -1986;
+    dim_name_and_physical_tag_auxiliary[0]["CrossingIntresections"] = -1986;
+    
+    TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_c.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
+    
+    /// Geometry description for Coloring regions by Appendix 6.1 Flemisch (2018).
+    Geometry_aux.SetFormatVersion(version);
+    Geometry_aux.SetDimNamePhysical(dim_name_and_physical_tag_auxiliary);
+    TPZGeoMesh * gmesh_aux = Geometry_aux.GeometricGmshMesh(file_gmsh.c_str());
+    Geometry_aux.PrintPartitionSummary(std::cout);
+    
+    ColorMeshCase3(gmesh_aux);
+    
+    /// Geometry description for FEM
     Geometry.SetFormatVersion(version);
     Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
@@ -1162,13 +1264,13 @@ void Case_2(){
 #endif
         
         
-        int n_vols_els = Geometry.m_n_pyramid_els + Geometry.m_n_prism_els + Geometry.m_n_hexahedron_els + Geometry.m_n_tetrahedron_els;
-        int n_surf_els = Geometry.m_n_triangle_els + Geometry.m_n_quadrilateral_els;
+        int n_vols_els = Geometry.NPyramids() + Geometry.NPrisms() + Geometry.NHexahedra() + Geometry.NTetrahera();
+        int n_surf_els = Geometry.NTriangles() + Geometry.NQuadrilaterals();
         log_file << "Number of elements by dimension : " << std::endl;
         log_file << "3D elements : " << n_vols_els << std::endl;
         log_file << "2D elements : " << n_surf_els << std::endl;
-        log_file << "1D elements : " << Geometry.m_n_line_els << std::endl;
-        log_file << "0D elements : " << Geometry.m_n_point_els << std::endl;
+        log_file << "1D elements : " << Geometry.NLines() << std::endl;
+        log_file << "0D elements : " << Geometry.NPoints() << std::endl;
         
         std::cout << "Condensing DFN equations." << std::endl;
         std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
@@ -1189,7 +1291,7 @@ void Case_2(){
         an->Assemble();
         std::cout << "Assembly for DFN complete." << std::endl;
         
-        //        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
+//        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
         
         std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
@@ -1198,47 +1300,36 @@ void Case_2(){
         
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
-        vecnames.Push("kappa");
         scalnames.Push("p");
         
         int div = 0;
-        std::string file_reservoir("case_2.vtk");
-        an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
+        std::set<int> mat_id_3D;
+        mat_id_3D.insert(1);
+        mat_id_3D.insert(2);
+        std::string file_reservoir("cube.vtk");
+        an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
-#ifdef PZDEBUG
-        { /// fracture postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("case_2_fracture.vtk");
-            auto material = mesh_vec[1]->FindMaterial(6);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(2);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,2);
-        }
+        std::set<int> mat_id_2D;
+        mat_id_2D.insert(6);
+        std::string file_frac("fracture.vtk");
+        an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+        an->PostProcess(div,2);
         
-        { /// lagrange postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("lagrange_1d.vtk");
-            auto material = mesh_vec[1]->FindMaterial(7);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(1);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,1);
-        }
-#endif
+        std::set<int> mat_id_1D;
+        mat_id_1D.insert(7);
+        std::string file_frac_intersections("fracture_intersections.vtk");
+        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
+        an->PostProcess(div,1);
     }
     
 
     
     int n_steps = 100;
     REAL dt     = 0.0025;
-    TPZFMatrix<STATE> M_diag;
+    TPZFMatrix<STATE> M_diag, M_vol;
     TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    VolumeMatrix(tracer_analysis, M_vol);
     
     ///// Post-processing data
     std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
@@ -1255,16 +1346,26 @@ void Case_2(){
         geometry->ResetReference();
         cmesh_transport->LoadReferences();
         
-        for (auto cel : cmesh_transport->ElementVec()) {
-            if (!cel) {
+        for (auto gel_aux : gmesh_aux->ElementVec()) {
+            if (!gel_aux) {
                 continue;
             }
-            TPZGeoEl * gel = cel->Reference();
+            int gel_aux_index = gel_aux->Index();
+            int mat_id = gel_aux->MaterialId();
+            if (mat_id == -1986) {
+                continue;
+            }
+            TPZGeoEl * gel = geometry->Element(gel_aux_index);
             if (!gel) {
                 DebugStop();
             }
-            int mat_id = gel->MaterialId();
-            int gel_dim = gel->Dimension();
+            
+            TPZCompEl * cel = gel->Reference();
+            if (!cel) {
+                continue;
+            }
+
+            int gel_dim = gel_aux->Dimension();
             
             int n_connects = cel->NConnects();
             if (n_connects==0 || n_connects==2) {
@@ -1321,65 +1422,461 @@ void Case_2(){
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
     
-    TPZFMatrix<REAL> item_2(n_steps+1,2,0.0);
-    TPZFMatrix<REAL> item_3(n_steps+1,2,0.0);
-    TPZFMatrix<REAL> item_4(n_steps+1,2,0.0);
-    int n_equ = meshtrvec[2]->NEquations();
+    TPZFMatrix<STATE> M_ones(M_diag.Rows(),1,1.0);
+    TPZFMatrix<STATE> ones = saturations;
+    for (int i = 0; i < ones.Rows(); i++) {
+        M_ones(i,0) = 1.0;
+        for (int j = 0; j < ones.Cols(); j++) {
+            ones(i,j) = 1.0;
+        }
+    }
+    TPZFMatrix<REAL> item_3(n_steps+1,23,0.0);
     for (int it = 1; it <= n_steps; it++) {
         
-        REAL time = (it*dt)/(86400*365);
-        REAL int_c3_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][1], saturations, M_diag);
-        REAL int_c2_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
-        
-        item_2(it,0) = time;
-        item_2(it,1) = int_c3_vol_1;
+        REAL time = it*dt;
         
         item_3(it,0) = time;
-        item_3(it,1) = int_c2_vol_1;
-        
-        for (int i = 0; i <n_equ; i++) {
-            cmesh_transport->Solution()(i,0) = saturations(i,it-1);
+        for (int idata = 1; idata <= 22; idata++) {
+            REAL int_c3 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][idata-1], saturations, M_vol);
+            REAL int_omega = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][idata-1], ones, M_vol);
+            item_3(it,idata) = int_c3/int_omega;
         }
-        cmesh_transport->LoadSolutionFromMultiPhysics();
-        std::map<int, REAL> gel_index_to_s;
-        GetSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_s);
-        
-        REAL c_integral = 0.0;
-        for (auto pair : gel_index_to_int_qn) {
-            c_integral += pair.second * gel_index_to_s[pair.first];
-        }
-        
-        item_4(it,0) = time;
-        item_4(it,1) = c_integral;
         
     }
     
-    log_file << std::endl;
-    log_file << "Appeding items 2, 3 and 4 (pag 6/17 Flemisch (2018)) : " << std::endl;
-    log_file << "Integral of concentration for each time value : " << std::endl;
-    item_2.Print("it2 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
     log_file << std::endl;
     log_file << "Integral of concentration on fracture for each time value : " << std::endl;
     item_3.Print("it3 = ",log_file,EMathematicaInput);
     log_file << std::endl;
     log_file << std::endl;
-    log_file << "Integral of concentration flux on outlet boundary for each time value : " << std::endl;
-    item_4.Print("it4 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
-    log_file << std::endl;
     log_file.flush();
-    
-    std::ofstream file_2("item_2.txt");
-    item_2.Print("it2 = ",file_2,EMathematicaInput);
     
     std::ofstream file_3("item_3.txt");
     item_3.Print("it3 = ",file_3,EMathematicaInput);
     
-    std::ofstream file_4("item_4.txt");
-    item_4.Print("it4 = ",file_4,EMathematicaInput);
+    return;
+}
+
+void Case_3(){
+    
+    /// Execution logger.
+    std::ofstream log_file("case_3_results.txt");
+    int h_level = 0;
+    
+    SimulationCase sim;
+    sim.UsePardisoQ=true;
+    sim.IsHybrid=true;
+    sim.n_threads = 12;
+    sim.omega_ids.push_back(1);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0);
+    sim.porosities.push_back(0.2);
+    
+    sim.omega_ids.push_back(2);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0e-1);
+    sim.porosities.push_back(0.1);
+    
+    /// C inlet value
+    sim.c_inlet = 1.0;
+    
+    int bc_inlet  = 3;
+    int bc_outlet = 4;
+    int bc_non_flux = 5;
+    
+    sim.gamma_ids.push_back(bc_inlet);
+    sim.gamma_dim.push_back(3);
+    sim.gamma_ids.push_back(bc_outlet);
+    sim.gamma_dim.push_back(3);
+    sim.gamma_ids.push_back(bc_non_flux);
+    sim.gamma_dim.push_back(3);
+    
+    int bc_type_D = 0;    //    D = 0;
+    int bc_type_N = 1;    //    N = 1;
+    REAL qn_inlet  = 1.0;
+    REAL p_outlet = 1.0;
+    REAL qn       = 0.0;
+    
+    sim.type.push_back(bc_type_N);
+    sim.type.push_back(bc_type_D);
+    sim.type.push_back(bc_type_N);
+    
+    sim.vals.push_back(qn_inlet);
+    sim.vals.push_back(p_outlet);
+    sim.vals.push_back(qn);
+    
+    /// Defining DFN boundary data (id,bc_type,data)
+    std::vector<std::tuple<int,int,REAL>> bc_ids_2d;
+    bc_ids_2d.push_back(std::make_tuple(bc_inlet,bc_type_N,qn_inlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
+    
+    int bc_1d_inlet  = 130;
+    int bc_1d_outlet = 140;
+    int bc_1d_non_flux = 150;
+    
+    int bc_0d_inlet  = 230;
+    int bc_0d_outlet = 240;
+    int bc_0d_non_flux = 250;
+    
+    std::map<int,int> bc_ids_1d_map;
+    bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_outlet,bc_1d_outlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
+    
+    std::map<int,int> bc_ids_0d_map;
+    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
+    
+    REAL eps_2 = 1.0e-4;
+    //    REAL eps_1 = eps_2*eps_2;
+    //    REAL eps_0 = eps_2*eps_2*eps_2;
+    
+    /// Defining DFN data
+    TPZStack<TFracture> fracture_data;
+    TFracture fracture;
+    fracture.m_id.insert(6);
+    fracture.m_id.insert(7);
+    fracture.m_id.insert(8);
+    fracture.m_id.insert(9);
+    fracture.m_id.insert(10);
+    fracture.m_id.insert(11);
+    fracture.m_id.insert(12);
+    fracture.m_id.insert(13);
+    fracture.m_dim              = 2;
+    fracture.m_kappa_normal     = 1.0*(2.0e6);
+    fracture.m_kappa_tangential = 100.0;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.2;
+    fracture_data.push_back(fracture);
+    fracture.m_id.clear();
+    fracture.m_id.insert(14);
+    fracture.m_dim              = 1;
+    fracture.m_kappa_normal     = 1.0*(2.0e4);
+    fracture.m_kappa_tangential = 1.;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.2;
+    fracture_data.push_back(fracture);
+    fracture.m_id.clear();
+    fracture.m_id.insert(15);
+    fracture.m_dim              = 0;
+    fracture.m_kappa_normal     = 1.0*(2.0);
+    fracture.m_kappa_tangential = 2.0;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.9;
+    fracture_data.push_back(fracture);
+    
+    /// Benchmarks Material ID convention
+    /// 1 and 2 for 3D matrix
+    /// 3,4, and 5 for 2D matrix boundaries (3 -> inlet, 4 -> outlet, 5 -> impervious)
+    /// 6 fractures
+    /// 7 fractures intersections
+    /// 8 crossing intersections
+    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
+    dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
+    dim_name_and_physical_tag[2]["BCInlet"] = 3;
+    dim_name_and_physical_tag[2]["BCOutlet"] = 4;
+    dim_name_and_physical_tag[2]["BCImpervious"] = 5;
+    dim_name_and_physical_tag[2]["FRACTURE_0"] = 6;
+    dim_name_and_physical_tag[2]["FRACTURE_1"] = 7;
+    dim_name_and_physical_tag[2]["FRACTURE_2"] = 8;
+    dim_name_and_physical_tag[2]["FRACTURE_3"] = 9;
+    dim_name_and_physical_tag[2]["FRACTURE_4"] = 10;
+    dim_name_and_physical_tag[2]["FRACTURE_5"] = 11;
+    dim_name_and_physical_tag[2]["FRACTURE_6"] = 12;
+    dim_name_and_physical_tag[2]["FRACTURE_7"] = 13;
+    dim_name_and_physical_tag[1]["FracturesIntersections"] = 14;
+    dim_name_and_physical_tag[0]["CrossingIntresections"] = 15;
+    
+    TPZGmshReader Geometry;
+    std::string source_dir = SOURCE_DIR;
+    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_aux.msh";
+    TPZGeoMesh *gmesh = new TPZGeoMesh;
+    std::string version("4.1");
+    
+    /// Geometry description for FEM
+    Geometry.SetFormatVersion(version);
+    Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
+    gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
+    Geometry.PrintPartitionSummary(std::cout);
+    
+    UniformRefinement(gmesh, h_level);
+    
+#ifdef PZDEBUG
+    std::ofstream file("geometry_case_3_base.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
+    std::ofstream file_txt("geometry_case_3_base.txt");
+    gmesh->Print(file_txt);
+#endif
+    
+    
+    int p_order = 1;
+    TPZVec<TPZCompMesh *> meshvec;
+    TPZCompMesh *cmixedmesh = NULL;
+    cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
+    //#ifdef PZDEBUG
+    //    std::ofstream filemixed("mixed_cmesh.txt");
+    //    cmixedmesh->Print(filemixed);
+    //#endif
+    
+    TPZCompMesh *cmeshm =NULL;
+    THybridizeDFN dfn_hybridzer;
+    dfn_hybridzer.SetFractureData(fracture_data);
+    
+    dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
+//    dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
+//    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+    cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
+    
+    TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
+    
+    /// Craate transpor computational mesh
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
+    TPZManVector<TPZCompMesh *,3> meshtrvec(3);
+    meshtrvec[0] = meshvec[0];
+    meshtrvec[1] = meshvec[1];
+    meshtrvec[2] = s_cmesh;
+    
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+    
+    bool solve_dfn_problem_Q = true;
+    if (solve_dfn_problem_Q) {
+        
+        TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
+        
+#ifdef PZDEBUG
+        {
+            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+            mesh_vec[0]->ComputeNodElCon();
+            mesh_vec[0]->Print(file_hybrid_mixed_q);
+            
+            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+            mesh_vec[1]->ComputeNodElCon();
+            mesh_vec[1]->Print(file_hybrid_mixed_p);
+            
+            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+            cmeshm->ComputeNodElCon();
+            cmeshm->Print(file_hybrid_mixed);
+        }
+#endif
+        
+        
+        int n_vols_els = Geometry.NPyramids() + Geometry.NPrisms() + Geometry.NHexahedra() + Geometry.NTetrahera();
+        int n_surf_els = Geometry.NTriangles() + Geometry.NQuadrilaterals();
+        log_file << "Number of elements by dimension : " << std::endl;
+        log_file << "3D elements : " << n_vols_els << std::endl;
+        log_file << "2D elements : " << n_surf_els << std::endl;
+        log_file << "1D elements : " << Geometry.NLines() << std::endl;
+        log_file << "0D elements : " << Geometry.NPoints() << std::endl;
+        
+        std::cout << "Condensing DFN equations." << std::endl;
+        std::cout << "DFN neq before condensation = " << mp_cmesh->NEquations() << std::endl;
+        log_file << "DFN neq without condensation = " << mp_cmesh->NEquations() << std::endl;
+        dfn_hybridzer.GroupElements(mp_cmesh);
+        std::cout << "DFN neq = " << mp_cmesh->NEquations() << std::endl;
+        log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
+        
+#ifdef PZDEBUG2
+        std::ofstream file("geometry_case_3_base_dfn.vtk");
+        TPZVTKGeoMesh::PrintGMeshVTK(mp_cmesh->Reference(), file);
+        std::ofstream file_txt("geometry_case_3_base_dfn.txt");
+        mp_cmesh->Reference()->Print(file_txt);
+#endif
+        
+        TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
+        std::cout << "Assembly DFN problem neq = " << mp_cmesh->NEquations() << std::endl;
+        an->Assemble();
+        std::cout << "Assembly for DFN complete." << std::endl;
+        
+        //        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
+        
+        std::cout << "Solving DFN problem." << std::endl;
+        an->Solve();
+        std::cout << "DFN problem solved." << std::endl;
+        mp_cmesh->LoadSolutionFromMultiPhysics();
+        
+        TPZStack<std::string,10> scalnames, vecnames;
+        vecnames.Push("q");
+        scalnames.Push("p");
+        
+        int div = 0;
+        std::set<int> mat_id_3D;
+        mat_id_3D.insert(1);
+        mat_id_3D.insert(2);
+        std::string file_reservoir("small.vtk");
+        an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+        an->PostProcess(div,3);
+        
+        std::set<int> mat_id_2D;
+        mat_id_2D.insert(6);
+        std::string file_frac("fracture.vtk");
+        an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+        an->PostProcess(div,2);
+        
+        std::set<int> mat_id_1D;
+        mat_id_1D.insert(7);
+        std::string file_frac_intersections("fracture_intersections.vtk");
+        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
+        an->PostProcess(div,1);
+    }
+    
+    
+    
+    int n_steps = 10;
+    REAL dt     = 0.0025;
+    TPZFMatrix<STATE> M_diag, M_vol;
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+
+    
+    int target_mat_id_in = 3;
+    std::map<int, REAL> gel_index_to_int_qn_inlet;
+    std::map<int, REAL> gel_index_to_int_p_inlet;
+    IntegrateFluxAndPressure(target_mat_id_in, meshtrvec, gel_index_to_int_qn_inlet, gel_index_to_int_p_inlet);
+    
+    REAL qn_inlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn_inlet) {
+        qn_inlet_integral += pair.second;
+    }
+    
+    REAL p_inlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_p_inlet) {
+        p_inlet_integral += pair.second;
+    }
+    
+    int target_mat_id_out = 4;
+    std::map<int, REAL> gel_index_to_int_qn;
+    std::map<int, REAL> gel_index_to_int_p;
+    IntegrateFluxAndPressure(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
+    
+    REAL qn_outlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn) {
+        qn_outlet_integral += pair.second;
+    }
+    
+    REAL p_outlet_integral = 0.0;
+    for (auto pair : gel_index_to_int_p) {
+        p_outlet_integral += pair.second;
+    }
+    
+    log_file << std::endl;
+    log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
+    log_file << "Inlet boundary : " << std::endl;
+    log_file << "Integrated flux q on inlet boundary = " << qn_inlet_integral << std::endl;
+    log_file << "Integrated pressure p on inlet boundary = " << p_inlet_integral << std::endl;
+    log_file << "Outlet boundary : " << std::endl;
+    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
+    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
+    
+    
     
     return;
+    
+}
+
+void ColorMeshCase3(TPZGeoMesh * gmesh){
+    if (!gmesh) {
+        DebugStop();
+    }
+    for (auto gel : gmesh->ElementVec()) {
+        
+        bool is_not_3D = gel->Dimension() != 3;
+        
+        if (is_not_3D) {
+            continue;
+        }
+        TPZManVector<REAL,3> x_qsi(3,0.0),x_c(3,0.0);
+        int side = gel->NSides() - 1;
+        gel->CenterPoint(side, x_qsi);
+        gel->X(x_qsi, x_c);
+        
+        REAL x = x_c[0];
+        REAL y = x_c[1];
+        REAL z = x_c[2];
+        
+        bool check_0 = (x < 0.5 && y < 0.5 && z < 0.5);
+        bool check_1 = (x > 0.5 && y < 0.5 && z < 0.5);
+        bool check_2 = (x < 0.5 && y > 0.5 && z < 0.5);
+        bool check_3 = (x > 0.5 && y > 0.5 && z < 0.5);
+        bool check_4 = (x < 0.5 && y < 0.5 && z > 0.5);
+        bool check_5 = (x > 0.5 && y < 0.5 && z > 0.5);
+        bool check_6 = (x < 0.5 && y > 0.5 && z > 0.5);
+        bool check_7 = (x > 0.75 && y > 0.75 && z > 0.75);
+        bool check_8 = (x > 0.75 && (y > 0.5 && y<0.75) && z > 0.75);
+        bool check_9 = ((x > 0.5 && x< 0.75) &&  y>0.75 && z > 0.75);
+        bool check_10 = ((x > 0.5 && x< 0.75) &&  (y > 0.5 && y<0.75) && z > 0.75);
+        bool check_11 = (x > 0.75 && y > 0.75) && (z > 0.5 && z < 0.75);
+        bool check_12 = (x > 0.75 && y > 0.5 && y < 0.75) && (z > 0.5 && z < 0.75);
+        bool check_13 = (x > 0.5 && x < 0.75 && y > 0.75) && (z > 0.5 && z < 0.75);
+        bool check_14 = (x > 0.5 && x < 0.625 && y > 0.5 && y < 0.625) && (z > 0.5 && z < 0.625);
+        bool check_15 = (x > 0.625 && x < 0.75 && y > 0.5 && y < 0.625) && (z > 0.5 && z < 0.625);
+        bool check_16 = (x > 0.5 && x < 0.625 && y > 0.625 && y < 0.75) && (z > 0.5 && z < 0.625);
+        bool check_17 = (x > 0.625 && x < 0.75 && y > 0.625 && y < 0.75) && (z > 0.5 && z < 0.625);
+        bool check_18 = (x > 0.5 && x < 0.625 && y > 0.5 && y < 0.625) && (z > 0.625 && z < 0.75);
+        bool check_19 = (x > 0.625 && x < 0.75 && y > 0.5 && y < 0.625) && (z > 0.625 && z < 0.75);
+        bool check_20 = (x > 0.5 && x < 0.625 && y > 0.625 && y < 0.75) && (z > 0.625 && z < 0.75);
+        bool check_21 = (x > 0.625 && x < 0.75 && y > 0.625 && y < 0.75) && (z > 0.625 && z < 0.75);
+        
+        if (check_0) {
+            gel->SetMaterialId(0);
+        }else if (check_1){
+            gel->SetMaterialId(1);
+        }else if (check_2){
+            gel->SetMaterialId(2);
+        }else if (check_3){
+            gel->SetMaterialId(3);
+        }else if (check_4){
+            gel->SetMaterialId(4);
+        }else if (check_5){
+            gel->SetMaterialId(5);
+        }else if (check_6){
+            gel->SetMaterialId(6);
+        }else if (check_7){
+            gel->SetMaterialId(7);
+        }else if (check_8){
+            gel->SetMaterialId(8);
+        }else if (check_9){
+            gel->SetMaterialId(9);
+        }else if (check_10){
+            gel->SetMaterialId(10);
+        }else if (check_11){
+            gel->SetMaterialId(11);
+        }else if (check_12){
+            gel->SetMaterialId(12);
+        }else if (check_13){
+            gel->SetMaterialId(13);
+        }else if (check_14){
+            gel->SetMaterialId(14);
+        }else if (check_15){
+            gel->SetMaterialId(15);
+        }else if (check_16){
+            gel->SetMaterialId(16);
+        }else if (check_17){
+            gel->SetMaterialId(17);
+        }else if (check_18){
+            gel->SetMaterialId(18);
+        }else if (check_19){
+            gel->SetMaterialId(19);
+        }else if (check_20){
+            gel->SetMaterialId(20);
+        }else if (check_21){
+            gel->SetMaterialId(21);
+        }else {
+            DebugStop();
+        }
+        
+        
+    }
+    
+#ifdef PZDEBUG
+    std::ofstream file("geometry_case_2_base_aux.vtk");
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
+    std::ofstream file_txt("geometry_case_2_base_aux.txt");
+    gmesh->Print(file_txt);
+#endif
+    
 }
 
 REAL IntegrateSaturations(int i_time_step, std::vector<int> & dof_indexes, TPZFMatrix<STATE> & saturations, TPZFMatrix<STATE> & M_diagonal){
@@ -1733,10 +2230,21 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 }
                 volume->SetDimension(data.second);
             }
-//            if(it == n_steps - 1){
-                int dim = 3;
-                tracer_analysis->DefineGraphMesh(dim,scalnames,vecnames,file_reservoir);
-                tracer_analysis->PostProcess(div,dim);
+//            if(it == n_steps - 1)
+//            {
+//                int div = 0;
+//                std::set<int> mat_id_3D;
+//                mat_id_3D.insert(1);
+//                mat_id_3D.insert(2);
+//                std::string file_reservoir("cube_s.vtk");
+//                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+//                tracer_analysis->PostProcess(div,3);
+//
+//                std::set<int> mat_id_2D;
+//                mat_id_2D.insert(6);
+//                std::string file_frac("fracture_s.vtk");
+//                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+//                tracer_analysis->PostProcess(div,2);
 //            }
 
             
@@ -1761,24 +2269,24 @@ void VolumeMatrix(TPZAnalysis * tracer_analysis, TPZFMatrix<STATE> & M_vol_diag)
         DebugStop();
     }
     
-    TPZAutoPointer<TPZMatrix<STATE> > M_vol;
-    {
-        bool mass_matrix_Q = true;
-        std::set<int> volumetric_mat_ids = {1,2,6,7,8};
-        
-        for (auto mat_id: volumetric_mat_ids) {
-            TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
-            TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
-            if (!volume) {
-                continue;
-            }
-            volume->SetMassMatrixAssembly(mass_matrix_Q);
+    TPZAutoPointer<TPZMatrix<STATE> > M_vol = NULL;
+    bool mass_matrix_Q = true;
+    std::set<int> volumetric_mat_ids = {1,2,6,7,8};
+    
+    for (auto mat_id: volumetric_mat_ids) {
+        TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
+        TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
+        if (!volume) {
+            continue;
         }
-        
-        std::cout << "Computing Mass Matrix." << std::endl;
-        tracer_analysis->Assemble();
-        M_vol = tracer_analysis->Solver().Matrix()->Clone();
+        volume->SetPorosity(1.0);
+        volume->SetFractureCrossLength(1.0);
+        volume->SetMassMatrixAssembly(mass_matrix_Q);
     }
+    
+    std::cout << "Computing Mass Matrix." << std::endl;
+    tracer_analysis->Assemble();
+    M_vol = tracer_analysis->Solver().Matrix()->Clone();
     
     int n_rows = M_vol->Rows();
     M_vol_diag.Resize(n_rows,1);

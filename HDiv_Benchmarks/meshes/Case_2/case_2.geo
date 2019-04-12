@@ -1,32 +1,40 @@
+
+
 // Gmsh project created on Sun Mar 31 19:13:00 2019
 SetFactory("OpenCASCADE");
 
+//h = 1.0; // 923 tet
+
+h = 0.14; // 3907 tet
+
+//h = 0.062; // 38742 tet
+
 //Small fractures defintion 
-p1 = newp; Point(p1) = {0.5, 0.75, 0.625};
-p2 = newp; Point(p2) = {0.625, 0.75, 0.625};
-p3 = newp; Point(p3) = {0.75, 0.75, 0.625};
-p4 = newp; Point(p4) = {0.5, 0.625, 0.625};
-p5 = newp; Point(p5) = {0.75, 0.625, 0.625};
-p6 = newp; Point(p6) = {0.5, 0.5, 0.625};
-p7 = newp; Point(p7) = {0.625, 0.5, 0.625};
-p8 = newp; Point(p8) = {0.75, 0.5, 0.625};
+p1 = newp; Point(p1) = {0.5, 0.75, 0.625,h};
+p2 = newp; Point(p2) = {0.625, 0.75, 0.625,h};
+p3 = newp; Point(p3) = {0.75, 0.75, 0.625,h};
+p4 = newp; Point(p4) = {0.5, 0.625, 0.625,h};
+p5 = newp; Point(p5) = {0.75, 0.625, 0.625,h};
+p6 = newp; Point(p6) = {0.5, 0.5, 0.625,h};
+p7 = newp; Point(p7) = {0.625, 0.5, 0.625,h};
+p8 = newp; Point(p8) = {0.75, 0.5, 0.625,h};
 
-p9 = newp; Point(p9) = {0.625, 0.75, 0.75};
-p10 = newp; Point(p10) = {0.625, 0.75, 0.5};
-p11 = newp; Point(p11) = {0.625, 0.625, 0.75};
-p12 = newp; Point(p12) = {0.625, 0.625, 0.5};
-p13 = newp; Point(p13) = {0.625, 0.5, 0.75};
-p14 = newp; Point(p14) = {0.625, 0.5, 0.5};
+p9 = newp; Point(p9) = {0.625, 0.75, 0.75,h};
+p10 = newp; Point(p10) = {0.625, 0.75, 0.5,h};
+p11 = newp; Point(p11) = {0.625, 0.625, 0.75,h};
+p12 = newp; Point(p12) = {0.625, 0.625, 0.5,h};
+p13 = newp; Point(p13) = {0.625, 0.5, 0.75,h};
+p14 = newp; Point(p14) = {0.625, 0.5, 0.5,h};
 
-p15 = newp; Point(p15) = {0.5, 0.625, 0.75};
-p16 = newp; Point(p16) = {0.5, 0.625, 0.5};
-p17 = newp; Point(p17) = {0.625, 0.625, 0.75};
-p18 = newp; Point(p18) = {0.625, 0.625, 0.5};
-p19 = newp; Point(p19) = {0.75, 0.625, 0.75};
-p20 = newp; Point(p20) = {0.75, 0.625, 0.5};
+p15 = newp; Point(p15) = {0.5, 0.625, 0.75,h};
+p16 = newp; Point(p16) = {0.5, 0.625, 0.5,h};
+p17 = newp; Point(p17) = {0.625, 0.625, 0.75,h};
+p18 = newp; Point(p18) = {0.625, 0.625, 0.5,h};
+p19 = newp; Point(p19) = {0.75, 0.625, 0.75,h};
+p20 = newp; Point(p20) = {0.75, 0.625, 0.5,h};
 
 //Center point small fractures
-p21 = newp; Point(p21) = {0.625, 0.625, 0.625};
+p21 = newp; Point(p21) = {0.625, 0.625, 0.625,h};
 
 l1 = newl; Curve(l1) = {p1,p2};
 l2 = newl; Line(l2) = {p2,p3};
@@ -98,36 +106,36 @@ su_frac_3_4 = news; Plane Surface(su_frac_3_4) = {frac_3_4};
 
 //Medium fractures definition
 
-p22 = newp; Point(p22) = {1.0, 1.0, 0.75};
-p23 = newp; Point(p23) = {0.75, 1.0, 0.75};
-p24 = newp; Point(p24) = {0.5, 1.0, 0.75};
-p25 = newp; Point(p25) = {1.0, 0.75, 0.75};
-p26 = newp; Point(p26) = {0.5, 0.75, 0.75};
-p27 = newp; Point(p27) = {1.0, 0.5, 0.75};
-p28 = newp; Point(p28) = {0.75, 0.5, 0.75};
-p29 = newp; Point(p29) = {0.5, 0.5, 0.75};
+p22 = newp; Point(p22) = {1.0, 1.0, 0.75,h};
+p23 = newp; Point(p23) = {0.75, 1.0, 0.75,h};
+p24 = newp; Point(p24) = {0.5, 1.0, 0.75,h};
+p25 = newp; Point(p25) = {1.0, 0.75, 0.75,h};
+p26 = newp; Point(p26) = {0.5, 0.75, 0.75,h};
+p27 = newp; Point(p27) = {1.0, 0.5, 0.75,h};
+p28 = newp; Point(p28) = {0.75, 0.5, 0.75,h};
+p29 = newp; Point(p29) = {0.5, 0.5, 0.75,h};
 
-p30 = newp; Point(p30) = {0.75, 1.0, 0.5};
-p31 = newp; Point(p31) = {0.75, 1.0, 1.0};
-p32 = newp; Point(p32) = {0.75, 0.75, 0.5};
-p33 = newp; Point(p33) = {0.75, 0.75, 1.0};
-p34 = newp; Point(p34) = {0.75, 0.5, 0.5};
-p35 = newp; Point(p35) = {0.75, 0.5, 1.0};
+p30 = newp; Point(p30) = {0.75, 1.0, 0.5,h};
+p31 = newp; Point(p31) = {0.75, 1.0, 1.0,h};
+p32 = newp; Point(p32) = {0.75, 0.75, 0.5,h};
+p33 = newp; Point(p33) = {0.75, 0.75, 1.0,h};
+p34 = newp; Point(p34) = {0.75, 0.5, 0.5,h};
+p35 = newp; Point(p35) = {0.75, 0.5, 1.0,h};
 
-p36 = newp; Point(p36) = {1.0, 0.75, 0.5};
-p37 = newp; Point(p37) = {1.0, 0.75, 1.0};
-p38 = newp; Point(p38) = {0.5, 0.75, 0.5};
-p39 = newp; Point(p39) = {0.5, 0.75, 1.0};
+p36 = newp; Point(p36) = {1.0, 0.75, 0.5,h};
+p37 = newp; Point(p37) = {1.0, 0.75, 1.0,h};
+p38 = newp; Point(p38) = {0.5, 0.75, 0.5,h};
+p39 = newp; Point(p39) = {0.5, 0.75, 1.0,h};
 
 //Center point medium fractures
-p40 = newp; Point(p40) = {0.75, 0.75, 0.75};
+p40 = newp; Point(p40) = {0.75, 0.75, 0.75,h};
 
-p41 = newp; Point(p41) = {0.75, 1., 0.875};
-p42 = newp; Point(p42) = {0.75, 0.875, 1.};
-p43 = newp; Point(p43) = {0.875, 0.75, 1.};
-p44 = newp; Point(p44) = {1., 0.875, 0.75};
-p45 = newp; Point(p45) = {1., 0.75, 0.875};
-p46 = newp; Point(p46) = {0.875, 1., 0.75};
+p41 = newp; Point(p41) = {0.75, 1., 0.875,h};
+p42 = newp; Point(p42) = {0.75, 0.875, 1.,h};
+p43 = newp; Point(p43) = {0.875, 0.75, 1.,h};
+p44 = newp; Point(p44) = {1., 0.875, 0.75,h};
+p45 = newp; Point(p45) = {1., 0.75, 0.875,h};
+p46 = newp; Point(p46) = {0.875, 1., 0.75,h};
 
 l55 = newl; Line(l55) = {p23,p24};
 l56 = newl; Line(l56) = {p23,p46};
@@ -241,44 +249,44 @@ su_frac_7_3 = news; Plane Surface(su_frac_7_3) = {frac_7_3};
 su_frac_7_4 = news; Plane Surface(su_frac_7_4) = {frac_7_4};
 //Big fractures defintion
 
-p47 = newp; Point(p47) = {1.0, 1.0, 0.5};
-p48 = newp; Point(p48) = {0.5, 1.0, 0.5};
-p49 = newp; Point(p49) = {0.0, 1.0, 0.5};
-p50 = newp; Point(p50) = {1.0, 0.5, 0.5};
-p51 = newp; Point(p51) = {0.0, 0.5, 0.5};
-p52 = newp; Point(p52) = {1.0, 0.0, 0.5};
-p53 = newp; Point(p53) = {0.5, 0.0, 0.5};
-p54 = newp; Point(p54) = {0.0, 0.0, 0.5};
+p47 = newp; Point(p47) = {1.0, 1.0, 0.5,h};
+p48 = newp; Point(p48) = {0.5, 1.0, 0.5,h};
+p49 = newp; Point(p49) = {0.0, 1.0, 0.5,h};
+p50 = newp; Point(p50) = {1.0, 0.5, 0.5,h};
+p51 = newp; Point(p51) = {0.0, 0.5, 0.5,h};
+p52 = newp; Point(p52) = {1.0, 0.0, 0.5,h};
+p53 = newp; Point(p53) = {0.5, 0.0, 0.5,h};
+p54 = newp; Point(p54) = {0.0, 0.0, 0.5,h};
 
-p55 = newp; Point(p55) = {0.5, 1.0, 0.0};
-p56 = newp; Point(p56) = {0.5, 1.0, 1.0};
-p57 = newp; Point(p57) = {0.5, 0.5, 0.0};
-p58 = newp; Point(p58) = {0.5, 0.5, 1.0};
-p59 = newp; Point(p59) = {0.5, 0.0, 0.0};
-p60 = newp; Point(p60) = {0.5, 0.0, 1.0};
+p55 = newp; Point(p55) = {0.5, 1.0, 0.0,h};
+p56 = newp; Point(p56) = {0.5, 1.0, 1.0,h};
+p57 = newp; Point(p57) = {0.5, 0.5, 0.0,h};
+p58 = newp; Point(p58) = {0.5, 0.5, 1.0,h};
+p59 = newp; Point(p59) = {0.5, 0.0, 0.0,h};
+p60 = newp; Point(p60) = {0.5, 0.0, 1.0,h};
 
-p61 = newp; Point(p61) = {0.5, 1.0, 0.0};
-p62 = newp; Point(p62) = {0.5, 1.0, 1.0};
-p63 = newp; Point(p63) = {0.5, 0.5, 0.0};
-p64 = newp; Point(p64) = {0.5, 0.5, 1.0};
-p65 = newp; Point(p65)= {0.5, 0.0, 0.0};
-p66 = newp; Point(p66) = {0.5, 0.0, 1.0};
+p61 = newp; Point(p61) = {0.5, 1.0, 0.0,h};
+p62 = newp; Point(p62) = {0.5, 1.0, 1.0,h};
+p63 = newp; Point(p63) = {0.5, 0.5, 0.0,h};
+p64 = newp; Point(p64) = {0.5, 0.5, 1.0,h};
+p65 = newp; Point(p65)= {0.5, 0.0, 0.0,h};
+p66 = newp; Point(p66) = {0.5, 0.0, 1.0,h};
 
-p67 = newp; Point(p67) = {1.0, 0.5, 0.0};
-p68 = newp; Point(p68) = {1.0, 0.5, 1.0};
-p69 = newp; Point(p69) = {0.0, 0.5, 0.0};
-p70 = newp; Point(p70) = {0.0, 0.5, 1.0};
+p67 = newp; Point(p67) = {1.0, 0.5, 0.0,h};
+p68 = newp; Point(p68) = {1.0, 0.5, 1.0,h};
+p69 = newp; Point(p69) = {0.0, 0.5, 0.0,h};
+p70 = newp; Point(p70) = {0.0, 0.5, 1.0,h};
 
 //Center point big fractures
-p71 = newp; Point(p71) = {0.5, 0.5, 0.5};
+p71 = newp; Point(p71) = {0.5, 0.5, 0.5,h};
 
-p600 = newp; Point(p600) = {0.25, 0.5, 0.}; //72
-p601 = newp; Point(p601) = {0.5, 0.25, 0.}; //73
-p602 = newp; Point(p602) = {0.25, 0., 0.5}; //74
-p603 = newp; Point(p603) = {0.25, 0., 0.5}; //75
-p604 = newp; Point(p604) = {0.5, 0., 0.25}; //76
-p605 = newp; Point(p605) = {0., 0.25, 0.5}; //77
-p606 = newp; Point(p606) = {0., 0.5, 0.25}; //78
+p600 = newp; Point(p600) = {0.25, 0.5, 0.,h};
+p601 = newp; Point(p601) = {0.5, 0.25, 0.,h};
+p602 = newp; Point(p602) = {0.25, 0., 0.5,h};
+//p603 = newp; Point(p603) = {0.25, 0., 0.5,h};
+p604 = newp; Point(p604) = {0.5, 0., 0.25,h};
+p605 = newp; Point(p605) = {0., 0.25, 0.5,h};
+p606 = newp; Point(p606) = {0., 0.5, 0.25,h};
 
 l142 = newl; Line(l142) = {p47,p30};
 l143 = newl; Line(l143) = {p30,p48};
@@ -445,30 +453,30 @@ Volume(8) = {8};
 
 
 //Inlet definition
-p79 = newp; Point(p79) = {0.25, 0., 0.};
-p80 = newp; Point(p80) = {0., 0.25, 0.};
-p81 = newp; Point(p81) = {0., 0., 0.25};
-p82 = newp; Point(p82) = {0.25, 0.25, 0.};
-p83 = newp; Point(p83) = {0.25, 0., 0.25};
-p84 = newp; Point(p84) = {0., 0.25, 0.25};
+p79 = newp; Point(p79) = {0.25, 0., 0.,h};
+p80 = newp; Point(p80) = {0., 0.25, 0.,h};
+p81 = newp; Point(p81) = {0., 0., 0.25,h};
+p82 = newp; Point(p82) = {0.25, 0.25, 0.,h};
+p83 = newp; Point(p83) = {0.25, 0., 0.25,h};
+p84 = newp; Point(p84) = {0., 0.25, 0.25,h};
 
 //Outlet Definition
-p85 = newp; Point(p85) = {0.875, 1., 1.};
-p86 = newp; Point(p86) = {1., 0.875, 1.};
-p87 = newp; Point(p87) = {1., 1., 0.875};
-p88 = newp; Point(p88) = {0.875, 0.875, 1.};
-p89 = newp; Point(p89) = {0.875, 1., 0.875};
-p90 = newp; Point(p90) = {1., 0.875, 0.875};
+p85 = newp; Point(p85) = {0.875, 1., 1.,h};
+p86 = newp; Point(p86) = {1., 0.875, 1.,h};
+p87 = newp; Point(p87) = {1., 1., 0.875,h};
+p88 = newp; Point(p88) = {0.875, 0.875, 1.,h};
+p89 = newp; Point(p89) = {0.875, 1., 0.875,h};
+p90 = newp; Point(p90) = {1., 0.875, 0.875,h};
 
 //Domain definition
-p91 = newp; Point(p91) = {1.0, 0.0, 1.0};
-p92 = newp; Point(p92) = {1.0, 1.0, 1.0};
-p93 = newp; Point(p93) = {0.0, 0.0, 1.0};
-p94 = newp; Point(p94) = {0.0, 1.0, 1.0};
-p95 = newp; Point(p95) = {1.0, 0.0, 0.0};
-p96 = newp; Point(p96) = {1.0, 1.0, 0.0};
-p97 = newp; Point(p97) = {0.0, 0.0, 0.0};
-p98 = newp; Point(p98) = {0.0, 1.0, 0.0};
+p91 = newp; Point(p91) = {1.0, 0.0, 1.0,h};
+p92 = newp; Point(p92) = {1.0, 1.0, 1.0,h};
+p93 = newp; Point(p93) = {0.0, 0.0, 1.0,h};
+p94 = newp; Point(p94) = {0.0, 1.0, 1.0,h};
+p95 = newp; Point(p95) = {1.0, 0.0, 0.0,h};
+p96 = newp; Point(p96) = {1.0, 1.0, 0.0,h};
+p97 = newp; Point(p97) = {0.0, 0.0, 0.0,h};
+p98 = newp; Point(p98) = {0.0, 1.0, 0.0,h};
 
 //Inlet lines definition
 l249 = newl; Line(l249) = {p92,p87};
@@ -511,12 +519,12 @@ su_outlet_to = news; Plane Surface(su_outlet_to) = {outlet_to};
 
 //Domain lines definition
 
-p99 = newp; Point(p99) = {0., 0.25, 0.5};
-p100 = newp; Point(p100) = {0., 0.5, 0.25};
-p101 = newp; Point(p101) = {0.25, 0.5, 0.};
-p102 = newp; Point(p102) = {0.5, 0., 0.25};
-p103 = newp; Point(p103) = {0.25, 0., 0.5};
-p104 = newp; Point(p104) = {0.5, 0.25, 0.0};
+p99 = newp; Point(p99) = {0., 0.25, 0.5,h};
+p100 = newp; Point(p100) = {0., 0.5, 0.25,h};
+p101 = newp; Point(p101) = {0.25, 0.5, 0.,h};
+p102 = newp; Point(p102) = {0.5, 0., 0.25,h};
+p103 = newp; Point(p103) = {0.25, 0., 0.5,h};
+p104 = newp; Point(p104) = {0.5, 0.25, 0.0,h};
 
 l280 = newl; Line(l280) = {p96,p55};
 l281 = newl; Line(l281) = {p55,p98};
@@ -559,7 +567,7 @@ l312 = newl; Line(l312) = {p88,p43};
 l313 = newl; Line(l313) = {p82,p600};
 l314 = newl; Line(l314) = {p82,p601};
 l315 = newl; Line(l315) = {p83,p604};
-l316 = newl; Line(l316) = {p83,p603};
+l316 = newl; Line(l316) = {p83,p602};
 l317 = newl; Line(l317) = {p84,p606};
 l318 = newl; Line(l318) = {p84,p605};
 
@@ -689,50 +697,43 @@ Plane Surface(327) = {328};
 Surface Loop(21) = {326, 327, 325, 208, 220, 241, 242, 247, 244, 246, 243, 245};
 Volume(21) = {21};
 
-//Big block 5
-Curve Loop(310) = {151, 316, 272, 304};
-Plane Surface(310) = {310};
-Curve Loop(312) = {150, 182, 315, 316};
-Plane Surface(312) = {312};
-Curve Loop(314) = {273, -286, 181, -315};
-Plane Surface(313) = {314};
-Curve Loop(315) = {171, -314, -266, -286};
-Plane Surface(314) = {315};
-Curve Loop(316) = {172, -166, -313, 314};
-Plane Surface(315) = {316};
-Curve Loop(317) = {165, -313, 267, 291};
-Plane Surface(316) = {317};
-Curve Loop(318) = {188, 160, -318, 317};
-Plane Surface(317) = {318};
-Curve Loop(319) = {161, 304, -270, 318};
-Plane Surface(318) = {319};
-Curve Loop(320) = {187, -317, -269, 291};
-Plane Surface(319) = {320};
-Surface Loop(22) = {209, 248, 228, 278, 310, 312, 313, 314, 279, 315, 316, 277, 317, 318, 319};
+//Big block 8
+Curve Loop(329) = {151, 304, 271, 265, -286, 181, 182, 150};
+Plane Surface(328) = {329};
+Curve Loop(330) = {188, 160, -318, 317};
+Plane Surface(329) = {330};
+Curve Loop(331) = {187, -317, -269, 291};
+Plane Surface(330) = {331};
+Curve Loop(332) = {318, 161, 304, -270};
+Plane Surface(331) = {332};
+Curve Loop(333) = {272, 316, 151, 304};
+Plane Surface(332) = {333};
+Curve Loop(334) = {316, -150, -182, -315};
+Plane Surface(333) = {334};
+Curve Loop(335) = {273, -286, 181, -315};
+Plane Surface(334) = {335};
+Curve Loop(336) = {266, 314, -171, 286};
+Plane Surface(335) = {336};
+Curve Loop(337) = {313, 166, -172, -314};
+Plane Surface(336) = {337};
+Curve Loop(338) = {165, -313, 267, 291};
+Plane Surface(337) = {338};
+Surface Loop(22) = {209, 248, 228, 336, 337, 277, 335, 278, 331, 329, 330, 334, 279, 332, 333};
 Volume(22) = {22};
-
-
 
 Coherence;
 
 Physical Volume("RockMatrix_1") = {16, 17, 20, 21, 22, 29, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3};
-
 Physical Volume("RockMatrix_2") = {1, 2, 13, 15, 18, 19};
-
-
 Physical Surface("BCInlet") = {277, 278, 279};
-
 Physical Surface("BCOutlet") = {262, 263, 264};
-
-Physical Surface("BCImpervious") = {323, 326, 300, 291, 292, 280, 293, 297, 294, 306, 307, 327, 308, 325, 324, 322, 309, 315, 314, 316, 313, 312, 310, 318, 317, 319, 302, 299, 298, 301, 304, 296, 295, 283, 282, 284, 285, 286, 290, 288, 289, 287, 281, 305, 303};
-
+Physical Surface("BCImpervious") = {322, 299, 298, 300, 323, 326, 330, 329, 331, 302, 301, 304, 295, 296, 281, 280, 291, 292, 288, 289, 287, 282, 284, 283, 290, 286, 285, 293, 297, 294, 306, 307, 327, 325, 324, 308, 336, 335, 337, 334, 333, 332, 309, 305, 303};
 Physical Surface("Fractures") = {220, 209, 208, 228, 248, 249, 229, 240, 200, 241, 242, 108, 141, 135, 113, 222, 223, 112, 111, 225, 227, 221, 122, 121, 247, 123, 107, 138, 127, 136, 125, 140, 110, 43, 124, 201, 226, 203, 205, 245, 37, 204, 224, 45, 52, 139, 207, 243, 206, 137, 244, 109, 202, 53, 44, 54, 38, 46, 35, 126, 51, 246, 36};
-
-Physical Curve("FracturesIntersections") = {157, 156, 155, 158, 177, 148, 147, 178, 179, 180, 146, 145, 67, 66, 65, 82, 83, 84, 60, 59, 58, 19, 20, 10, 9, 4, 3, 2, 1, 8, 7, 12, 11, 24, 23, 15, 21, 22, 16, 89, 99, 28, 6, 5, 61, 62, 81, 27, 80, 18, 13, 14, 17, 74, 75, 68, 69, 26, 30, 29, 25, 95, 94, 93, 88, 70, 73, 63};
-
+Physical Curve("FracturesIntersections") = {59,60,61,62,63,65,66,67,68,69,70,73,74,75,79,80,81,82,83,84,88,89,93,94,95,99,145,146,147,148,155,156,157,158,177,178,179,180,58,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30};
 Physical Point("CrossingIntresections") = {6,71,29,14,7,13,34,8,28,16,4,15,12,21,11,20,5,19,38,1,26,10,2,9,32,3,40};
 
-//Transfinite Surface "*";
-//Recombine Surface "*";
-//Recombine Volume "*";
+
+
+
+
 

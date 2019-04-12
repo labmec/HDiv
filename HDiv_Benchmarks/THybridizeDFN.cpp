@@ -1137,8 +1137,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
         dfn_hybrid_cmesh->Print(out);
     }
     
-
-    
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_intersections_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);

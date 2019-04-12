@@ -69,3 +69,7 @@ add_subdirectory(Hdiv3DCurved)
 add_subdirectory(HdivPressureTeste)
 add_subdirectory(HDiv_Benchmarks)
 
+#Enabling nightly tests
+ENABLE_TESTING()
+include(CTest)
+
