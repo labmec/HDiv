@@ -182,7 +182,7 @@ void SeparateConnectsByFracId(TPZCompMesh * mixed_cmesh,int fracid);
 void InsertFractureMaterial(TPZCompMesh *cmesh);
 TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e);
 void AdjustMaterialIdBoundary(TPZMultiphysicsCompMesh *cmesh);
-TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh);
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh, TPZStack<TFracture> &fractures);
 
 void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZStack<TFracture> & fracture_data ,SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
@@ -314,6 +314,8 @@ void Pretty_cube(){
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
     fracture.m_id.insert(6);
+    fracture.m_id.insert(7);
+    fracture.m_id.insert(8);
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
@@ -321,7 +323,7 @@ void Pretty_cube(){
     fracture.m_porosity         = 0.5;
     fracture_data.push_back(fracture);
     fracture.m_id.clear();
-    fracture.m_id.insert(7);
+    fracture.m_id.insert(9);
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
@@ -329,7 +331,7 @@ void Pretty_cube(){
     fracture.m_porosity         = 1.0;
     fracture_data.push_back(fracture);
     fracture.m_id.clear();
-    fracture.m_id.insert(8);
+    fracture.m_id.insert(10);
     fracture.m_dim              = 0;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
@@ -350,9 +352,11 @@ void Pretty_cube(){
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
     dim_name_and_physical_tag[2]["BCOutlet"] = 4;
     dim_name_and_physical_tag[2]["BCImpervious"] = 5;
-    dim_name_and_physical_tag[2]["Fractures"] = 6;
-    dim_name_and_physical_tag[1]["FracturesIntersections"] = 7;
-    dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
+    dim_name_and_physical_tag[2]["Fractures_1"] = 6;
+    dim_name_and_physical_tag[2]["Fractures_2"] = 7;
+    dim_name_and_physical_tag[2]["Fractures_3"] = 8;
+    dim_name_and_physical_tag[1]["FracturesIntersections"] = 9;
+    dim_name_and_physical_tag[0]["CrossingIntresections"] = 10;
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
@@ -405,7 +409,7 @@ void Pretty_cube(){
 #endif
 
     
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
     
 #ifdef PZDEBUG
     {
@@ -740,7 +744,7 @@ void Case_1(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -1127,7 +1131,7 @@ void Case_2(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -2716,6 +2720,7 @@ TPZMultiphysicsCompMesh * MPCMeshMixed(TPZGeoMesh * geometry, int order, Simulat
     
     cmesh->SetDimModel(dimension);
     TPZManVector<TPZCompMesh * ,2> mesh_vec(2);
+    /// generate the 3D flux mesh (only)
     mesh_vec[0] = FluxMesh(geometry, order, sim_data);
     mesh_vec[1] = PressureMesh(geometry, order, sim_data);
     TPZManVector<int,5> active_approx_spaces(2); /// 1 stands for an active approximation spaces
@@ -3118,7 +3123,7 @@ void InsertFractureMaterial(TPZCompMesh *cmesh){
 }
 
 
-TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh, TPZStack<TFracture> &fractures)
 {
     TPZCompMesh *q_cmesh = cmesh->MeshVector()[0];
     TPZGeoMesh * geometry = q_cmesh->Reference();
@@ -3132,6 +3137,13 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     q_cmesh->LoadReferences();
 
     std::set<int> allmat_ids = {1,2,6,7,8};
+    for(auto frac_set: fractures)
+    {
+        for(auto matid:frac_set.m_id)
+        {
+            allmat_ids.insert(matid);
+        }
+    }
     std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250,-1942};
     
     int nstate = 1;
@@ -3185,7 +3197,14 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     
     s_cmesh->SetDimModel(0);
     s_cmesh->ApproxSpace().SetAllCreateFunctionsDiscontinuous();
-    
+    int ind_0 = -1;
+    for (int i = 0; i<fractures.size(); i++) {
+        if (fractures[i].m_dim == 0) {
+            ind_0 = i;
+            break;
+        }
+    }
+    if(ind_0 < 0) DebugStop();
     /// Create point element
     for (auto cel : cmesh->ElementVec()) {
         if (!cel) {
@@ -3216,12 +3235,13 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         }
         
         int n_connect = cel->NConnects();
-        if (n_connect !=1 && gel->MaterialId() == 8) {
+        bool matid_found = fractures[ind_0].m_id.find(gel->MaterialId())  != fractures[ind_0].m_id.end();
+        if (n_connect !=1 && matid_found) {
             DebugStop();
         }
-        else if(n_connect == 1 && gel->MaterialId() != 8)
+        else if(n_connect == 1 && !matid_found)
         {
-            std::cout << "I dont understand matid should be 8\n";
+            std::cout << "I dont understand matid should be included in the fracture data structure\n";
         }
         else if (n_connect == 0)
         {
@@ -3229,7 +3249,7 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
         }
         TPZConnect & c = cel->Connect(0);
         
-        if (c.NElConnected() > 2 && gel->MaterialId() == 8) {
+        if (c.NElConnected() > 2 && matid_found) {
             CreateTransportElement(s_order,s_cmesh, gel, false);
         }
         

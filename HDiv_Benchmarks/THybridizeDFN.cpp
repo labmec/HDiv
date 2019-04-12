@@ -471,14 +471,14 @@ void THybridizeDFN::BuildMixedOperatorOnFractures(int p_order, int target_dim, T
     TPZVTKGeoMesh::PrintGMeshVTK(geometry, geo_file, true);
 #endif
     
-    /// nothing to do
+    /// create the target_dim fracture elements (including the boundary conditions)
     LoadReferencesByDimension(flux_cmesh, target_dim);
     flux_cmesh->SetDimModel(target_dim);
     flux_cmesh->SetDefaultOrder(p_order);
     flux_cmesh->SetAllCreateFunctionsHDiv();
     flux_cmesh->AutoBuild(fracture_flux_material_set);
 
-    
+    /// this step makes the flux mesh "not computable". If all sideorients are one, the mesh without hybridizing is inconsistent
     int sideorient = 1;
     for (auto gel : flux_cmesh->Reference()->ElementVec()) {
         if (!gel->Reference()) {
@@ -581,7 +581,8 @@ void THybridizeDFN::CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gme
                     foundbc = true;
                     
                 }
-                if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
+
+                if(m_fracture_ids[target_dim].find(gel_side.Element()->MaterialId()) != m_fracture_ids[target_dim].end())
                 {
                     if(gel_side.Element()->Dimension() == target_dim) {
                         foundfrac = true;
@@ -812,6 +813,7 @@ TPZStack<TPZCompElSide> THybridizeDFN::AnalyzeSide(int target_dim, TPZGeoEl * ge
     }
     
     int n_dim_m_1_sides = cel_side_vec_dim_m_1.size();
+    // has_been_hybridized also means it is a flux boundary with existing boundary condition
     bool has_been_hybridize_Q = cel_side_vec_dim.size() == cel_side_vec_dim_m_1.size();
     if (has_been_hybridize_Q) {
         candidates.Resize(0);
@@ -1073,6 +1075,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     /// Creates mixed operator on fractures 2D
     // switch the material id of the pressure elements if they are neighbour of 2d fracture elements
     // create boundary elements for the 2d fracture elements
+    // creates the flux mesh for the fractures_dim elements
     int fractures_dim = target_dim - 1;
     BuildMixedOperatorOnFractures(p_order, fractures_dim, cmesh, flux_trace_id, lagrange_id, flux_resistivity_id, mp_nterface_id);
 
@@ -1119,10 +1122,16 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     InsertMaterialsForMixedOperatorOnFractures(fractures_intersections_dim,dfn_hybrid_cmesh);
     InsertMaterialsForMixedOperatorOnFractures(0,dfn_hybrid_cmesh);
 
-    TPZMaterial *mat8 = dfn_hybrid_cmesh->FindMaterial(8);
-    dfn_hybrid_cmesh->MaterialVec().erase(8);
+    TPZManVector<TPZMaterial *> zeroDimMat(m_fracture_ids[0].size());
+    int count = 0;
+    for (auto matid:m_fracture_ids[0]) {
+        zeroDimMat[count++] = dfn_hybrid_cmesh->FindMaterial(matid);
+        dfn_hybrid_cmesh->MaterialVec().erase(matid);
+    }
     BuildMultiphysicsCMesh(matrix_dim,dfn_hybrid_cmesh,active_approx_spaces,dfn_mixed_mesh_vec);
-    dfn_hybrid_cmesh->InsertMaterialObject(mat8);
+    for (auto matptr:zeroDimMat) {
+        dfn_hybrid_cmesh->InsertMaterialObject(matptr);
+    }
     {
         std::ofstream out("darcy_mesh_before_interfaces.txt");
         dfn_hybrid_cmesh->Print(out);
@@ -1156,13 +1165,15 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
                 TPZGeoEl *gel = cel->Reference();
                 // find a neighbour with matid = 8
                 TPZGeoEl *gel8 = 0;
+                int matid_target = 0;
                 TPZGeoElSide gelside(gel,gel->NSides()-1);
                 TPZGeoElSide neighbour = gelside.Neighbour();
                 while(neighbour != gelside)
                 {
-                    if(neighbour.Element()->MaterialId() == 8)
+                    if(m_fracture_ids[0].find(neighbour.Element()->MaterialId()) != m_fracture_ids[0].end())
                     {
                         gel8 = neighbour.Element();
+                        matid_target = neighbour.Element()->MaterialId();
                         break;
                     }
                     neighbour = neighbour.Neighbour();
@@ -1171,12 +1182,14 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
                 if(!gel8)
                 {
                     std::cout << "no element found at the intersection of fractures\n";
-                    gel->SetMaterialId(8);
+                    int matid = *m_fracture_ids[0].begin();
+                    std::cout << "changin matid to " << matid << std::endl;
+                    gel->SetMaterialId(matid);
                 }
                 else
                 {
                     gel8->SetMaterialId(0);
-                    gel->SetMaterialId(8);
+                    gel->SetMaterialId(matid_target);
                 }
             }
         }
@@ -1198,6 +1211,7 @@ void THybridizeDFN::CreateLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStac
         
         TPZGeoEl * gel = geometry->Element(gel_index);
         int64_t cel_index;
+        // if the approximation space would be discontinuous, the dimension of the pressure mesh should be adjusted
         TPZCompEl * cel = p_cmesh->ApproxSpace().CreateCompEl(gel, *p_cmesh, cel_index);
         TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *> (cel);
         TPZCompElDisc *intelDisc = dynamic_cast<TPZCompElDisc *> (cel);
