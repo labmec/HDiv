@@ -1051,20 +1051,22 @@ void Case_2(){
     
     TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
     /// Geometry description for Coloring regions by Appendix 6.1 Flemisch (2018).
     Geometry_aux.SetFormatVersion(version);
-    Geometry_aux.SetDimNamePhysical(dim_name_and_physical_tag);
+    Geometry_aux.SetDimNamePhysical(dim_name_and_physical_tag_auxiliary);
     TPZGeoMesh * gmesh_aux = Geometry_aux.GeometricGmshMesh(file_gmsh.c_str());
     Geometry_aux.PrintPartitionSummary(std::cout);
     
-    
     {
+//        for (auto; <#condition#>; <#increment#>) {
+//            <#statements#>
+//        }
         
     }
     
