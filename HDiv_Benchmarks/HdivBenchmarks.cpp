@@ -1037,7 +1037,7 @@ void Case_2(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_c.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
