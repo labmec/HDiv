@@ -1292,13 +1292,13 @@ void Case_2(){
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
     
-    TPZFMatrix<REAL> item_3(n_steps+1,23,0.0);
+    TPZFMatrix<REAL> item_3(n_steps+1,24,0.0);
     for (int it = 1; it <= n_steps; it++) {
         
         REAL time = it*dt;
         
         item_3(it,0) = time;
-        for (int idata = 1; idata <= 22; idata++) {
+        for (int idata = 1; idata <= 23; idata++) {
             REAL int_c3 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][idata-1], saturations, M_diag);
             item_3(it,idata) = int_c3;
         }
