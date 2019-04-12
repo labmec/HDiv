@@ -1587,8 +1587,8 @@ void Case_3(){
     dfn_hybridzer.SetFractureData(fracture_data);
     
     dfn_hybridzer.SetReservoirBoundaryData(bc_ids_2d);
-    dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
-    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
+//    dfn_hybridzer.SetMapReservoirBCToDFNBC1DIds(bc_ids_1d_map);
+//    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
     cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
     
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
