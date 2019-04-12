@@ -1039,13 +1039,36 @@ void Case_2(){
     dim_name_and_physical_tag[1]["FracturesIntersections"] = 7;
     dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
     
-    TPZGmshReader Geometry;
+    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag_auxiliary(4); // From 0D to 3D
+    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_1"] = -1;
+    dim_name_and_physical_tag_auxiliary[3]["RockMatrix_2"] = -1;
+    dim_name_and_physical_tag_auxiliary[2]["BCInlet"] = -1;
+    dim_name_and_physical_tag_auxiliary[2]["BCOutlet"] = -1;
+    dim_name_and_physical_tag_auxiliary[2]["BCImpervious"] = -1;
+    dim_name_and_physical_tag_auxiliary[2]["Fractures"] = -1;
+    dim_name_and_physical_tag_auxiliary[1]["FracturesIntersections"] = -1;
+    dim_name_and_physical_tag_auxiliary[0]["CrossingIntresections"] = -1;
+    
+    TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
+    
+    /// Geometry description for Coloring regions by Appendix 6.1 Flemisch (2018).
+    Geometry_aux.SetFormatVersion(version);
+    Geometry_aux.SetDimNamePhysical(dim_name_and_physical_tag);
+    TPZGeoMesh * gmesh_aux = Geometry_aux.GeometricGmshMesh(file_gmsh.c_str());
+    Geometry_aux.PrintPartitionSummary(std::cout);
+    
+    
+    {
+        
+    }
+    
+    /// Geometry description for FEM
     Geometry.SetFormatVersion(version);
     Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
@@ -1140,7 +1163,7 @@ void Case_2(){
         an->Assemble();
         std::cout << "Assembly for DFN complete." << std::endl;
         
-        //        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
+//        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
         
         std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
