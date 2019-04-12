@@ -231,8 +231,8 @@ int main(){
 #endif
     
 
-    Pretty_cube();
-//    Case_1();
+//    Pretty_cube();
+    Case_1();
 
 //     Case_2();
 
@@ -554,8 +554,8 @@ void Pretty_cube(){
         p_outlet_integral += pair.second;
     }
     
-    REAL int_s_vol_1 = IntegrateSaturations(n_steps-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
-    REAL vol_1 = IntegratePorousVolume(dim_mat_id_dof_indexes[2][6], M_diag);
+//    REAL int_s_vol_1 = IntegrateSaturations(n_steps-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
+//    REAL vol_1 = IntegratePorousVolume(dim_mat_id_dof_indexes[2][6], M_diag);
     
     return;
 }
@@ -666,9 +666,9 @@ void Case_1(){
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
@@ -721,23 +721,6 @@ void Case_1(){
         
         TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
         
-//#ifdef PZDEBUG
-//        {
-//            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-//            mesh_vec[0]->ComputeNodElCon();
-//            mesh_vec[0]->Print(file_hybrid_mixed_q);
-//
-//            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-//            mesh_vec[1]->ComputeNodElCon();
-//            mesh_vec[1]->Print(file_hybrid_mixed_p);
-//
-//            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
-//            cmeshm->ComputeNodElCon();
-//            cmeshm->Print(file_hybrid_mixed);
-//        }
-//#endif
-        
-        
         int n_vols_els = Geometry.NPyramids() + Geometry.NPrisms() + Geometry.NHexahedra() + Geometry.NTetrahera();
         int n_surf_els = Geometry.NTriangles() + Geometry.NQuadrilaterals();
         log_file << "Number of elements by dimension : " << std::endl;
@@ -754,7 +737,6 @@ void Case_1(){
         log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
 
 
-
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
         std::cout << "Assembly DFN problem neq = " << mp_cmesh->NEquations() << std::endl;
         an->Assemble();
@@ -769,27 +751,27 @@ void Case_1(){
         
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
-        vecnames.Push("kappa");
         scalnames.Push("p");
         
         int div = 0;
-        std::string file_reservoir("case_1.vtk");
-        an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
+        std::set<int> mat_id_3D;
+        mat_id_3D.insert(1);
+        mat_id_3D.insert(2);
+        std::string file_reservoir("cube.vtk");
+        an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
-#ifdef PZDEBUG
-        { /// fracture postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("case_1_fracture.vtk");
-            auto material = mesh_vec[1]->FindMaterial(6);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(2);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,2);
-        }
-#endif
+        std::set<int> mat_id_2D;
+        mat_id_2D.insert(6);
+        std::string file_frac("fracture.vtk");
+        an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+        an->PostProcess(div,2);
+        
+//        std::set<int> mat_id_1D;
+//        mat_id_1D.insert(7);
+//        std::string file_frac_intersections("fracture_intersections.vtk");
+//        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
+//        an->PostProcess(div,1);
     }
     
     int n_steps = 100;
@@ -1161,39 +1143,27 @@ void Case_2(){
         
         TPZStack<std::string,10> scalnames, vecnames;
         vecnames.Push("q");
-        vecnames.Push("kappa");
         scalnames.Push("p");
         
         int div = 0;
-        std::string file_reservoir("case_2.vtk");
-        an->DefineGraphMesh(3,scalnames,vecnames,file_reservoir);
+        std::set<int> mat_id_3D;
+        mat_id_3D.insert(1);
+        mat_id_3D.insert(2);
+        std::string file_reservoir("cube.vtk");
+        an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
-#ifdef PZDEBUG
-        { /// fracture postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("case_2_fracture.vtk");
-            auto material = mesh_vec[1]->FindMaterial(6);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(2);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(2,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,2);
-        }
+        std::set<int> mat_id_2D;
+        mat_id_2D.insert(6);
+        std::string file_frac("fracture.vtk");
+        an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+        an->PostProcess(div,2);
         
-        { /// lagrange postprocessor
-            TPZStack<std::string,10> scalnames, vecnames;
-            scalnames.Push("state");
-            std::string file_frac("lagrange_1d.vtk");
-            auto material = mesh_vec[1]->FindMaterial(7);
-            TPZL2Projection * fract_2d = dynamic_cast<TPZL2Projection *>(material);
-            fract_2d->SetDimension(1);
-            TPZAnalysis frac_an(mesh_vec[1],false);
-            frac_an.DefineGraphMesh(1,scalnames,vecnames,file_frac);
-            frac_an.PostProcess(div,1);
-        }
-#endif
+        std::set<int> mat_id_1D;
+        mat_id_1D.insert(7);
+        std::string file_frac_intersections("fracture_intersections.vtk");
+        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
+        an->PostProcess(div,1);
     }
     
 
