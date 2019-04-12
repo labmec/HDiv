@@ -923,7 +923,7 @@ void Case_1(){
     return;
 }
 
-//#define Case_2_0
+#define Case_2_0
 
 void Case_2(){
     
@@ -1000,29 +1000,29 @@ void Case_2(){
     bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
     
     REAL eps_2 = 1.0e-4;
-    REAL eps_1 = eps_2*eps_2;
-    REAL eps_0 = eps_2*eps_2*eps_2;
+//    REAL eps_1 = eps_2*eps_2;
+//    REAL eps_0 = eps_2*eps_2*eps_2;
     
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = (2.0e8);//*(2.0/eps_2);
+    fracture.m_kappa_normal     = 2.0*(2.0e8);
     fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.9;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = (2.0e4);//*(2.0/eps_1);
+    fracture.m_kappa_normal     = 2.0*(2.0e4);
     fracture.m_kappa_tangential = 1.0e-4;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.9;
     fracture_data.push_back(fracture);
     fracture.m_id               = 8;
     fracture.m_dim              = 0;
-    fracture.m_kappa_normal     = (2.0);//*(2.0/eps_0);
+    fracture.m_kappa_normal     = 2.0*(2.0);
     fracture.m_kappa_tangential = 2.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.9;
@@ -1105,21 +1105,21 @@ void Case_2(){
     TFracture fracture;
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = (2.0);//*(2.0/eps_2);
+    fracture.m_kappa_normal     = 2.0*(2.0);//*(2.0/eps_2);
     fracture.m_kappa_tangential = (1.0e-8);//*eps_2;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.01;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = (2.0e-4);//*(2.0/(eps_1*eps_1));
+    fracture.m_kappa_normal     = 2.0*(2.0e-4);//*(2.0/(eps_1*eps_1));
     fracture.m_kappa_tangential = (1.0e-12);//*eps_1;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.01;
     fracture_data.push_back(fracture);
     fracture.m_id               = 8;
     fracture.m_dim              = 0;
-    fracture.m_kappa_normal     = (2.0e-8);//*(2.0/(eps_0*eps_0*eps_0));
+    fracture.m_kappa_normal     = 2.0*(2.0e-8);//*(2.0/(eps_0*eps_0*eps_0));
     fracture.m_kappa_tangential = (2.0e-8);//*eps_0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.01;
@@ -1155,9 +1155,9 @@ void Case_2(){
     
     TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -1923,26 +1923,24 @@ void VolumeMatrix(TPZAnalysis * tracer_analysis, TPZFMatrix<STATE> & M_vol_diag)
         DebugStop();
     }
     
-    TPZAutoPointer<TPZMatrix<STATE> > M_vol;
-    {
-        bool mass_matrix_Q = true;
-        std::set<int> volumetric_mat_ids = {1,2,6,7,8};
-        
-        for (auto mat_id: volumetric_mat_ids) {
-            TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
-            TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
-            if (!volume) {
-                continue;
-            }
-            volume->SetPorosity(1.0);
-            volume->SetFractureCrossLength(1.0);
-            volume->SetMassMatrixAssembly(mass_matrix_Q);
+    TPZAutoPointer<TPZMatrix<STATE> > M_vol = NULL;
+    bool mass_matrix_Q = true;
+    std::set<int> volumetric_mat_ids = {1,2,6,7,8};
+    
+    for (auto mat_id: volumetric_mat_ids) {
+        TPZMaterial * mat = cmesh_transport->FindMaterial(mat_id);
+        TPZTracerFlow * volume = dynamic_cast<TPZTracerFlow * >(mat);
+        if (!volume) {
+            continue;
         }
-        
-        std::cout << "Computing Mass Matrix." << std::endl;
-        tracer_analysis->Assemble();
-        M_vol = tracer_analysis->Solver().Matrix()->Clone();
+        volume->SetPorosity(1.0);
+        volume->SetFractureCrossLength(1.0);
+        volume->SetMassMatrixAssembly(mass_matrix_Q);
     }
+    
+    std::cout << "Computing Mass Matrix." << std::endl;
+    tracer_analysis->Assemble();
+    M_vol = tracer_analysis->Solver().Matrix()->Clone();
     
     int n_rows = M_vol->Rows();
     M_vol_diag.Resize(n_rows,1);
