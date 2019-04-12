@@ -8,7 +8,7 @@
 #include "TFracture.h"
 
 
-TFracture::TFracture() : m_id(0), m_dim(0), m_kappa_normal(0), m_kappa_tangential(0), m_d_opening(0), m_porosity()
+TFracture::TFracture() : m_id(), m_dim(0), m_kappa_normal(0), m_kappa_tangential(0), m_d_opening(0), m_porosity()
 {
     
 }

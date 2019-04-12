@@ -10,12 +10,13 @@
 
 #include <stdio.h>
 #include "pzreal.h"
+#include <set>
 
 class TFracture {
     
 public:
     
-    int     m_id;
+    std::set<int>  m_id;
     int     m_dim;
     REAL    m_kappa_normal;
     REAL    m_kappa_tangential;

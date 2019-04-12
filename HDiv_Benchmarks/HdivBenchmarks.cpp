@@ -231,10 +231,10 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
+    Pretty_cube();
 //    Case_1();
 
-     Case_2();
+//     Case_2();
 
 }
 
@@ -313,21 +313,23 @@ void Pretty_cube(){
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 6;
+    fracture.m_id.insert(6);
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = 1.0;
     fracture.m_porosity         = 0.5;
     fracture_data.push_back(fracture);
-    fracture.m_id               = 7;
+    fracture.m_id.clear();
+    fracture.m_id.insert(7);
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = 1.0;
     fracture.m_porosity         = 1.0;
     fracture_data.push_back(fracture);
-    fracture.m_id               = 8;
+    fracture.m_id.clear();
+    fracture.m_id.insert(8);
     fracture.m_dim              = 0;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
@@ -392,8 +394,26 @@ void Pretty_cube(){
     cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
 
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
+
+#ifdef PZDEBUG
+    {
+        std::ofstream file("geometry_cube_after.vtk");
+        TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
+        std::ofstream file_txt("geometry_cube_after.txt");
+        gmesh->Print(file_txt);
+    }
+#endif
+
     
     TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    
+#ifdef PZDEBUG
+    {
+        std::ofstream out("transport_mesh.txt");
+        s_cmesh->Print(out);
+    }
+#endif
+    
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -651,7 +671,7 @@ void Case_1(){
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 6;
+    fracture.m_id.insert(6);
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 20.0;
     fracture.m_kappa_tangential = 1.0e-3;
@@ -1027,21 +1047,21 @@ void Case_2(){
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 6;
+    fracture.m_id.insert(6);
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 2.0e8;
     fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = 1.0e-4;
     fracture.m_porosity         = 0.9;
     fracture_data.push_back(fracture);
-    fracture.m_id               = 7;
+    fracture.m_id.insert(7);
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 2.0e4;
     fracture.m_kappa_tangential = 1.0e-4;
     fracture.m_d_opening        = 1.0e-4;
     fracture.m_porosity         = 1.0;
     fracture_data.push_back(fracture);
-    fracture.m_id               = 8;
+    fracture.m_id.insert(8);
     fracture.m_dim              = 0;
     fracture.m_kappa_normal     = 2.0;
     fracture.m_kappa_tangential = 2.0;
@@ -2753,16 +2773,18 @@ TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZSt
     /// Inserting fracture materials
     int n_fracs = fracture_data.size();
     for (int i = 0; i < n_fracs; i++) {
-        int mat_id = fracture_data[i].m_id;
-        REAL phi = fracture_data[i].m_porosity;
-        REAL d_opening = fracture_data[i].m_d_opening;
-        TPZTracerFlow * volume = new TPZTracerFlow(mat_id,0);
-        volume->SetPorosity(phi);
-        volume->SetFractureCrossLength(d_opening);
-        cmesh->InsertMaterialObject(volume);
+        for(auto mat_id :fracture_data[i].m_id)
+        {
+            REAL phi = fracture_data[i].m_porosity;
+            REAL d_opening = fracture_data[i].m_d_opening;
+            TPZTracerFlow * volume = new TPZTracerFlow(mat_id,0);
+            volume->SetPorosity(phi);
+            volume->SetFractureCrossLength(d_opening);
+            cmesh->InsertMaterialObject(volume);
+        }
     }
     
-    std::set<int> bc_inlet_mat_ids = {3,5,130,150,230,250};
+    std::set<int> bc_inlet_mat_ids = {3,5,130,150,230,250,-1942};
     std::set<int> bc_outlet_mat_ids = {4,140,240};
     
     TPZMaterial * material = cmesh->FindMaterial(1);
@@ -3110,7 +3132,7 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh)
     q_cmesh->LoadReferences();
 
     std::set<int> allmat_ids = {1,2,6,7,8};
-    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250};
+    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250,-1942};
     
     int nstate = 1;
     TPZVec<STATE> sol(1,0.0);
@@ -3257,7 +3279,7 @@ void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, s
     
     int mesh_dim = geometry->Dimension();
     
-    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250};
+    std::set<int> bcmat_ids = {3,4,5,130,140,150,230,240,250,-1942};
     bool needs_all_boundaries_Q = true;
     TPZManVector<int64_t,3> left_mesh_indexes(2,0);
     left_mesh_indexes[0] = 0;

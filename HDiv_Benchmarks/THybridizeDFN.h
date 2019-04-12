@@ -32,19 +32,28 @@ class THybridizeDFN : public TPZHybridizeHDiv {
 private:
 
     /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
+    // first : material id
+    // second : boundary condition type
+    // third : value of the boundary condition
     std::vector<std::tuple<int,int,REAL>> m_bc_ids_2d;
     
     /// Set of boundary material ids - boundary material ids of fractures intersections 1d
+    // first : material id of the 3d boundary condition
+    // second : material id of the 2d fracture boundary condition
     std::map<int,int> m_bc_ids_1d;
     
     /// Set of boundary material ids - boundary material ids of fractures intersections 0d
+    // first : material id of the 3d boundary condition
+    // second : material id of the 1d fracture boundary condition
     std::map<int,int> m_bc_ids_0d;
     
     /// List of fracture characteristics
     TPZStack<TFracture> m_fracture_data;
     
     /// Set of fractures identifiers
-    std::set<int> m_fracture_ids;
+    // first : dimension of the fracture
+    // second : set of fracture ids
+    std::map<int, std::set<int>> m_fracture_ids;
     
     /// stands for base geometry
     TPZGeoMesh * m_geometry;
@@ -67,6 +76,9 @@ public:
     
     void ComputeMaterialIds(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id, int shift = 0);
     
+    /// insert the given material ids in the fluxmesh.
+    // insert the impervious material to seal the fractures
+    // put the lagrange matid in the pressure mesh
     void InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id);
     
     
@@ -82,6 +94,9 @@ public:
     
     void InsertMaterialsForMixedOperatorOnFractures(int target_dim, TPZCompMesh * cmesh);
     
+    /// switch the reference of the pressure computational element to the geometric element of the neighbouring fracture element
+    // it will also change the material id of HDivBound element to resistivity material id
+    // inserts the material objects 0f boundary conditions of fractures in the flux mesh
     void BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id);
     
     /// Construct a lagrange multiplier approximation spaces for a DFN
@@ -99,6 +114,9 @@ public:
     
     void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
     
+
+    /// create boundary elements of dimension target_dim-1 which lay on the boundary of the three dimensional mesh
+    // target_dim : consider fracture elements of dimension target_dim
     void CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gmesh, std::set<int> bc_indexes, std::set<int> bc_frac_indexes);
     
     
