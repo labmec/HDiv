@@ -238,8 +238,9 @@ int main(){
 
 //    Pretty_cube();
 //    Case_1();
-
-     Case_2();
+//    Case_2();
+    
+    Case_3();
 
 }
 
