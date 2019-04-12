@@ -923,11 +923,15 @@ void Case_1(){
     return;
 }
 
+#define Case_2_0
+
 void Case_2(){
     
     /// Execution logger.
     std::ofstream log_file("case_2_results.txt");
     int h_level = 0;
+    
+#ifdef Case_2_0
     
     SimulationCase sim;
     sim.UsePardisoQ=true;
@@ -1024,6 +1028,104 @@ void Case_2(){
     fracture.m_porosity         = 0.9;
     fracture_data.push_back(fracture);
     
+#else
+    
+    SimulationCase sim;
+    sim.UsePardisoQ=true;
+    sim.IsHybrid=true;
+    sim.n_threads = 12;
+    sim.omega_ids.push_back(1);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0);
+    sim.porosities.push_back(0.1);
+    
+    sim.omega_ids.push_back(2);
+    sim.omega_dim.push_back(3);
+    sim.permeabilities.push_back(1.0e-1);
+    sim.porosities.push_back(0.1);
+    
+    /// C inlet value
+    sim.c_inlet = 1.0;
+    
+    int bc_inlet  = 3;
+    int bc_outlet = 4;
+    int bc_non_flux = 5;
+    
+    sim.gamma_ids.push_back(bc_inlet);
+    sim.gamma_dim.push_back(3);
+    sim.gamma_ids.push_back(bc_outlet);
+    sim.gamma_dim.push_back(3);
+    sim.gamma_ids.push_back(bc_non_flux);
+    sim.gamma_dim.push_back(3);
+    
+    int bc_type_D = 0;    //    D = 0;
+    int bc_type_N = 1;    //    N = 1;
+    REAL qn_inlet  = 1.0;
+    REAL p_outlet = 1.0;
+    REAL qn       = 0.0;
+    
+    sim.type.push_back(bc_type_N);
+    sim.type.push_back(bc_type_D);
+    sim.type.push_back(bc_type_N);
+    
+    sim.vals.push_back(qn_inlet);
+    sim.vals.push_back(p_outlet);
+    sim.vals.push_back(qn);
+    
+    /// Defining DFN boundary data (id,bc_type,data)
+    std::vector<std::tuple<int,int,REAL>> bc_ids_2d;
+    bc_ids_2d.push_back(std::make_tuple(bc_inlet,bc_type_N,qn_inlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_outlet,bc_type_D,p_outlet));
+    bc_ids_2d.push_back(std::make_tuple(bc_non_flux,bc_type_N,qn));
+    
+    int bc_1d_inlet  = 130;
+    int bc_1d_outlet = 140;
+    int bc_1d_non_flux = 150;
+    
+    int bc_0d_inlet  = 230;
+    int bc_0d_outlet = 240;
+    int bc_0d_non_flux = 250;
+    
+    std::map<int,int> bc_ids_1d_map;
+    bc_ids_1d_map.insert(std::make_pair(bc_inlet,bc_1d_inlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_outlet,bc_1d_outlet));
+    bc_ids_1d_map.insert(std::make_pair(bc_non_flux,bc_1d_non_flux));
+    
+    std::map<int,int> bc_ids_0d_map;
+    bc_ids_0d_map.insert(std::make_pair(bc_inlet,bc_0d_inlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
+    bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
+    
+    REAL eps_2 = 1.0e-4;
+    REAL eps_1 = eps_2*eps_2;
+    REAL eps_0 = eps_2*eps_2*eps_2;
+    
+    /// Defining DFN data
+    TPZStack<TFracture> fracture_data;
+    TFracture fracture;
+    fracture.m_id               = 6;
+    fracture.m_dim              = 2;
+    fracture.m_kappa_normal     = (2.0e8)*(2.0/eps_2);
+    fracture.m_kappa_tangential = 1.0;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.9;
+    fracture_data.push_back(fracture);
+    fracture.m_id               = 7;
+    fracture.m_dim              = 1;
+    fracture.m_kappa_normal     = (2.0e4)*(2.0/eps_1);
+    fracture.m_kappa_tangential = 1.0e-4;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.9;
+    fracture_data.push_back(fracture);
+    fracture.m_id               = 8;
+    fracture.m_dim              = 0;
+    fracture.m_kappa_normal     = (2.0)*(2.0/eps_0);
+    fracture.m_kappa_tangential = 2.0;
+    fracture.m_d_opening        = eps_2;
+    fracture.m_porosity         = 0.9;
+    fracture_data.push_back(fracture);
+    
+#endif
     
     /// Benchmarks Material ID convention
     /// 1 and 2 for 3D matrix
@@ -1053,9 +1155,9 @@ void Case_2(){
     
     TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -1198,8 +1300,9 @@ void Case_2(){
     
     int n_steps = 100;
     REAL dt     = 0.0025;
-    TPZFMatrix<STATE> M_diag;
+    TPZFMatrix<STATE> M_diag, M_vol;
     TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    VolumeMatrix(tracer_analysis, M_vol);
     
     ///// Post-processing data
     std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
@@ -1292,15 +1395,24 @@ void Case_2(){
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
     
-    TPZFMatrix<REAL> item_3(n_steps+1,24,0.0);
+    TPZFMatrix<STATE> M_ones(M_diag.Rows(),1,1.0);
+    TPZFMatrix<STATE> ones = saturations;
+    for (int i = 0; i < ones.Rows(); i++) {
+        M_ones(i,0) = 1.0;
+        for (int j = 0; j < ones.Cols(); j++) {
+            ones(i,j) = 1.0;
+        }
+    }
+    TPZFMatrix<REAL> item_3(n_steps+1,23,0.0);
     for (int it = 1; it <= n_steps; it++) {
         
         REAL time = it*dt;
         
         item_3(it,0) = time;
-        for (int idata = 1; idata <= 23; idata++) {
-            REAL int_c3 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][idata-1], saturations, M_diag);
-            item_3(it,idata) = int_c3;
+        for (int idata = 1; idata <= 22; idata++) {
+            REAL int_c3 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][idata-1], saturations, M_vol);
+            REAL int_omega = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][idata-1], ones, M_vol);
+            item_3(it,idata) = int_c3/int_omega;
         }
         
     }
@@ -1772,24 +1884,22 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 }
                 volume->SetDimension(data.second);
             }
-            if(it == n_steps - 1)
-            {
-                
-                int div = 0;
-                std::set<int> mat_id_3D;
-                mat_id_3D.insert(1);
-                mat_id_3D.insert(2);
-                std::string file_reservoir("cube_s.vtk");
-                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
-                tracer_analysis->PostProcess(div,3);
-                
-                std::set<int> mat_id_2D;
-                mat_id_2D.insert(6);
-                std::string file_frac("fracture_s.vtk");
-                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
-                tracer_analysis->PostProcess(div,2);
-                
-            }
+//            if(it == n_steps - 1)
+//            {
+//                int div = 0;
+//                std::set<int> mat_id_3D;
+//                mat_id_3D.insert(1);
+//                mat_id_3D.insert(2);
+//                std::string file_reservoir("cube_s.vtk");
+//                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+//                tracer_analysis->PostProcess(div,3);
+//
+//                std::set<int> mat_id_2D;
+//                mat_id_2D.insert(6);
+//                std::string file_frac("fracture_s.vtk");
+//                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+//                tracer_analysis->PostProcess(div,2);
+//            }
 
             
             // configuring next time step
@@ -1824,6 +1934,8 @@ void VolumeMatrix(TPZAnalysis * tracer_analysis, TPZFMatrix<STATE> & M_vol_diag)
             if (!volume) {
                 continue;
             }
+            volume->SetPorosity(1.0);
+            volume->SetFractureCrossLength(1.0);
             volume->SetMassMatrixAssembly(mass_matrix_Q);
         }
         
