@@ -2,7 +2,7 @@ Geometry.Tolerance = 7.142857142857144e-08;
 
 // mesh size parameter for outlet
 h_outlet = 50;
-nf = 1;
+//nf = 1;
 
 
 // Define points
@@ -4607,8 +4607,8 @@ Line{frac_line_1004} In Surface{fracture_51};
 Line{frac_line_1005} In Surface{fracture_51};
 
 Coherence;
-fl_[]= Line "*";
-Transfinite Line {fl_[]} = nf;
+//fl_[]= Line "*";
+//Transfinite Line {fl_[]} = nf;
 
 // End of fracture specification
 
