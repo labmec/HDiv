@@ -237,9 +237,9 @@ int main(){
     
 
 //    Pretty_cube();
-    Case_1();
+//    Case_1();
 //     Case_2();
-//    Case_3();
+    Case_3();
 
 }
 
@@ -1531,7 +1531,7 @@ void Case_3(){
     bc_ids_0d_map.insert(std::make_pair(bc_outlet,bc_0d_outlet));
     bc_ids_0d_map.insert(std::make_pair(bc_non_flux,bc_0d_non_flux));
     
-    REAL eps_2 = 1.0e-4;
+    REAL eps_2 = 1.0e-2;
     //    REAL eps_1 = eps_2*eps_2;
     //    REAL eps_0 = eps_2*eps_2*eps_2;
     
@@ -1547,7 +1547,7 @@ void Case_3(){
     fracture.m_id.insert(12);
     fracture.m_id.insert(13);
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 2.0*(2.0e6);
+    fracture.m_kappa_normal     = 1.0*(2.0e6);
     fracture.m_kappa_tangential = 100.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
@@ -1555,7 +1555,7 @@ void Case_3(){
     fracture.m_id.clear();
     fracture.m_id.insert(14);
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = 2.0*(2.0e4);
+    fracture.m_kappa_normal     = 1.0*(2.0e4);
     fracture.m_kappa_tangential = 1.;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
