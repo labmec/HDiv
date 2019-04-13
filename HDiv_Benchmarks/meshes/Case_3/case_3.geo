@@ -1,12 +1,17 @@
 Geometry.Tolerance = 3.33333333333e-05;
 
-s = 1.0;
+s = 100.0;
+
+nf_0 = 4;
+nf_1 = 4;
 
 // Domain corners
 
 //h_domain = 0.1; /// 30k
 
-h_domain = 0.25; /// 30k
+//h_domain = 0.25; ///  + h_ref = 1  -> 30k
+
+h_domain = 1.0; /// 30k
 
 // Fracture 1, left (low x) and right ends
 h_1_left = s*0.1;
@@ -210,6 +215,9 @@ frac_line_62= newl; Line(frac_line_62) = {p46, p47};
 frac_line_63= newl; Line(frac_line_63) = {p47, p49};
 frac_line_64= newl; Line(frac_line_64) = {p48, p49};
 frac_line_65= newl; Line(frac_line_65) = {p50, p51};
+
+
+
 
 in_line_low = newl; Line(in_line_low) = {pin00, pin10};
 
