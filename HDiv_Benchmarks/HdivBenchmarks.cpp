@@ -1729,6 +1729,8 @@ void Case_3(){
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
     
+    return;
+    
     ///// Post-processing data
     
     std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
@@ -2684,22 +2686,22 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 }
                 volume->SetDimension(data.second);
             }
-//            if(it == n_steps - 1)
-//            {
-//                int div = 0;
-//                std::set<int> mat_id_3D;
-//                mat_id_3D.insert(1);
-//                mat_id_3D.insert(2);
-//                std::string file_reservoir("cube_s.vtk");
-//                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
-//                tracer_analysis->PostProcess(div,3);
-//
-//                std::set<int> mat_id_2D;
-//                mat_id_2D.insert(6);
-//                std::string file_frac("fracture_s.vtk");
-//                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
-//                tracer_analysis->PostProcess(div,2);
-//            }
+            if(it == n_steps - 1)
+            {
+                int div = 0;
+                std::set<int> mat_id_3D;
+                mat_id_3D.insert(1);
+                mat_id_3D.insert(2);
+                std::string file_reservoir("cube_s.vtk");
+                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+                tracer_analysis->PostProcess(div,3);
+
+                std::set<int> mat_id_2D;
+                mat_id_2D.insert(6);
+                std::string file_frac("fracture_s.vtk");
+                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+                tracer_analysis->PostProcess(div,2);
+            }
 
             
             // configuring next time step
