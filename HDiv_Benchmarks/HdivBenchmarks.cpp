@@ -243,8 +243,8 @@ int main(){
 //    Pretty_cube();
 //    Case_1();
 //    Case_2();
-//    Case_3();
-        Case_4();
+    Case_3();
+//        Case_4();
 
 }
 
@@ -1475,7 +1475,7 @@ void Case_3(){
     int bc_type_D = 0;    //    D = 0;
     int bc_type_N = 1;    //    N = 1;
     REAL qn_inlet  = 1.0;
-    REAL p_outlet = 1.0;
+    REAL p_outlet = 0.0;
     REAL qn       = 0.0;
     
     sim.type.push_back(bc_type_N);

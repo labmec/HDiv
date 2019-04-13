@@ -3,7 +3,9 @@ Geometry.Tolerance = 3.33333333333e-05;
 s = 1.0;
 
 // Domain corners
-h_domain = 0.25;
+//h_domain = 0.1; /// 30k
+
+h_domain = 0.25; /// 30k
 
 // Fracture 1, left (low x) and right ends
 h_1_left = s*0.1;
