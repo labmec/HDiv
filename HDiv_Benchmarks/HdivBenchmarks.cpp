@@ -1599,7 +1599,7 @@ void Case_3(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_aux.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -1611,7 +1611,7 @@ void Case_3(){
     
     UniformRefinement(gmesh, h_level);
     
-#ifdef PZDEBUG2
+#ifdef PZDEBUG
     std::ofstream file("geometry_case_3_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     std::ofstream file_txt("geometry_case_3_base.txt");
@@ -1829,7 +1829,7 @@ void Case_3(){
             ones(i,j) = 1.0;
         }
     }
-    TPZFMatrix<REAL> item_5(n_steps+1,8,0.0);
+    TPZFMatrix<REAL> item_5(n_steps+1,9,0.0);
     for (int it = 1; it <= n_steps; it++) {
         
         REAL time = it*dt;
@@ -1863,6 +1863,10 @@ void Case_3(){
         REAL int_omega_6 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][12], ones, M_vol);
         item_5(it,7) = int_c_6/int_omega_6;
         
+        REAL int_c_7 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][13], saturations, M_vol);
+        REAL int_omega_7 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][13], ones, M_vol);
+        item_5(it,8) = int_c_7/int_omega_7;
+        
     }
     
     log_file << std::endl;
@@ -1874,8 +1878,7 @@ void Case_3(){
     
     std::ofstream file_5("item_5.txt");
     item_5.Print("it5 = ",file_5,EMathematicaInput);
-    
-    
+
     return;
     
 }
