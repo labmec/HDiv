@@ -1600,7 +1600,8 @@ void Case_3(){
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
 //    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -1699,7 +1700,7 @@ void Case_3(){
         an->Assemble();
         std::cout << "Assembly for DFN complete." << std::endl;
         
-        //        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
+        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
         
         std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
