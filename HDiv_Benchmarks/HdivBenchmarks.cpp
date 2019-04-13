@@ -1545,7 +1545,7 @@ void Case_3(){
     fracture.m_id.insert(12);
     fracture.m_id.insert(13);
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 1.0*(2.0e6);
+    fracture.m_kappa_normal     = 2.0*(2.0e6);
     fracture.m_kappa_tangential = 100.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
