@@ -4606,7 +4606,7 @@ Line{frac_line_1001} In Surface{fracture_51};
 Line{frac_line_1004} In Surface{fracture_51};
 Line{frac_line_1005} In Surface{fracture_51};
 
-
+Coherence;
 fl_[]= Line "*";
 Transfinite Line {fl_[]} = nf;
 

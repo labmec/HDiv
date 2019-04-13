@@ -2299,13 +2299,64 @@ void Case_4(){
     
     UniformRefinement(gmesh, h_level);
     
+
+    
+    /// labeling inlet and outlet bcs
+    std::vector<int> gel_indexes_inlet_1;
+    std::vector<int> gel_indexes_inlet_2;
+    std::vector<int> gel_indexes_outlet_1;
+    std::vector<int> gel_indexes_outlet_2;
+    {
+        
+        for (auto gel : gmesh->ElementVec()) {
+            
+            if (!gel) {
+                DebugStop();
+            }
+            
+            if (gel->MaterialId() != 5) {
+                continue;
+            }
+            
+            int gel_index = gel->Index();
+
+            TPZManVector<REAL,3> x_qsi(3,0.0),x_c(3,0.0);
+            int side = gel->NSides() - 1;
+            gel->CenterPoint(side, x_qsi);
+            gel->X(x_qsi, x_c);
+            
+            REAL x = x_c[0];
+            REAL y = x_c[1];
+            REAL z = x_c[2];
+            
+            bool check_inlet_1 = fabs(y-1500.0) < 1.0e-8 && (-500 < x && x < -200.0) && ( z > 300.0 && z < 500.0);
+            bool check_inlet_2 = fabs(x+500.0) < 1.0e-8 && (1200 < y && y < 1500.0) && ( z > 300.0 && z < 500.0);
+            bool check_outlet_1 = fabs(x+500.0) && ( y > 100 && y < 400) && (z > -100 && z < 100);
+            bool check_outlet_2 = fabs(x-350.0) && ( y > 100 && y < 400) && (z > -100 && z < 100);
+            
+            
+            if (check_inlet_1) {
+                gel->SetMaterialId(3);
+                gel_indexes_inlet_1.push_back(gel_index);
+            }else if (check_inlet_2){
+                gel->SetMaterialId(3);
+                gel_indexes_inlet_2.push_back(gel_index);
+            }else if (check_outlet_1){
+                gel->SetMaterialId(4);
+                gel_indexes_outlet_1.push_back(gel_index);
+            }else if (check_outlet_2)
+                gel->SetMaterialId(4);
+                gel_indexes_outlet_2.push_back(gel_index);
+        }
+        
+    }
+    
 #ifdef PZDEBUG
     std::ofstream file("geometry_case_4_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     std::ofstream file_txt("geometry_case_4_base.txt");
     gmesh->Print(file_txt);
 #endif
-    
     
     ////// End:: Geometry reader
     
@@ -2327,6 +2378,15 @@ void Case_4(){
     //    dfn_hybridzer.SetMapReservoirBCToDFNBC0DIds(bc_ids_0d_map);
     cmeshm = dfn_hybridzer.Hybridize(cmixedmesh);
     
+#ifdef PZDEBUG2
+    {
+        std::ofstream file("geometry_case_3_base_dfn.vtk");
+        TPZVTKGeoMesh::PrintGMeshVTK(mp_cmesh->Reference(), file);
+        std::ofstream file_txt("geometry_case_3_base_dfn.txt");
+        mp_cmesh->Reference()->Print(file_txt);
+    }
+#endif
+    
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
@@ -2336,8 +2396,8 @@ void Case_4(){
     meshtrvec[1] = meshvec[1];
     meshtrvec[2] = s_cmesh;
     
-    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
-    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+//    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+//    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     bool solve_dfn_problem_Q = true;
     if (solve_dfn_problem_Q) {
@@ -2420,7 +2480,8 @@ void Case_4(){
         an->PostProcess(div,1);
     }
     
-    
+    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     int n_steps = 100;
     REAL dt     = 0.01;
