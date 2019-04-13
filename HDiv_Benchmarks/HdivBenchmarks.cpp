@@ -1553,7 +1553,7 @@ void Case_3(){
     fracture.m_id.clear();
     fracture.m_id.insert(14);
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = 1.0*(2.0e4);
+    fracture.m_kappa_normal     = 2.0*(2.0e4);
     fracture.m_kappa_tangential = 1.;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
@@ -1561,7 +1561,7 @@ void Case_3(){
     fracture.m_id.clear();
     fracture.m_id.insert(15);
     fracture.m_dim              = 0;
-    fracture.m_kappa_normal     = 1.0*(2.0);
+    fracture.m_kappa_normal     = 2.0*(2.0);
     fracture.m_kappa_tangential = 2.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.9;
@@ -1604,7 +1604,7 @@ void Case_3(){
     
     UniformRefinement(gmesh, h_level);
     
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
     std::ofstream file("geometry_case_3_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     std::ofstream file_txt("geometry_case_3_base.txt");
@@ -1647,7 +1647,7 @@ void Case_3(){
         
         TPZManVector<TPZCompMesh * > mesh_vec = mp_cmesh->MeshVector();
         
-#ifdef PZDEBUG
+#ifdef PZDEBUG2
         {
             std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
             mesh_vec[0]->ComputeNodElCon();
@@ -1730,6 +1730,48 @@ void Case_3(){
     TPZFMatrix<STATE> M_diag, M_vol;
     TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
 
+    ///// Post-processing data
+    
+    std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
+    {
+        std::set<int> volumetric_mat_ids = {6,7,8,9,10,11,12,13}; /// Available materials
+        TPZCompMesh * s_cmesh = meshtrvec[2];
+        if (!s_cmesh) {
+            DebugStop();
+        }
+        TPZGeoMesh * geometry = cmesh_transport->Reference();
+        if (!geometry) {
+            DebugStop();
+        }
+        geometry->ResetReference();
+        cmesh_transport->LoadReferences();
+        
+        for (auto cel : cmesh_transport->ElementVec()) {
+            if (!cel) {
+                continue;
+            }
+            TPZGeoEl * gel = cel->Reference();
+            if (!gel) {
+                DebugStop();
+            }
+            int mat_id = gel->MaterialId();
+            int gel_dim = gel->Dimension();
+            
+            int n_connects = cel->NConnects();
+            if (n_connects==0 || n_connects==2) {
+                continue;
+            }
+            
+            if (n_connects!=1) {
+                DebugStop();
+            }
+            
+            TPZConnect & c = cel->Connect(0);
+            int64_t equ = c.SequenceNumber(); // because polynomial order is zero, i.e. block size = 1.
+            dim_mat_id_dof_indexes[gel_dim][mat_id].push_back(equ);
+            
+        }
+    }
     
     int target_mat_id_in = 3;
     std::map<int, REAL> gel_index_to_int_qn_inlet;
@@ -1770,6 +1812,59 @@ void Case_3(){
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
     
+    TPZFMatrix<STATE> M_ones(M_diag.Rows(),1,1.0);
+    TPZFMatrix<STATE> ones = saturations;
+    for (int i = 0; i < ones.Rows(); i++) {
+        M_ones(i,0) = 1.0;
+        for (int j = 0; j < ones.Cols(); j++) {
+            ones(i,j) = 1.0;
+        }
+    }
+    TPZFMatrix<REAL> item_5(n_steps+1,8,0.0);
+    for (int it = 1; it <= n_steps; it++) {
+        
+        REAL time = it*dt;
+        
+        item_5(it,0) = time;
+        REAL int_c_0 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][6], saturations, M_vol);
+        REAL int_omega_0 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][6], ones, M_vol);
+        item_5(it,1) = int_c_0/int_omega_0;
+        
+        REAL int_c_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][7], saturations, M_vol);
+        REAL int_omega_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][7], ones, M_vol);
+        item_5(it,2) = int_c_1/int_omega_1;
+        
+        REAL int_c_2 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][8], saturations, M_vol);
+        REAL int_omega_2 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][8], ones, M_vol);
+        item_5(it,3) = int_c_2/int_omega_2;
+        
+        REAL int_c_3 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][9], saturations, M_vol);
+        REAL int_omega_3 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][9], ones, M_vol);
+        item_5(it,4) = int_c_3/int_omega_3;
+        
+        REAL int_c_4 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][10], saturations, M_vol);
+        REAL int_omega_4 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][10], ones, M_vol);
+        item_5(it,5) = int_c_4/int_omega_4;
+        
+        REAL int_c_5 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][11], saturations, M_vol);
+        REAL int_omega_5 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][11], ones, M_vol);
+        item_5(it,6) = int_c_5/int_omega_5;
+        
+        REAL int_c_6 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][12], saturations, M_vol);
+        REAL int_omega_6 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][12], ones, M_vol);
+        item_5(it,7) = int_c_6/int_omega_6;
+        
+    }
+    
+    log_file << std::endl;
+    log_file << "Integral of concentration on fracture for each time value : " << std::endl;
+    item_5.Print("it5 = ",log_file,EMathematicaInput);
+    log_file << std::endl;
+    log_file << std::endl;
+    log_file.flush();
+    
+    std::ofstream file_5("item_5.txt");
+    item_5.Print("it5 = ",file_5,EMathematicaInput);
     
     
     return;
