@@ -204,6 +204,8 @@ void GetSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec,
 
 void IntegrateFluxAndPressure(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn, std::map<int, REAL> & gel_index_to_int_p);
 
+void IntegrateFluxAndPressure(std::vector<int> & gel_indexes, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn, std::map<int, REAL> & gel_index_to_int_p);
+
 TPZTransform<REAL> Transform_Face_To_Volume(TPZGeoEl * gel_face, TPZGeoEl * gel_vol);
 
 REAL IntegrateSaturations(int i_time_step, std::vector<int> & dof_indexes, TPZFMatrix<STATE> & saturations, TPZFMatrix<STATE> & M_diagonal);
@@ -212,7 +214,7 @@ REAL IntegratePorousVolume(std::vector<int> & dof_indexes, TPZFMatrix<STATE> & M
 
 void FractureTest();
 
-void ColorMeshCase3(TPZGeoMesh * gmesh);
+void ColorMeshCase2(TPZGeoMesh * gmesh);
 
 /// Executes case 1
 void Case_1();
@@ -1201,7 +1203,7 @@ void Case_2(){
     TPZGeoMesh * gmesh_aux = Geometry_aux.GeometricGmshMesh(file_gmsh.c_str());
     Geometry_aux.PrintPartitionSummary(std::cout);
     
-    ColorMeshCase3(gmesh_aux);
+    ColorMeshCase2(gmesh_aux);
     
     /// Geometry description for FEM
     Geometry.SetFormatVersion(version);
@@ -1600,8 +1602,8 @@ void Case_3(){
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
 //    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -1700,7 +1702,7 @@ void Case_3(){
         an->Assemble();
         std::cout << "Assembly for DFN complete." << std::endl;
         
-        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
+//        an->Solver().Matrix()->Print("j = ",std::cout,EInputFormat);
         
         std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
@@ -1813,6 +1815,74 @@ void Case_3(){
         p_outlet_integral += pair.second;
     }
     
+    std::vector<int> gel_indexes_outlet_1;
+    std::vector<int> gel_indexes_outlet_2;
+    {
+        
+        TPZGeoMesh * geometry = cmesh_transport->Reference();
+        if (!geometry) {
+            DebugStop();
+        }
+        
+        
+        for (auto chunk : gel_index_to_int_qn) {
+            
+            int gel_index = chunk.first;
+            TPZGeoEl * gel = geometry->Element(gel_index);
+            if (!gel) {
+                DebugStop();
+            }
+            
+            TPZManVector<REAL,3> x_qsi(3,0.0),x_c(3,0.0);
+            int side = gel->NSides() - 1;
+            gel->CenterPoint(side, x_qsi);
+            gel->X(x_qsi, x_c);
+        
+            REAL z = x_c[2];
+            bool check_outlet_1 = z < 1.0/3.0;
+            bool check_outlet_2 = z > 2.0/3.0;
+            
+            if (check_outlet_1) {
+                gel_indexes_outlet_1.push_back(gel_index);
+            }else if (check_outlet_2){
+                gel_indexes_outlet_2.push_back(gel_index);
+            }else{
+                DebugStop();
+            }
+            
+        }
+    }
+    
+    
+    std::map<int, REAL> gel_index_to_int_qn_outlet_1;
+    std::map<int, REAL> gel_index_to_int_p_outlet_1;
+    IntegrateFluxAndPressure(gel_indexes_outlet_1, meshtrvec, gel_index_to_int_qn_outlet_1, gel_index_to_int_p_outlet_1);
+    
+    REAL qn_outlet_1_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn_outlet_1) {
+        qn_outlet_1_integral += pair.second;
+    }
+    
+    REAL p_outlet_1_integral = 0.0;
+    for (auto pair : gel_index_to_int_p_outlet_1) {
+        p_outlet_1_integral += pair.second;
+    }
+    
+    std::map<int, REAL> gel_index_to_int_qn_outlet_2;
+    std::map<int, REAL> gel_index_to_int_p_outlet_2;
+    IntegrateFluxAndPressure(gel_indexes_outlet_2, meshtrvec, gel_index_to_int_qn_outlet_2, gel_index_to_int_p_outlet_2);
+    
+    REAL qn_outlet_2_integral = 0.0;
+    for (auto pair : gel_index_to_int_qn_outlet_2) {
+        qn_outlet_2_integral += pair.second;
+    }
+    
+    REAL p_outlet_2_integral = 0.0;
+    for (auto pair : gel_index_to_int_p_outlet_2) {
+        p_outlet_2_integral += pair.second;
+    }
+    
+    
     log_file << std::endl;
     log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
     log_file << "Inlet boundary : " << std::endl;
@@ -1821,6 +1891,13 @@ void Case_3(){
     log_file << "Outlet boundary : " << std::endl;
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
+    log_file << "Outlet 0 boundary : " << std::endl;
+    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_1_integral << std::endl;
+    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_1_integral << std::endl;
+    log_file << "Outlet 1 boundary : " << std::endl;
+    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_2_integral << std::endl;
+    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_2_integral << std::endl;
+    
     
     
     TPZFMatrix<STATE> M_ones(M_diag.Rows(),1,1.0);
@@ -2283,7 +2360,7 @@ void Case_4(){
 }
 
 
-void ColorMeshCase3(TPZGeoMesh * gmesh){
+void ColorMeshCase2(TPZGeoMesh * gmesh){
     if (!gmesh) {
         DebugStop();
     }
@@ -2520,6 +2597,121 @@ void IntegrateFluxAndPressure(int target_mat_id, TPZManVector<TPZCompMesh * ,3> 
         }
         gel_index_to_int_p.insert(std::make_pair(gel_index, int_p));
     }
+}
+
+void IntegrateFluxAndPressure(std::vector<int> & gel_indexes, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn, std::map<int, REAL> & gel_index_to_int_p){
+    
+    std::set<int> volumes = {1,2};
+    int int_order = 10;
+    int int_type = 0;
+    int var = 0;
+    
+    /// Flux integration
+    TPZCompMesh * flux_mesh = mesh_vec[0];
+    if (!flux_mesh) {
+        DebugStop();
+    }
+    TPZGeoMesh * geometry = flux_mesh->Reference();
+    if (!geometry) {
+        DebugStop();
+    }
+    geometry->ResetReference();
+    flux_mesh->LoadReferences();
+    
+    for(auto index: gel_indexes){
+        
+        TPZGeoEl * gel = geometry->Element(index);
+        if (!gel) {
+            DebugStop();
+        }
+        
+        TPZCompEl * cel = gel->Reference();
+        if (!cel) {
+            DebugStop();
+        }
+        
+        int dim = gel->Dimension();
+        flux_mesh->SetDimModel(dim);
+        TPZManVector<REAL> qn  = cel->IntegrateSolution(var);
+        
+        int gel_index = gel->Index();
+        REAL qn_val = qn[0];
+        gel_index_to_int_qn.insert(std::make_pair(gel_index, qn_val));
+    }
+    
+    /// Pressure integration
+    TPZCompMesh * pressure_mesh = mesh_vec[1];
+    if (!pressure_mesh) {
+        DebugStop();
+    }
+    geometry->ResetReference();
+    pressure_mesh->LoadReferences();
+    TPZManVector<STATE,1> sol;
+    for(auto pair: gel_index_to_int_qn){
+        int64_t gel_index = pair.first;
+        TPZGeoEl * gel = geometry->Element(gel_index);
+        if (!gel) {
+            DebugStop();
+        }
+        
+        TPZGeoElSide gel_side(gel,gel->NSides()-1);
+        TPZStack<TPZCompElSide> cel_stack;
+        gel_side.ConnectedCompElementList(cel_stack, 0, 0);
+        
+        REAL int_p = 0;
+        TPZCompEl * cel_vol;
+        for (auto cel_side : cel_stack) {
+            cel_vol = cel_side.Element();
+            int neigh_mat_id = cel_vol->Reference()->MaterialId();
+            int vol_dim = cel_vol->Dimension();
+            if (vol_dim != gel->Dimension() +1) {
+                continue;
+            }
+            if(volumes.find(neigh_mat_id) != volumes.end()){
+                break;
+            }
+        }
+        TPZGeoEl * gel_vol = cel_vol->Reference();
+        if (!gel_vol) {
+            DebugStop();
+        }
+        TPZTransform<REAL> afine_transformation = Transform_Face_To_Volume(gel,gel_vol);
+        
+        int side = gel->NSides() - 1;
+        TPZIntPoints * NumericIntegral = gel->CreateSideIntegrationRule(side, int_order);
+        NumericIntegral->SetType(int_type, int_order);
+        
+        // Creating the integration rule
+        int dimension   = NumericIntegral->Dimension();
+        int npoints     = NumericIntegral->NPoints();
+        
+        if (dimension != gel->Dimension()) {
+            std::cout << "Incompatible dimensions." << std::endl;
+            DebugStop();
+        }
+        
+        // compute the integrals
+        TPZManVector<REAL,3> xi_face(dimension,0.0);
+        TPZManVector<REAL,3> xi_vol(gel_vol->Dimension(),0.0);
+        REAL weight = 0.0;
+        for (int it = 0 ; it < npoints; it++) {
+            
+            TPZFMatrix<REAL> jac;
+            TPZFMatrix<REAL> axes;
+            REAL detjac;
+            TPZFMatrix<REAL> jacinv;
+            NumericIntegral->Point(it, xi_face, weight);
+            gel->Jacobian(xi_face, jac, axes, detjac, jacinv);
+            
+            afine_transformation.Apply(xi_face, xi_vol);
+            
+            cel_vol->Solution(xi_vol, var, sol);
+            int_p += weight * detjac * sol[0];
+            
+        }
+        gel_index_to_int_p.insert(std::make_pair(gel_index, int_p));
+    }
+    
 }
 
 void GetSaturation(int target_mat_id, TPZManVector<TPZCompMesh * ,3> & mesh_vec, std::map<int, REAL> & gel_index_to_int_qn ,std::map<int, REAL> & gel_index_to_s){
