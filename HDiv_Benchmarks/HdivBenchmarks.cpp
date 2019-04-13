@@ -1819,49 +1819,7 @@ void Case_3(){
     log_file << "Outlet boundary : " << std::endl;
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
-        
-    ///// Post-processing data
     
-    std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
-    {
-        std::set<int> volumetric_mat_ids = {6,7,8,9,10,11,12,13}; /// Available materials
-        TPZCompMesh * s_cmesh = meshtrvec[2];
-        if (!s_cmesh) {
-            DebugStop();
-        }
-        TPZGeoMesh * geometry = cmesh_transport->Reference();
-        if (!geometry) {
-            DebugStop();
-        }
-        geometry->ResetReference();
-        cmesh_transport->LoadReferences();
-        
-        for (auto cel : cmesh_transport->ElementVec()) {
-            if (!cel) {
-                continue;
-            }
-            TPZGeoEl * gel = cel->Reference();
-            if (!gel) {
-                DebugStop();
-            }
-            int mat_id = gel->MaterialId();
-            int gel_dim = gel->Dimension();
-            
-            int n_connects = cel->NConnects();
-            if (n_connects==0 || n_connects==2) {
-                continue;
-            }
-            
-            if (n_connects!=1) {
-                DebugStop();
-            }
-            
-            TPZConnect & c = cel->Connect(0);
-            int64_t equ = c.SequenceNumber(); // because polynomial order is zero, i.e. block size = 1.
-            dim_mat_id_dof_indexes[gel_dim][mat_id].push_back(equ);
-            
-        }
-    }
     
     TPZFMatrix<STATE> M_ones(M_diag.Rows(),1,1.0);
     TPZFMatrix<STATE> ones = saturations;
@@ -2002,14 +1960,14 @@ void Case_4(){
     /// Defining DFN data
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
-    fracture.m_id               = 6;
+    fracture.m_id.insert(6);
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 2.0*(2.0e6);
     fracture.m_kappa_tangential = 100.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
     fracture_data.push_back(fracture);
-    fracture.m_id               = 7;
+    fracture.m_id.insert(7);
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 2.0*(2.0e4);
     fracture.m_kappa_tangential = 1.0;
@@ -2080,7 +2038,7 @@ void Case_4(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
