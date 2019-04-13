@@ -1520,14 +1520,14 @@ void Case_3(){
     fracture.m_id               = 6;
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 2.0*(2.0e6);
-    fracture.m_kappa_tangential = 1.0e-8;
+    fracture.m_kappa_tangential = 100.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
     fracture_data.push_back(fracture);
     fracture.m_id               = 7;
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 2.0*(2.0e4);
-    fracture.m_kappa_tangential = 1.0e-8;
+    fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
     fracture_data.push_back(fracture);
