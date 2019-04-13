@@ -245,8 +245,8 @@ int main(){
 //    Pretty_cube();
 //    Case_1();
 //     Case_2();
-    Case_3();
-//        Case_4();
+//    Case_3();
+    Case_4();
 
 }
 
@@ -2000,7 +2000,7 @@ void Case_4(){
     int bc_type_D = 0;    //    D = 0;
     int bc_type_N = 1;    //    N = 1;
     REAL qn_inlet  = 1.0;
-    REAL p_outlet = 1.0;
+    REAL p_outlet = 0.0;
     REAL qn       = 0.0;
     
     sim.type.push_back(bc_type_N);
@@ -2044,18 +2044,20 @@ void Case_4(){
     TFracture fracture;
     fracture.m_id.insert(6);
     fracture.m_dim              = 2;
-    fracture.m_kappa_normal     = 2.0*(2.0e6);
-    fracture.m_kappa_tangential = 100.0;
+    fracture.m_kappa_normal     = 1.0*(2.0e6);
+    fracture.m_kappa_tangential = 1.0e2;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
     fracture_data.push_back(fracture);
     fracture.m_id.insert(7);
     fracture.m_dim              = 1;
-    fracture.m_kappa_normal     = 2.0*(2.0e4);
+    fracture.m_kappa_normal     = 1.0*(2.0e4);
     fracture.m_kappa_tangential = 1.0;
     fracture.m_d_opening        = eps_2;
     fracture.m_porosity         = 0.2;
     fracture_data.push_back(fracture);
+    
+    ////// Begin:: Geometry reader
     
     /// Benchmarks Material ID convention
     /// 1 and 2 for 3D matrix
@@ -2075,7 +2077,7 @@ void Case_4(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_4/case_4.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_4/gmsh.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -2083,21 +2085,21 @@ void Case_4(){
     Geometry.SetFormatVersion(version);
     Geometry.SetDimNamePhysical(dim_name_and_physical_tag);
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
-    check_mesh(gmesh, 3);
     std::ofstream file2("geometry_case_4_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file2);
-    
     Geometry.PrintPartitionSummary(std::cout);
     
     UniformRefinement(gmesh, h_level);
     
-#ifdef PZDEBUG2
+#ifdef PZDEBUG
     std::ofstream file("geometry_case_4_base.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
     std::ofstream file_txt("geometry_case_4_base.txt");
     gmesh->Print(file_txt);
 #endif
     
+    
+    ////// End:: Geometry reader
     
     int p_order = 1;
     TPZVec<TPZCompMesh *> meshvec;
