@@ -236,8 +236,8 @@ int main(){
 #endif
     
 
-    Pretty_cube();
-//    Case_1();
+//    Pretty_cube();
+    Case_1();
 //     Case_2();
 //    Case_3();
 
@@ -676,7 +676,7 @@ void Case_1(){
     fracture.m_d_opening        = 1.0e-2;
     fracture.m_porosity         = 0.4;
     fracture_data.push_back(fracture);
-    
+    fracture.m_id.clear();
     
     /// Benchmarks Material ID convention
     /// 1 and 2 for 3D matrix
@@ -697,9 +697,9 @@ void Case_1(){
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
@@ -3809,56 +3809,58 @@ TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh, TPZStack<TFract
             break;
         }
     }
-    if(ind_0 < 0) DebugStop();
-    /// Create point element
-    for (auto cel : cmesh->ElementVec()) {
-        if (!cel) {
-            continue;
+    if(ind_0 >= 0)
+    {
+        /// Create point element
+        for (auto cel : cmesh->ElementVec()) {
+            if (!cel) {
+                continue;
+            }
+            
+            TPZGeoEl * gel = cel->Reference();
+            if (!gel) {
+                DebugStop();
+            }
+            
+            if (gel->Dimension() != 0) {
+                continue;
+            }
+            int matid = gel->MaterialId();
+            if(bcmat_ids.find(matid) != bcmat_ids.end())
+            {
+                continue;
+            }
+            if(allmat_ids.find(matid) == allmat_ids.end())
+            {
+                continue;
+            }
+            
+            TPZMultiphysicsInterfaceElement * int_face = dynamic_cast<TPZMultiphysicsInterfaceElement *>(cel);
+            if (int_face) {
+                continue;
+            }
+            
+            int n_connect = cel->NConnects();
+            bool matid_found = fractures[ind_0].m_id.find(gel->MaterialId())  != fractures[ind_0].m_id.end();
+            if (n_connect !=1 && matid_found) {
+                DebugStop();
+            }
+            else if(n_connect == 1 && !matid_found)
+            {
+                std::cout << "I dont understand matid should be included in the fracture data structure\n";
+            }
+            else if (n_connect == 0)
+            {
+                DebugStop();
+            }
+            TPZConnect & c = cel->Connect(0);
+            
+            if (c.NElConnected() > 2 && matid_found) {
+                CreateTransportElement(s_order,s_cmesh, gel, false);
+            }
+            
+            
         }
-        
-        TPZGeoEl * gel = cel->Reference();
-        if (!gel) {
-            DebugStop();
-        }
-        
-        if (gel->Dimension() != 0) {
-            continue;
-        }
-        int matid = gel->MaterialId();
-        if(bcmat_ids.find(matid) != bcmat_ids.end())
-        {
-            continue;
-        }
-        if(allmat_ids.find(matid) == allmat_ids.end())
-        {
-            continue;
-        }
-        
-        TPZMultiphysicsInterfaceElement * int_face = dynamic_cast<TPZMultiphysicsInterfaceElement *>(cel);
-        if (int_face) {
-            continue;
-        }
-        
-        int n_connect = cel->NConnects();
-        bool matid_found = fractures[ind_0].m_id.find(gel->MaterialId())  != fractures[ind_0].m_id.end();
-        if (n_connect !=1 && matid_found) {
-            DebugStop();
-        }
-        else if(n_connect == 1 && !matid_found)
-        {
-            std::cout << "I dont understand matid should be included in the fracture data structure\n";
-        }
-        else if (n_connect == 0)
-        {
-            DebugStop();
-        }
-        TPZConnect & c = cel->Connect(0);
-        
-        if (c.NElConnected() > 2 && matid_found) {
-            CreateTransportElement(s_order,s_cmesh, gel, false);
-        }
-        
-        
     }
     geometry->ResetReference();
     s_cmesh->InitializeBlock();
