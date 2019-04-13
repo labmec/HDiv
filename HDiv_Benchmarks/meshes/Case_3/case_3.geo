@@ -1,17 +1,23 @@
 Geometry.Tolerance = 3.33333333333e-05;
 
-s = 100.0;
+s = 1.0;
 
-nf_0 = 4;
-nf_1 = 4;
+ng = 5;
+nf_0 = ng;
+nf_1 = ng;
+nf_2 = ng;
+nf_3 = ng;
+nf_4 = ng;
+nf_5 = ng;
+nf_6 = ng;
+nf_7 = ng;
 
 // Domain corners
-
 //h_domain = 0.1; /// 30k
-
 //h_domain = 0.25; ///  + h_ref = 1  -> 30k
-
 h_domain = 1.0; /// 30k
+
+
 
 // Fracture 1, left (low x) and right ends
 h_1_left = s*0.1;
@@ -216,9 +222,6 @@ frac_line_63= newl; Line(frac_line_63) = {p47, p49};
 frac_line_64= newl; Line(frac_line_64) = {p48, p49};
 frac_line_65= newl; Line(frac_line_65) = {p50, p51};
 
-
-
-
 in_line_low = newl; Line(in_line_low) = {pin00, pin10};
 
 in_line_hi = newl; Line(in_line_hi) = {pin01, pin11};
@@ -227,6 +230,24 @@ out_line_low = newl; Line(out_line_low) = {pout00, pout10};
 
 out_line_hi = newl; Line(out_line_hi) = {pout01, pout11};
 
+
+f0_l[]={1,2,3,4,5,6,7,8,14,69};
+f1_l[]={9,10,11,12,13};
+f2_l[]={14,15,16,17};
+f3_l[]={18,19,20,21};
+f4_l[]={22,23,24,25,26,27,28};
+f5_l[]={29,30,31,32,33,35};
+f6_l[]={36,37,38,39,40};
+f7_l[]={41,42,43,44,45};
+
+Transfinite Line {f0_l[]} = nf_0;
+Transfinite Line {f1_l[]} = nf_1;
+Transfinite Line {f2_l[]} = nf_2;
+Transfinite Line {f3_l[]} = nf_3;
+Transfinite Line {f4_l[]} = nf_4;
+Transfinite Line {f5_l[]} = nf_5;
+Transfinite Line {f6_l[]} = nf_6;
+Transfinite Line {f7_l[]} = nf_7;
 
 // End of line specification
 
@@ -316,5 +337,14 @@ Physical Volume("RockMatrix_1") = {1};
 Physical Surface("BCInlet") = {10};
 Physical Surface("BCOutlet") = {11, 12};
 Physical Surface("BCImpervious") = {13, 14, 15, 16, 17, 18, 19};
-Physical Surface("Fractures") = {1,2,3,4,5,6,7,8,9};
+Physical Surface("FRACTURE_0") = {2,3};
+Physical Surface("FRACTURE_1") = {1};
+Physical Surface("FRACTURE_2") = {4};
+Physical Surface("FRACTURE_3") = {5};
+Physical Surface("FRACTURE_4") = {8};
+Physical Surface("FRACTURE_5") = {9};
+Physical Surface("FRACTURE_6") = {7};
+Physical Surface("FRACTURE_7") = {6};
+
+
 Physical Curve("FracturesIntersections") = {14, 67, 70, 71, 73, 66, 74};
