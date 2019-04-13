@@ -1132,10 +1132,6 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     for (auto matptr:zeroDimMat) {
         dfn_hybrid_cmesh->InsertMaterialObject(matptr);
     }
-    {
-        std::ofstream out("darcy_mesh_before_interfaces.txt");
-        dfn_hybrid_cmesh->Print(out);
-    }
     
     CreateInterfaceElements(matrix_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
     CreateInterfaceElements(fractures_dim, mp_nterface_id, dfn_hybrid_cmesh, dfn_mixed_mesh_vec);
