@@ -592,7 +592,7 @@ void THybridizeDFN::CreateFractureBCGeoElements(int target_dim, TPZGeoMesh * gme
             bool candidate_to_create_bc_Q = foundface == false || foundbc == true || foundfrac == false;
             if(candidate_to_create_bc_Q) continue;
             for (auto gel_side : all_neigh) {
-                if(m_fracture_ids.find(gel_side.Element()->MaterialId()) != m_fracture_ids.end())
+                if(m_fracture_ids[target_dim].find(gel_side.Element()->MaterialId()) != m_fracture_ids[target_dim].end())
                 {
                     if (target_dim == 2) {
                         int bc_frac_mat_id = m_bc_ids_1d[bcmatid];
