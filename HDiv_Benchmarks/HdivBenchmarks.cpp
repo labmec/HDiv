@@ -236,10 +236,10 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
+    Pretty_cube();
 //    Case_1();
 //     Case_2();
-    Case_3();
+//    Case_3();
 
 }
 
@@ -365,7 +365,7 @@ void Pretty_cube(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/the_cuttest_cube/cube.msh";
+    std::string file_gmsh = source_dir + "/meshes/the_cuttest_cube/cube_many_frac.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
@@ -417,6 +417,8 @@ void Pretty_cube(){
     
 #ifdef PZDEBUG
     {
+        std::ofstream file("transport_mesh.vtk");
+        TPZVTKGeoMesh::PrintCMeshVTK(s_cmesh, file);
         std::ofstream out("transport_mesh.txt");
         s_cmesh->Print(out);
     }
