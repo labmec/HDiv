@@ -2,7 +2,7 @@ Geometry.Tolerance = 7.142857142857144e-08;
 
 // mesh size parameter for outlet
 h_outlet = 50;
-h_frac = 1.5;
+h_frac = 1.3;
 nf = 10;
 
 
