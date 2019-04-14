@@ -2338,10 +2338,10 @@ void Case_4(){
             REAL y = x_c[1];
             REAL z = x_c[2];
             
-            bool check_inlet_1 = fabs(y-1500.0) < 1.0e-8 && (-500 < x && x < -200.0) && ( z > 300.0 && z < 500.0);
-            bool check_inlet_2 = fabs(x+500.0) < 1.0e-8 && (1200 < y && y < 1500.0) && ( z > 300.0 && z < 500.0);
-            bool check_outlet_1 = fabs(x+500.0) && ( y > 100 && y < 400) && (z > -100 && z < 100);
-            bool check_outlet_2 = fabs(x-350.0) && ( y > 100 && y < 400) && (z > -100 && z < 100);
+            bool check_inlet_1 = fabs(y-1500.0) < 1.0e-5 && (-500 < x && x < -200.0) && ( z > 300.0 && z < 500.0);
+            bool check_inlet_2 = fabs(x+500.0) < 1.0e-5 && (1200 < y && y < 1500.0) && ( z > 300.0 && z < 500.0);
+            bool check_outlet_1 = fabs(x+500.0) < 1.0e-5 && ( y > 100 && y < 400) && (z > -100 && z < 100);
+            bool check_outlet_2 = fabs(x-350.0) < 1.0e-5 && ( y > 100 && y < 400) && (z > -100 && z < 100);
             
             
             if (check_inlet_1) {
