@@ -2353,9 +2353,10 @@ void Case_4(){
             }else if (check_outlet_1){
                 gel->SetMaterialId(4);
                 gel_indexes_outlet_1.push_back(gel_index);
-            }else if (check_outlet_2)
+            }else if (check_outlet_2){
                 gel->SetMaterialId(4);
                 gel_indexes_outlet_2.push_back(gel_index);
+            }
         }
         
     }
