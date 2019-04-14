@@ -2528,6 +2528,35 @@ void Case_4(){
         p_outlet_integral += pair.second;
     }
     
+    std::map<int, REAL> gel_index_to_int_qn_1;
+    std::map<int, REAL> gel_index_to_int_p_1;
+    IntegrateFluxAndPressure(gel_indexes_outlet_1, meshtrvec, gel_index_to_int_qn_1, gel_index_to_int_p_1);
+    
+    REAL qn_outlet_integral_1 = 0.0;
+    for (auto pair : gel_index_to_int_qn_1) {
+        qn_outlet_integral_1 += pair.second;
+    }
+    
+    REAL p_outlet_integral_1 = 0.0;
+    for (auto pair : gel_index_to_int_p_1) {
+        p_outlet_integral_1 += pair.second;
+    }
+    
+    std::map<int, REAL> gel_index_to_int_qn_2;
+    std::map<int, REAL> gel_index_to_int_p_2;
+    IntegrateFluxAndPressure(gel_indexes_outlet_2, meshtrvec, gel_index_to_int_qn_2, gel_index_to_int_p_2);
+    
+    REAL qn_outlet_integral_2 = 0.0;
+    for (auto pair : gel_index_to_int_qn_2) {
+        qn_outlet_integral_2 += pair.second;
+    }
+    
+    REAL p_outlet_integral_2 = 0.0;
+    for (auto pair : gel_index_to_int_p_2) {
+        p_outlet_integral_2 += pair.second;
+    }
+
+    
     log_file << std::endl;
     log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
     log_file << "Inlet boundary : " << std::endl;
@@ -2536,6 +2565,12 @@ void Case_4(){
     log_file << "Outlet boundary : " << std::endl;
     log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
     log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
+    log_file << "Outlet boundary 0 : " << std::endl;
+    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral_1 << std::endl;
+    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral_1 << std::endl;
+    log_file << "Outlet boundary 1 : " << std::endl;
+    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral_2 << std::endl;
+    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral_2 << std::endl;
     
     ///// Post-processing data
     
