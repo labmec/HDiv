@@ -71,9 +71,6 @@ void TPZMixedElasticityMaterial::FillDataRequirements(TPZVec<TPZMaterialData > &
     }
 }
 
-int TPZMixedElasticityMaterial::NStateVariables() {
-    return 2;
-}
 
 ////////////////////////////////////////////////////////////////////
 
