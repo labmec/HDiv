@@ -84,9 +84,9 @@ public:
     
     TPZCompMesh * DuplicateMultiphysicsCMeshMaterials(TPZCompMesh * cmesh);
     
-    TPZManVector<int,5> & ExtractActiveApproxSpaces(TPZCompMesh * cmesh);
+    TPZVec<int> & ExtractActiveApproxSpaces(TPZCompMesh * cmesh);
     
-    TPZManVector<TPZCompMesh *, 3> & GetMeshVector(TPZCompMesh * cmesh);
+    TPZVec<TPZCompMesh *> & GetMeshVector(TPZCompMesh * cmesh);
     
     void CleanUpMultiphysicsCMesh(TPZCompMesh * cmesh);
     
@@ -112,7 +112,7 @@ public:
     
     void CreateLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
     
-    void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
+    void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZVec<int> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
     
 
     /// create boundary elements of dimension target_dim-1 which lay on the boundary of the three dimensional mesh

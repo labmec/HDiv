@@ -191,18 +191,18 @@ void THybridizeDFN::InsertMaterials(int target_dim, TPZCompMesh * cmesh, int & f
 
 
 
-TPZManVector<int,5> & THybridizeDFN::ExtractActiveApproxSpaces(TPZCompMesh * cmesh){
+TPZVec<int> & THybridizeDFN::ExtractActiveApproxSpaces(TPZCompMesh * cmesh){
     
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
     if (!mp_cmesh) {
         DebugStop();
     }
     
-    TPZManVector<int,5> & active_approx_spaces = mp_cmesh->GetActiveApproximationSpaces();
+    TPZVec<int> & active_approx_spaces = mp_cmesh->GetActiveApproximationSpaces();
     return active_approx_spaces;
 }
 
-TPZManVector<TPZCompMesh *, 3> & THybridizeDFN::GetMeshVector(TPZCompMesh * cmesh){
+TPZVec<TPZCompMesh *> & THybridizeDFN::GetMeshVector(TPZCompMesh * cmesh){
     TPZMultiphysicsCompMesh  * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(cmesh);
     if (!mp_cmesh) {
         DebugStop();
@@ -225,7 +225,6 @@ TPZCompMesh * THybridizeDFN::DuplicateMultiphysicsCMeshMaterials(TPZCompMesh * c
 
 void THybridizeDFN::CleanUpMultiphysicsCMesh(TPZCompMesh * cmesh){
     cmesh->CleanUp();
-    cmesh->SetReference(NULL);
 }
 
 void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id){
@@ -1113,7 +1112,7 @@ TPZCompMesh * THybridizeDFN::Hybridize(TPZCompMesh * cmesh){
     CreateLagrangeMultiplierSpace(p_cmesh, gel_index_and_order_fractures_intersection);
 
     /// Computational multiphysics mesh reconstruction
-    TPZManVector<int,5> & active_approx_spaces = ExtractActiveApproxSpaces(cmesh);
+    TPZVec<int> & active_approx_spaces = ExtractActiveApproxSpaces(cmesh);
     TPZCompMesh * dfn_hybrid_cmesh = DuplicateMultiphysicsCMeshMaterials(cmesh);
     CleanUpMultiphysicsCMesh(cmesh);
     
@@ -1228,7 +1227,7 @@ void THybridizeDFN::CreateLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStac
     
 }
 
-void THybridizeDFN::BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZManVector<int,5> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec){
+void THybridizeDFN::BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZVec<int> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec){
     
     TPZMultiphysicsCompMesh  * mp_hybrid_cmesh = dynamic_cast<TPZMultiphysicsCompMesh * >(hybrid_cmesh);
     if (!mp_hybrid_cmesh) {

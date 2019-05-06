@@ -63,13 +63,13 @@ public:
     }
     
     /** @brief Returns the integrable dimension of the material */
-    int Dimension() const {return m_dimension;}
+    int Dimension() const override {return m_dimension;}
     
     /** @brief Sets material dimension */
     void SetDimension(int dim) { m_dimension = dim; }
     
     /** @brief Returns the number of state variables associated with the material */
-    int NStateVariables() override {return 1;} // Deprecated, must to be removed
+    int NStateVariables() const override {return 1;} // Deprecated, must to be removed
     
     /** @brief Returns material copied form this object */
     virtual TPZMaterial *NewMaterial() override
