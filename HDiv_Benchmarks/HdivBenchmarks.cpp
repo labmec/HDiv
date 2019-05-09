@@ -242,9 +242,9 @@ int main(){
 #endif
     
 
-//    Pretty_cube();
+    Pretty_cube();
 //    Case_1();
-    Case_2();
+//    Case_2();
 //    Case_3();
 //    Case_4();
 
