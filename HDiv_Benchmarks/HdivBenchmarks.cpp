@@ -243,8 +243,8 @@ int main(){
     
 
 //    Pretty_cube();
-    Case_1();
-//     Case_2();
+//    Case_1();
+    Case_2();
 //    Case_3();
 //    Case_4();
 
@@ -372,7 +372,7 @@ void Pretty_cube(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/the_cuttest_cube/cube_many_frac.msh";
+    std::string file_gmsh = source_dir + "/meshes/the_cuttest_cube/cube.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     Geometry.SetFormatVersion(version);
