@@ -242,7 +242,7 @@ int main(){
 #endif
     
 
-    Pretty_cube();
+      Pretty_cube();
 //    Case_1();
 //    Case_2();
 //    Case_3();
@@ -518,7 +518,7 @@ void Pretty_cube(){
     int n_steps = 10;
     REAL dt     = 10.0;
     TPZFMatrix<STATE> M_diag;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    //TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
     
     ///// Post-processing data
     std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
@@ -703,8 +703,8 @@ void Case_1(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
@@ -1601,9 +1601,9 @@ void Case_3(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
