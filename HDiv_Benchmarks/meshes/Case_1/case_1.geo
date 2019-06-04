@@ -1,13 +1,11 @@
 
 Mesh.Algorithm = 6;
 
-h=2;
-
 //h = 1.5;   /// approx 1k tet : 1054 tetrahera and 526 triangles
 
-//h = 0.55;   /// approx 10k tet : 10589 tetrahera and 2884 triangles
+h = 100;   /// approx 1k tet : 10589 tetrahera and 2884 triangles
 
-//h = 0.24;   /// approx 100k tet : 101524 tetrahera and 13436 triangles
+//h = 0.24;   /// approx 1k tet : 101524 tetrahera and 13436 triangles
 
 
 
@@ -49,6 +47,14 @@ Point(16) = {0.0, 100.0, 80.0, fracture_left_siz};
 Point(17) = {0.0, 0.0, 90.0, inlet_siz};
 Point(18) = {0.0, 100.0, 90.0, inlet_siz};
 
+//  layer inlet points JOSE
+Point(19) = {100.0, 0.0, 90.0, inlet_siz};
+Point(20) = {100.0, 100.0, 90.0, inlet_siz};
+
+Point(21) = {100.0, 0.0, 80.0, fracture_left_siz};
+Point(22) = {100.0, 100.0, 80.0, fracture_left_siz};
+Point(23) = {0.0, 0.0, 20.0, fracture_right_siz};
+Point(24) = {0.0, 100.0, 20.0, fracture_right_siz};
 
 // Lines layer one vertical discretization
 Line(1) = {1, 9};
@@ -59,15 +65,15 @@ Line(4) = {3, 11};
 // Lines layer two vertical discretization
 Line(5) = {10, 14};
 Line(6) = {11, 15};
-Line(7) = {12, 16};
-Line(8) = {9, 13};
+Line(7) = {16, 24};
+Line(8) = {13, 23};
 
 Line(9) = {5, 17};
 Line(109) = {17, 13};
 Line(10) = {8, 18};
 Line(110) = {18, 16};
-Line(11) = {6, 14};
-Line(12) = {7, 15};
+Line(11) = {14, 21};
+Line(12) = {15, 22};
 
 // Discretization in x-direction
 Line(13) = {1, 2};
@@ -89,73 +95,179 @@ Line(26) = {9, 12};
 Line(27) = {13, 16};
 Line(28) = {5, 8};
 Line(112) = {17, 18};
+Line(113) = {19, 20};
+Line(114) = {19, 6};
+Line(115) = {7, 20};
+Line(116) = {20, 18};
+Line(117) = {17, 19};
 
-// lower layer volume
-Line Loop(29) = {1, 14, -3, -13};
-Plane Surface(30) = {29};
-Line Loop(31) = {3, 22, -4, -21};
-Plane Surface(32) = {31};
-Line Loop(33) = {4, -18, -2, 17};
-Plane Surface(34) = {33};
-Line Loop(35) = {2, -26, -1, 25};
-Plane Surface(36) = {35};
-Line Loop(37) = {25, 17, -21, -13};
-Plane Surface(38) = {37};
-Line Loop(39) = {26, 18, -22, -14};
-Plane Surface(40) = {39};
-Surface Loop(41) = {40, 36, 34, 32, 30, 38};
-Volume(42) = {41};
 
-// upper layer volumes
-Line Loop(43) = {8, 15, -5, -14};
-Plane Surface(44) = {43};
-Line Loop(45) = {5, 23, -6, -22};
-Plane Surface(46) = {45};
-Line Loop(47) = {18, 6, -19, -7};
-Plane Surface(48) = {47};
-Line Loop(49) = {7, -27, -8, 26};
-Plane Surface(50) = {49};
-Line Loop(51) = {15, 23, -19, -27};
-Plane Surface(52) = {51}; // fault plane
-Surface Loop(53) = {52, 44, 50, 48, 46, 40};
-Volume(54) = {53};
-Line Loop(55) = {15, -11, -16, 9, 109};
-Plane Surface(56) = {55};
-Line Loop(57) = {11, 23, -12, -24};
-Plane Surface(58) = {57};
-Line Loop(59) = {12, -19, -10, -110, 20};
-Plane Surface(60) = {59};
-Line Loop(61) = {10, -112, -9, 28};
-Plane Surface(62) = {61};
-Line Loop(161) = {110, -27, -109, 112};
-Plane Surface(162) = {161};
-Line Loop(63) = {28, 20, -24, -16};
-Plane Surface(64) = {63};
-Surface Loop(65) = {64, 62, 162, 60, 58, 56, 52};
-Volume(66) = {65};
+//JOSE
+Line(118) = {21, 13};
+Line(119) = {21, 22};
+Line(120) = {22, 16};
+Line(121) = {19, 21};
+Line(122) = {20, 22};
 
-vol_1[] = {42};
-vol_2[] = {66, 54};
+Line(123) = {15, 24};
+Line(124) = {23, 24};
+Line(125) = {23, 14};
 
-Surface {52} In Volume {54};
-Surface {52} In Volume {66};
+Line(126) = {9, 23};
+Line(127) = {12, 24};//+
+Curve Loop(1) = {20, -24, -16, 28};
+//+
+Plane Surface(1) = {1};
+//+
+Curve Loop(2) = {112, -116, -113, -117};
+//+
+Plane Surface(2) = {2};
+//+
+Curve Loop(3) = {118, 27, -120, -119};
+//+
+Plane Surface(3) = {3};
+//+
+Curve Loop(4) = {125, 23, 123, -124};
+//+
+Plane Surface(4) = {4};
+//+
+Curve Loop(5) = {14, 22, -18, -26};
+//+
+Plane Surface(5) = {5};
+//+
+Curve Loop(6) = {13, 21, -17, -25};
+//+
+Plane Surface(6) = {6};
+//+
+Curve Loop(7) = {15, 23, -19, -27};
+//+
+Plane Surface(7) = {7};
+//+
+Curve Loop(8) = {24, 115, -113, 114};
+//+
+Plane Surface(8) = {8};
+//+
+Curve Loop(9) = {121, 119, -122, -113};
+//+
+Plane Surface(9) = {9};
+//+
+Curve Loop(10) = {11, 119, -12, -23};
+//+
+Plane Surface(10) = {10};
+//+
+Curve Loop(11) = {5, 23, -6, -22};
+//+
+Plane Surface(11) = {11};
+//+
+Curve Loop(12) = {3, 22, -4, -21};
+//+
+Plane Surface(12) = {12};
+//+
+Curve Loop(13) = {112, 110, -27, -109};
+//+
+Plane Surface(13) = {13};
+//+
+Curve Loop(14) = {28, 10, -112, -9};
+//+
+Plane Surface(14) = {14};
+//+
+Curve Loop(15) = {8, 124, -7, -27};
+//+
+Plane Surface(15) = {15};
+//+
+Curve Loop(16) = {124, -127, -26, 126};
+//+
+Plane Surface(16) = {16};
+//+
+Curve Loop(17) = {26, -2, -25, 1};
+//+
+Plane Surface(17) = {17};
+//+
+Curve Loop(18) = {20, 115, 116, -10};
+//+
+Plane Surface(18) = {18};
+//+
+Curve Loop(19) = {116, 110, -120, -122};
+//+
+Plane Surface(19) = {19};
+//+
+Curve Loop(20) = {120, 19, 12};
+//+
+Plane Surface(20) = {20};
+//+
+Curve Loop(21) = {19, 123, -7};
+//+
+Plane Surface(21) = {21};
+//+
+Curve Loop(22) = {123, -127, 18, 6};
+//+
+Plane Surface(22) = {22};
+//+
+Curve Loop(23) = {18, -4, -17, 2};
+//+
+Plane Surface(23) = {23};
+//+
+Curve Loop(24) = {16, -114, -117, -9};
+//+
+Plane Surface(24) = {24};
+//+
+Curve Loop(25) = {117, 121, 118, -109};
+//+
+Plane Surface(25) = {25};
+//+
+Curve Loop(26) = {118, 15, 11};
+//+
+Plane Surface(26) = {26};
+//+
+Curve Loop(27) = {15, -125, -8};
+//+
+Plane Surface(27) = {27};
+//+
+Curve Loop(28) = {125, -5, -14, 126};
+//+
+Plane Surface(28) = {28};
+//+
+Curve Loop(29) = {14, -3, -13, 1};
+//+
+Plane Surface(29) = {29};
+//+
+Surface Loop(1) = {6, 29, 12, 23, 17, 5};
+//+
+Volume(1) = {1};
+//+
+Surface Loop(2) = {5, 11, 28, 16, 22, 4};
+//+
+Volume(2) = {2};
+//+
+Surface Loop(3) = {4, 7, 27, 15, 21};
+//+
+Volume(3) = {3};
+//+
+Surface Loop(4) = {7, 26, 10, 20, 3};
+//+
+Volume(4) = {4};
+//+
+Surface Loop(5) = {19, 13, 25, 9, 3, 2};
+//+
+Volume(5) = {5};
+//+
+Surface Loop(6) = {2, 1, 18, 8, 24, 14};
+//+
+Volume(6) = {6};
+
+//+
+Physical Volume("RockMatrix_1") = {6, 5, 3, 2,4};
+
+//+
+Physical Volume("RockMatrix_2") = {1};
+
 
 Coherence;
 
-fracture_l[] = {15,27,19,23};
-inlet_vl[] = {9,10};
-inlet_hl[] = {112,28};
-outlet_vl[] = {3,1};
-outlet_hl[] = {14,13};
+Transfinite Line "*" = 2 Using Bump 1;
+Transfinite Surface "*";
+Recombine Surface "*";
+Transfinite Volume "*";//+
 
-
-Physical Volume("RockMatrix_1") = {vol_1[]};
-Physical Volume("RockMatrix_2") = {vol_2[]};
-
-Physical Surface("BCInlet") = {62};
-Physical Surface("BCOutlet") = {30};
-Physical Surface("BCImpervious") = {32, 44, 50, 56, 58, 46, 60, 48, 162, 64, 36, 34, 38};
-
-Physical Surface("Fractures") = {52};
 
 

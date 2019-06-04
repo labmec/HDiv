@@ -182,7 +182,7 @@ void SeparateConnectsByFracId(TPZCompMesh * mixed_cmesh,int fracid);
 void InsertFractureMaterial(TPZCompMesh *cmesh);
 TPZVec<REAL> MidPoint(TPZVec<REAL> & x_i, TPZVec<REAL> & x_e);
 void AdjustMaterialIdBoundary(TPZMultiphysicsCompMesh *cmesh);
-TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh, TPZStack<TFracture> &fractures);
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh, TPZStack<TFracture> &fractures, int ref);
 
 void InsertTransportInterfaceElements(TPZMultiphysicsCompMesh *cmesh);
 TPZMultiphysicsCompMesh * MPTransportMesh(TPZMultiphysicsCompMesh * mixed, TPZStack<TFracture> & fracture_data ,SimulationCase sim_data, TPZVec<TPZCompMesh *> &meshvec);
@@ -196,7 +196,7 @@ void UniformRefinement(TPZGeoMesh * geometry, int h_level);
 
 void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, std::vector<int> & cel_indexes);
 
-TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag);
+TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag, bool mult);
 
 void VolumeMatrix(TPZAnalysis * tracer_analysis, TPZFMatrix<STATE> & M_vol_diag);
 
@@ -242,11 +242,11 @@ int main(){
 #endif
     
 
-      Pretty_cube();
-//    Case_1();
-//    Case_2();
+//    Pretty_cube();
+//   Case_4();
+//     Case_2();
 //    Case_3();
-//    Case_4();
+    Case_1();
 
 }
 
@@ -326,8 +326,6 @@ void Pretty_cube(){
     TPZStack<TFracture> fracture_data;
     TFracture fracture;
     fracture.m_id.insert(6);
-    fracture.m_id.insert(7);
-    fracture.m_id.insert(8);
     fracture.m_dim              = 2;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
@@ -335,7 +333,7 @@ void Pretty_cube(){
     fracture.m_porosity         = 0.5;
     fracture_data.push_back(fracture);
     fracture.m_id.clear();
-    fracture.m_id.insert(9);
+    fracture.m_id.insert(7);
     fracture.m_dim              = 1;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
@@ -343,7 +341,7 @@ void Pretty_cube(){
     fracture.m_porosity         = 1.0;
     fracture_data.push_back(fracture);
     fracture.m_id.clear();
-    fracture.m_id.insert(10);
+    fracture.m_id.insert(8);
     fracture.m_dim              = 0;
     fracture.m_kappa_normal     = 1.0e20;
     fracture.m_kappa_tangential = 1.0;
@@ -358,17 +356,17 @@ void Pretty_cube(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
     dim_name_and_physical_tag[2]["BCOutlet"] = 4;
     dim_name_and_physical_tag[2]["BCImpervious"] = 5;
     dim_name_and_physical_tag[2]["Fractures_1"] = 6;
-    dim_name_and_physical_tag[2]["Fractures_2"] = 7;
-    dim_name_and_physical_tag[2]["Fractures_3"] = 8;
-    dim_name_and_physical_tag[1]["FracturesIntersections"] = 9;
-    dim_name_and_physical_tag[0]["CrossingIntresections"] = 10;
+    dim_name_and_physical_tag[2]["Fractures_2"] = 6;
+    dim_name_and_physical_tag[2]["Fractures_3"] = 6;
+    dim_name_and_physical_tag[1]["FracturesIntersections"] = 7;
+    dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
@@ -420,7 +418,7 @@ void Pretty_cube(){
 #endif
 
     
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data,0);
     
 #ifdef PZDEBUG
     {
@@ -518,7 +516,7 @@ void Pretty_cube(){
     int n_steps = 10;
     REAL dt     = 10.0;
     TPZFMatrix<STATE> M_diag;
-    //TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag, false);
     
     ///// Post-processing data
     std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
@@ -691,7 +689,7 @@ void Case_1(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -714,7 +712,7 @@ void Case_1(){
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
-    UniformRefinement(gmesh, h_level);
+    UniformRefinement(gmesh, 2);
     
 #ifdef PZDEBUG
     std::ofstream file("geometry_case_1_base.vtk");
@@ -724,10 +722,11 @@ void Case_1(){
 #endif
     
     
-    int p_order = 1;
+    int p_order = 4;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
+    
 //#ifdef PZDEBUG
 //    std::ofstream filemixed("mixed_cmesh.txt");
 //    cmixedmesh->Print(filemixed);
@@ -745,7 +744,7 @@ void Case_1(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data,1);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -815,7 +814,7 @@ void Case_1(){
     int n_steps = 100;
     REAL dt     = 1.0e7;
     TPZFMatrix<STATE> M_diag;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag, true);
     
     ///// Post-processing data
     std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
@@ -1169,7 +1168,7 @@ void Case_2(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -1179,7 +1178,7 @@ void Case_2(){
     dim_name_and_physical_tag[1]["FracturesIntersections"] = 7;
     dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
     
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag_auxiliary(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag_auxiliary(4); // From 0D to 3D
     dim_name_and_physical_tag_auxiliary[3]["RockMatrix_1"] = -1986;
     dim_name_and_physical_tag_auxiliary[3]["RockMatrix_2"] = -1986;
     dim_name_and_physical_tag_auxiliary[2]["BCInlet"] = -1986;
@@ -1192,8 +1191,8 @@ void Case_2(){
     TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
 //    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -1242,7 +1241,7 @@ void Case_2(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data,0);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -1337,7 +1336,7 @@ void Case_2(){
     int n_steps = 100;
     REAL dt     = 0.0025;
     TPZFMatrix<STATE> M_diag, M_vol;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag,false);
     VolumeMatrix(tracer_analysis, M_vol);
     
     ///// Post-processing data
@@ -1582,7 +1581,7 @@ void Case_3(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -1601,8 +1600,8 @@ void Case_3(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
-//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
+      std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
@@ -1644,7 +1643,7 @@ void Case_3(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data,0);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -1736,10 +1735,10 @@ void Case_3(){
     
     
     
-    int n_steps = 100;
+    int n_steps = 50;
     REAL dt     = 0.01;
     TPZFMatrix<STATE> M_diag, M_vol;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag,false);
     VolumeMatrix(tracer_analysis, M_vol);
 
     ///// Post-processing data
@@ -2125,7 +2124,7 @@ void Case_4(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["DOMAIN"]=1;
     dim_name_and_physical_tag[2]["AUXILIARY_52"]=5;
     dim_name_and_physical_tag[2]["AUXILIARY_53"]=5;
@@ -2400,7 +2399,7 @@ void Case_4(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data);
+    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data,0);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
@@ -2474,19 +2473,19 @@ void Case_4(){
         std::set<int> mat_id_3D;
         mat_id_3D.insert(1);
         mat_id_3D.insert(2);
-        std::string file_reservoir("field.vtk");
+        std::string file_reservoir("field_case4.vtk");
         an->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
         an->PostProcess(div,3);
         
         std::set<int> mat_id_2D;
         mat_id_2D.insert(6);
-        std::string file_frac("fracture.vtk");
+        std::string file_frac("fracture_case4.vtk");
         an->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
         an->PostProcess(div,2);
         
         std::set<int> mat_id_1D;
         mat_id_1D.insert(7);
-        std::string file_frac_intersections("fracture_intersections.vtk");
+        std::string file_frac_intersections("fracture_intersections_case4.vtk");
         an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
         an->PostProcess(div,1);
     }
@@ -2495,362 +2494,362 @@ void Case_4(){
     int n_steps = 100;
     REAL dt     = 50.0;
     TPZFMatrix<STATE> M_diag, M_vol;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag,false);
     VolumeMatrix(tracer_analysis, M_vol);
     
-    
-    int target_mat_id_in = 3;
-    std::map<int, REAL> gel_index_to_int_qn_inlet;
-    std::map<int, REAL> gel_index_to_int_p_inlet;
-    IntegrateFluxAndPressure(target_mat_id_in, meshtrvec, gel_index_to_int_qn_inlet, gel_index_to_int_p_inlet);
-    
-    REAL qn_inlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_qn_inlet) {
-        qn_inlet_integral += pair.second;
-    }
-    
-    REAL p_inlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_p_inlet) {
-        p_inlet_integral += pair.second;
-    }
-    
-    int target_mat_id_out = 4;
-    std::map<int, REAL> gel_index_to_int_qn;
-    std::map<int, REAL> gel_index_to_int_p;
-    IntegrateFluxAndPressure(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
-    
-    REAL qn_outlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_qn) {
-        qn_outlet_integral += pair.second;
-    }
-    
-    REAL p_outlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_p) {
-        p_outlet_integral += pair.second;
-    }
-    
-    std::map<int, REAL> gel_index_to_int_qn_1;
-    std::map<int, REAL> gel_index_to_int_p_1;
-    IntegrateFluxAndPressure(gel_indexes_outlet_1, meshtrvec, gel_index_to_int_qn_1, gel_index_to_int_p_1);
-    
-    REAL qn_outlet_integral_1 = 0.0;
-    for (auto pair : gel_index_to_int_qn_1) {
-        qn_outlet_integral_1 += pair.second;
-    }
-    
-    REAL p_outlet_integral_1 = 0.0;
-    for (auto pair : gel_index_to_int_p_1) {
-        p_outlet_integral_1 += pair.second;
-    }
-    
-    std::map<int, REAL> gel_index_to_int_qn_2;
-    std::map<int, REAL> gel_index_to_int_p_2;
-    IntegrateFluxAndPressure(gel_indexes_outlet_2, meshtrvec, gel_index_to_int_qn_2, gel_index_to_int_p_2);
-    
-    REAL qn_outlet_integral_2 = 0.0;
-    for (auto pair : gel_index_to_int_qn_2) {
-        qn_outlet_integral_2 += pair.second;
-    }
-    
-    REAL p_outlet_integral_2 = 0.0;
-    for (auto pair : gel_index_to_int_p_2) {
-        p_outlet_integral_2 += pair.second;
-    }
-
-    
-    log_file << std::endl;
-    log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
-    log_file << "Inlet boundary : " << std::endl;
-    log_file << "Integrated flux q on inlet boundary = " << qn_inlet_integral << std::endl;
-    log_file << "Integrated pressure p on inlet boundary = " << p_inlet_integral << std::endl;
-    log_file << "Outlet boundary : " << std::endl;
-    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
-    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
-    log_file << "Outlet boundary 0 : " << std::endl;
-    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral_1 << std::endl;
-    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral_1 << std::endl;
-    log_file << "Outlet boundary 1 : " << std::endl;
-    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral_2 << std::endl;
-    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral_2 << std::endl;
-    
-    ///// Post-processing data
-    
-    std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
-    {
-        std::set<int> volumetric_mat_ids = {6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57}; /// Available materials
-        TPZCompMesh * s_cmesh = meshtrvec[2];
-        if (!s_cmesh) {
-            DebugStop();
-        }
-        TPZGeoMesh * geometry = cmesh_transport->Reference();
-        if (!geometry) {
-            DebugStop();
-        }
-        geometry->ResetReference();
-        cmesh_transport->LoadReferences();
-        
-        for (auto cel : cmesh_transport->ElementVec()) {
-            if (!cel) {
-                continue;
-            }
-            TPZGeoEl * gel = cel->Reference();
-            if (!gel) {
-                DebugStop();
-            }
-            int mat_id = gel->MaterialId();
-            int gel_dim = gel->Dimension();
-            
-            int n_connects = cel->NConnects();
-            if (n_connects==0 || n_connects==2) {
-                continue;
-            }
-            
-            if (n_connects!=1) {
-                DebugStop();
-            }
-            
-            TPZConnect & c = cel->Connect(0);
-            int64_t equ = c.SequenceNumber(); // because polynomial order is zero, i.e. block size = 1.
-            dim_mat_id_dof_indexes[gel_dim][mat_id].push_back(equ);
-            
-        }
-    }
-    
-    TPZFMatrix<STATE> M_ones(M_diag.Rows(),1,1.0);
-    TPZFMatrix<STATE> ones = saturations;
-    for (int i = 0; i < ones.Rows(); i++) {
-        M_ones(i,0) = 1.0;
-        for (int j = 0; j < ones.Cols(); j++) {
-            ones(i,j) = 1.0;
-        }
-    }
-    TPZFMatrix<REAL> item_5(n_steps+1,53,0.0);
-    for (int it = 1; it <= n_steps; it++) {
-        
-        REAL time = it*dt;
-        
-        item_5(it,0) = time;
-        
-        REAL int_c_0=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][6],saturations,M_vol);
-        REAL int_omega_0=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][6],ones,M_vol);
-        item_5(it,1)=int_c_0/int_omega_0;
-        
-        REAL int_c_1=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][7],saturations,M_vol);
-        REAL int_omega_1=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][7],ones,M_vol);
-        item_5(it,2)=int_c_1/int_omega_1;
-        
-        REAL int_c_2=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][8],saturations,M_vol);
-        REAL int_omega_2=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][8],ones,M_vol);
-        item_5(it,3)=int_c_2/int_omega_2;
-        
-        REAL int_c_3=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][9],saturations,M_vol);
-        REAL int_omega_3=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][9],ones,M_vol);
-        item_5(it,4)=int_c_3/int_omega_3;
-        
-        REAL int_c_4=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][10],saturations,M_vol);
-        REAL int_omega_4=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][10],ones,M_vol);
-        item_5(it,5)=int_c_4/int_omega_4;
-        
-        REAL int_c_5=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][11],saturations,M_vol);
-        REAL int_omega_5=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][11],ones,M_vol);
-        item_5(it,6)=int_c_5/int_omega_5;
-        
-        REAL int_c_6=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][12],saturations,M_vol);
-        REAL int_omega_6=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][12],ones,M_vol);
-        item_5(it,7)=int_c_6/int_omega_6;
-        
-        REAL int_c_7=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][13],saturations,M_vol);
-        REAL int_omega_7=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][13],ones,M_vol);
-        item_5(it,8)=int_c_7/int_omega_7;
-        
-        REAL int_c_8=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][14],saturations,M_vol);
-        REAL int_omega_8=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][14],ones,M_vol);
-        item_5(it,9)=int_c_8/int_omega_8;
-        
-        REAL int_c_9=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][15],saturations,M_vol);
-        REAL int_omega_9=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][15],ones,M_vol);
-        item_5(it,10)=int_c_9/int_omega_9;
-        
-        REAL int_c_10=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][16],saturations,M_vol);
-        REAL int_omega_10=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][16],ones,M_vol);
-        item_5(it,11)=int_c_10/int_omega_10;
-        
-        REAL int_c_11=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][17],saturations,M_vol);
-        REAL int_omega_11=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][17],ones,M_vol);
-        item_5(it,12)=int_c_11/int_omega_11;
-        
-        REAL int_c_12=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][18],saturations,M_vol);
-        REAL int_omega_12=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][18],ones,M_vol);
-        item_5(it,13)=int_c_12/int_omega_12;
-        
-        REAL int_c_13=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][19],saturations,M_vol);
-        REAL int_omega_13=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][19],ones,M_vol);
-        item_5(it,14)=int_c_13/int_omega_13;
-        
-        REAL int_c_14=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][20],saturations,M_vol);
-        REAL int_omega_14=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][20],ones,M_vol);
-        item_5(it,15)=int_c_14/int_omega_14;
-        
-        REAL int_c_15=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][21],saturations,M_vol);
-        REAL int_omega_15=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][21],ones,M_vol);
-        item_5(it,16)=int_c_15/int_omega_15;
-        
-        REAL int_c_16=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][22],saturations,M_vol);
-        REAL int_omega_16=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][22],ones,M_vol);
-        item_5(it,17)=int_c_16/int_omega_16;
-        
-        REAL int_c_17=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][23],saturations,M_vol);
-        REAL int_omega_17=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][23],ones,M_vol);
-        item_5(it,18)=int_c_17/int_omega_17;
-        
-        REAL int_c_18=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][24],saturations,M_vol);
-        REAL int_omega_18=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][24],ones,M_vol);
-        item_5(it,19)=int_c_18/int_omega_18;
-        
-        REAL int_c_19=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][25],saturations,M_vol);
-        REAL int_omega_19=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][25],ones,M_vol);
-        item_5(it,20)=int_c_19/int_omega_19;
-        
-        REAL int_c_20=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][26],saturations,M_vol);
-        REAL int_omega_20=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][26],ones,M_vol);
-        item_5(it,21)=int_c_20/int_omega_20;
-        
-        REAL int_c_21=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][27],saturations,M_vol);
-        REAL int_omega_21=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][27],ones,M_vol);
-        item_5(it,22)=int_c_21/int_omega_21;
-        
-        REAL int_c_22=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][28],saturations,M_vol);
-        REAL int_omega_22=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][28],ones,M_vol);
-        item_5(it,23)=int_c_22/int_omega_22;
-        
-        REAL int_c_23=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][29],saturations,M_vol);
-        REAL int_omega_23=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][29],ones,M_vol);
-        item_5(it,24)=int_c_23/int_omega_23;
-        
-        REAL int_c_24=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][30],saturations,M_vol);
-        REAL int_omega_24=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][30],ones,M_vol);
-        item_5(it,25)=int_c_24/int_omega_24;
-        
-        REAL int_c_25=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][31],saturations,M_vol);
-        REAL int_omega_25=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][31],ones,M_vol);
-        item_5(it,26)=int_c_25/int_omega_25;
-        
-        REAL int_c_26=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][32],saturations,M_vol);
-        REAL int_omega_26=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][32],ones,M_vol);
-        item_5(it,27)=int_c_26/int_omega_26;
-        
-        REAL int_c_27=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][33],saturations,M_vol);
-        REAL int_omega_27=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][33],ones,M_vol);
-        item_5(it,28)=int_c_27/int_omega_27;
-        
-        REAL int_c_28=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][34],saturations,M_vol);
-        REAL int_omega_28=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][34],ones,M_vol);
-        item_5(it,29)=int_c_28/int_omega_28;
-        
-        REAL int_c_29=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][35],saturations,M_vol);
-        REAL int_omega_29=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][35],ones,M_vol);
-        item_5(it,30)=int_c_29/int_omega_29;
-        
-        REAL int_c_30=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][36],saturations,M_vol);
-        REAL int_omega_30=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][36],ones,M_vol);
-        item_5(it,31)=int_c_30/int_omega_30;
-        
-        REAL int_c_31=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][37],saturations,M_vol);
-        REAL int_omega_31=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][37],ones,M_vol);
-        item_5(it,32)=int_c_31/int_omega_31;
-        
-        REAL int_c_32=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][38],saturations,M_vol);
-        REAL int_omega_32=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][38],ones,M_vol);
-        item_5(it,33)=int_c_32/int_omega_32;
-        
-        REAL int_c_33=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][39],saturations,M_vol);
-        REAL int_omega_33=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][39],ones,M_vol);
-        item_5(it,34)=int_c_33/int_omega_33;
-        
-        REAL int_c_34=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][40],saturations,M_vol);
-        REAL int_omega_34=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][40],ones,M_vol);
-        item_5(it,35)=int_c_34/int_omega_34;
-        
-        REAL int_c_35=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][41],saturations,M_vol);
-        REAL int_omega_35=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][41],ones,M_vol);
-        item_5(it,36)=int_c_35/int_omega_35;
-        
-        REAL int_c_36=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][42],saturations,M_vol);
-        REAL int_omega_36=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][42],ones,M_vol);
-        item_5(it,37)=int_c_36/int_omega_36;
-        
-        REAL int_c_37=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][43],saturations,M_vol);
-        REAL int_omega_37=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][43],ones,M_vol);
-        item_5(it,38)=int_c_37/int_omega_37;
-        
-        REAL int_c_38=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][44],saturations,M_vol);
-        REAL int_omega_38=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][44],ones,M_vol);
-        item_5(it,39)=int_c_38/int_omega_38;
-        
-        REAL int_c_39=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][45],saturations,M_vol);
-        REAL int_omega_39=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][45],ones,M_vol);
-        item_5(it,40)=int_c_39/int_omega_39;
-        
-        REAL int_c_40=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][46],saturations,M_vol);
-        REAL int_omega_40=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][46],ones,M_vol);
-        item_5(it,41)=int_c_40/int_omega_40;
-        
-        REAL int_c_41=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][47],saturations,M_vol);
-        REAL int_omega_41=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][47],ones,M_vol);
-        item_5(it,42)=int_c_41/int_omega_41;
-        
-        REAL int_c_42=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][48],saturations,M_vol);
-        REAL int_omega_42=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][48],ones,M_vol);
-        item_5(it,43)=int_c_42/int_omega_42;
-        
-        REAL int_c_43=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][49],saturations,M_vol);
-        REAL int_omega_43=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][49],ones,M_vol);
-        item_5(it,44)=int_c_43/int_omega_43;
-        
-        REAL int_c_44=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][50],saturations,M_vol);
-        REAL int_omega_44=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][50],ones,M_vol);
-        item_5(it,45)=int_c_44/int_omega_44;
-        
-        REAL int_c_45=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][51],saturations,M_vol);
-        REAL int_omega_45=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][51],ones,M_vol);
-        item_5(it,46)=int_c_45/int_omega_45;
-        
-        REAL int_c_46=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][52],saturations,M_vol);
-        REAL int_omega_46=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][52],ones,M_vol);
-        item_5(it,47)=int_c_46/int_omega_46;
-        
-        REAL int_c_47=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][53],saturations,M_vol);
-        REAL int_omega_47=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][53],ones,M_vol);
-        item_5(it,48)=int_c_47/int_omega_47;
-        
-        REAL int_c_48=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][54],saturations,M_vol);
-        REAL int_omega_48=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][54],ones,M_vol);
-        item_5(it,49)=int_c_48/int_omega_48;
-        
-        REAL int_c_49=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][55],saturations,M_vol);
-        REAL int_omega_49=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][55],ones,M_vol);
-        item_5(it,50)=int_c_49/int_omega_49;
-        
-        REAL int_c_50=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][56],saturations,M_vol);
-        REAL int_omega_50=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][56],ones,M_vol);
-        item_5(it,51)=int_c_50/int_omega_50;
-        
-        REAL int_c_51=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][57],saturations,M_vol);
-        REAL int_omega_51=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][57],ones,M_vol);
-        item_5(it,52)=int_c_51/int_omega_51;
-        
-    }
-    
-    log_file << std::endl;
-    log_file << "Integral of concentration on fracture for each time value : " << std::endl;
-    item_5.Print("it5 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
-    log_file << std::endl;
-    log_file.flush();
-    
-    std::ofstream file_5("item_5.txt");
-    item_5.Print("it5 = ",file_5,EMathematicaInput);
-    
+//
+//    int target_mat_id_in = 3;
+//    std::map<int, REAL> gel_index_to_int_qn_inlet;
+//    std::map<int, REAL> gel_index_to_int_p_inlet;
+//    IntegrateFluxAndPressure(target_mat_id_in, meshtrvec, gel_index_to_int_qn_inlet, gel_index_to_int_p_inlet);
+//
+//    REAL qn_inlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_qn_inlet) {
+//        qn_inlet_integral += pair.second;
+//    }
+//
+//    REAL p_inlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_p_inlet) {
+//        p_inlet_integral += pair.second;
+//    }
+//
+//    int target_mat_id_out = 4;
+//    std::map<int, REAL> gel_index_to_int_qn;
+//    std::map<int, REAL> gel_index_to_int_p;
+//    IntegrateFluxAndPressure(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
+//
+//    REAL qn_outlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_qn) {
+//        qn_outlet_integral += pair.second;
+//    }
+//
+//    REAL p_outlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_p) {
+//        p_outlet_integral += pair.second;
+//    }
+//
+//    std::map<int, REAL> gel_index_to_int_qn_1;
+//    std::map<int, REAL> gel_index_to_int_p_1;
+//    IntegrateFluxAndPressure(gel_indexes_outlet_1, meshtrvec, gel_index_to_int_qn_1, gel_index_to_int_p_1);
+//
+//    REAL qn_outlet_integral_1 = 0.0;
+//    for (auto pair : gel_index_to_int_qn_1) {
+//        qn_outlet_integral_1 += pair.second;
+//    }
+//
+//    REAL p_outlet_integral_1 = 0.0;
+//    for (auto pair : gel_index_to_int_p_1) {
+//        p_outlet_integral_1 += pair.second;
+//    }
+//
+//    std::map<int, REAL> gel_index_to_int_qn_2;
+//    std::map<int, REAL> gel_index_to_int_p_2;
+//    IntegrateFluxAndPressure(gel_indexes_outlet_2, meshtrvec, gel_index_to_int_qn_2, gel_index_to_int_p_2);
+//
+//    REAL qn_outlet_integral_2 = 0.0;
+//    for (auto pair : gel_index_to_int_qn_2) {
+//        qn_outlet_integral_2 += pair.second;
+//    }
+//
+//    REAL p_outlet_integral_2 = 0.0;
+//    for (auto pair : gel_index_to_int_p_2) {
+//        p_outlet_integral_2 += pair.second;
+//    }
+//
+//
+//    log_file << std::endl;
+//    log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
+//    log_file << "Inlet boundary : " << std::endl;
+//    log_file << "Integrated flux q on inlet boundary = " << qn_inlet_integral << std::endl;
+//    log_file << "Integrated pressure p on inlet boundary = " << p_inlet_integral << std::endl;
+//    log_file << "Outlet boundary : " << std::endl;
+//    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
+//    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
+//    log_file << "Outlet boundary 0 : " << std::endl;
+//    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral_1 << std::endl;
+//    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral_1 << std::endl;
+//    log_file << "Outlet boundary 1 : " << std::endl;
+//    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral_2 << std::endl;
+//    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral_2 << std::endl;
+//
+//    ///// Post-processing data
+//
+//    std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
+//    {
+//        std::set<int> volumetric_mat_ids = {6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57}; /// Available materials
+//        TPZCompMesh * s_cmesh = meshtrvec[2];
+//        if (!s_cmesh) {
+//            DebugStop();
+//        }
+//        TPZGeoMesh * geometry = cmesh_transport->Reference();
+//        if (!geometry) {
+//            DebugStop();
+//        }
+//        geometry->ResetReference();
+//        cmesh_transport->LoadReferences();
+//
+//        for (auto cel : cmesh_transport->ElementVec()) {
+//            if (!cel) {
+//                continue;
+//            }
+//            TPZGeoEl * gel = cel->Reference();
+//            if (!gel) {
+//                DebugStop();
+//            }
+//            int mat_id = gel->MaterialId();
+//            int gel_dim = gel->Dimension();
+//
+//            int n_connects = cel->NConnects();
+//            if (n_connects==0 || n_connects==2) {
+//                continue;
+//            }
+//
+//            if (n_connects!=1) {
+//                DebugStop();
+//            }
+//
+//            TPZConnect & c = cel->Connect(0);
+//            int64_t equ = c.SequenceNumber(); // because polynomial order is zero, i.e. block size = 1.
+//            dim_mat_id_dof_indexes[gel_dim][mat_id].push_back(equ);
+//
+//        }
+//    }
+//
+//    TPZFMatrix<STATE> M_ones(M_diag.Rows(),1,1.0);
+//    TPZFMatrix<STATE> ones = saturations;
+//    for (int i = 0; i < ones.Rows(); i++) {
+//        M_ones(i,0) = 1.0;
+//        for (int j = 0; j < ones.Cols(); j++) {
+//            ones(i,j) = 1.0;
+//        }
+//    }
+//    TPZFMatrix<REAL> item_5(n_steps+1,53,0.0);
+//    for (int it = 1; it <= n_steps; it++) {
+//
+//        REAL time = it*dt;
+//
+//        item_5(it,0) = time;
+//
+//        REAL int_c_0=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][6],saturations,M_vol);
+//        REAL int_omega_0=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][6],ones,M_vol);
+//        item_5(it,1)=int_c_0/int_omega_0;
+//
+//        REAL int_c_1=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][7],saturations,M_vol);
+//        REAL int_omega_1=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][7],ones,M_vol);
+//        item_5(it,2)=int_c_1/int_omega_1;
+//
+//        REAL int_c_2=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][8],saturations,M_vol);
+//        REAL int_omega_2=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][8],ones,M_vol);
+//        item_5(it,3)=int_c_2/int_omega_2;
+//
+//        REAL int_c_3=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][9],saturations,M_vol);
+//        REAL int_omega_3=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][9],ones,M_vol);
+//        item_5(it,4)=int_c_3/int_omega_3;
+//
+//        REAL int_c_4=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][10],saturations,M_vol);
+//        REAL int_omega_4=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][10],ones,M_vol);
+//        item_5(it,5)=int_c_4/int_omega_4;
+//
+//        REAL int_c_5=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][11],saturations,M_vol);
+//        REAL int_omega_5=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][11],ones,M_vol);
+//        item_5(it,6)=int_c_5/int_omega_5;
+//
+//        REAL int_c_6=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][12],saturations,M_vol);
+//        REAL int_omega_6=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][12],ones,M_vol);
+//        item_5(it,7)=int_c_6/int_omega_6;
+//
+//        REAL int_c_7=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][13],saturations,M_vol);
+//        REAL int_omega_7=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][13],ones,M_vol);
+//        item_5(it,8)=int_c_7/int_omega_7;
+//
+//        REAL int_c_8=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][14],saturations,M_vol);
+//        REAL int_omega_8=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][14],ones,M_vol);
+//        item_5(it,9)=int_c_8/int_omega_8;
+//
+//        REAL int_c_9=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][15],saturations,M_vol);
+//        REAL int_omega_9=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][15],ones,M_vol);
+//        item_5(it,10)=int_c_9/int_omega_9;
+//
+//        REAL int_c_10=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][16],saturations,M_vol);
+//        REAL int_omega_10=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][16],ones,M_vol);
+//        item_5(it,11)=int_c_10/int_omega_10;
+//
+//        REAL int_c_11=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][17],saturations,M_vol);
+//        REAL int_omega_11=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][17],ones,M_vol);
+//        item_5(it,12)=int_c_11/int_omega_11;
+//
+//        REAL int_c_12=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][18],saturations,M_vol);
+//        REAL int_omega_12=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][18],ones,M_vol);
+//        item_5(it,13)=int_c_12/int_omega_12;
+//
+//        REAL int_c_13=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][19],saturations,M_vol);
+//        REAL int_omega_13=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][19],ones,M_vol);
+//        item_5(it,14)=int_c_13/int_omega_13;
+//
+//        REAL int_c_14=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][20],saturations,M_vol);
+//        REAL int_omega_14=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][20],ones,M_vol);
+//        item_5(it,15)=int_c_14/int_omega_14;
+//
+//        REAL int_c_15=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][21],saturations,M_vol);
+//        REAL int_omega_15=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][21],ones,M_vol);
+//        item_5(it,16)=int_c_15/int_omega_15;
+//
+//        REAL int_c_16=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][22],saturations,M_vol);
+//        REAL int_omega_16=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][22],ones,M_vol);
+//        item_5(it,17)=int_c_16/int_omega_16;
+//
+//        REAL int_c_17=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][23],saturations,M_vol);
+//        REAL int_omega_17=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][23],ones,M_vol);
+//        item_5(it,18)=int_c_17/int_omega_17;
+//
+//        REAL int_c_18=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][24],saturations,M_vol);
+//        REAL int_omega_18=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][24],ones,M_vol);
+//        item_5(it,19)=int_c_18/int_omega_18;
+//
+//        REAL int_c_19=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][25],saturations,M_vol);
+//        REAL int_omega_19=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][25],ones,M_vol);
+//        item_5(it,20)=int_c_19/int_omega_19;
+//
+//        REAL int_c_20=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][26],saturations,M_vol);
+//        REAL int_omega_20=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][26],ones,M_vol);
+//        item_5(it,21)=int_c_20/int_omega_20;
+//
+//        REAL int_c_21=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][27],saturations,M_vol);
+//        REAL int_omega_21=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][27],ones,M_vol);
+//        item_5(it,22)=int_c_21/int_omega_21;
+//
+//        REAL int_c_22=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][28],saturations,M_vol);
+//        REAL int_omega_22=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][28],ones,M_vol);
+//        item_5(it,23)=int_c_22/int_omega_22;
+//
+//        REAL int_c_23=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][29],saturations,M_vol);
+//        REAL int_omega_23=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][29],ones,M_vol);
+//        item_5(it,24)=int_c_23/int_omega_23;
+//
+//        REAL int_c_24=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][30],saturations,M_vol);
+//        REAL int_omega_24=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][30],ones,M_vol);
+//        item_5(it,25)=int_c_24/int_omega_24;
+//
+//        REAL int_c_25=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][31],saturations,M_vol);
+//        REAL int_omega_25=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][31],ones,M_vol);
+//        item_5(it,26)=int_c_25/int_omega_25;
+//
+//        REAL int_c_26=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][32],saturations,M_vol);
+//        REAL int_omega_26=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][32],ones,M_vol);
+//        item_5(it,27)=int_c_26/int_omega_26;
+//
+//        REAL int_c_27=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][33],saturations,M_vol);
+//        REAL int_omega_27=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][33],ones,M_vol);
+//        item_5(it,28)=int_c_27/int_omega_27;
+//
+//        REAL int_c_28=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][34],saturations,M_vol);
+//        REAL int_omega_28=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][34],ones,M_vol);
+//        item_5(it,29)=int_c_28/int_omega_28;
+//
+//        REAL int_c_29=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][35],saturations,M_vol);
+//        REAL int_omega_29=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][35],ones,M_vol);
+//        item_5(it,30)=int_c_29/int_omega_29;
+//
+//        REAL int_c_30=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][36],saturations,M_vol);
+//        REAL int_omega_30=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][36],ones,M_vol);
+//        item_5(it,31)=int_c_30/int_omega_30;
+//
+//        REAL int_c_31=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][37],saturations,M_vol);
+//        REAL int_omega_31=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][37],ones,M_vol);
+//        item_5(it,32)=int_c_31/int_omega_31;
+//
+//        REAL int_c_32=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][38],saturations,M_vol);
+//        REAL int_omega_32=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][38],ones,M_vol);
+//        item_5(it,33)=int_c_32/int_omega_32;
+//
+//        REAL int_c_33=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][39],saturations,M_vol);
+//        REAL int_omega_33=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][39],ones,M_vol);
+//        item_5(it,34)=int_c_33/int_omega_33;
+//
+//        REAL int_c_34=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][40],saturations,M_vol);
+//        REAL int_omega_34=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][40],ones,M_vol);
+//        item_5(it,35)=int_c_34/int_omega_34;
+//
+//        REAL int_c_35=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][41],saturations,M_vol);
+//        REAL int_omega_35=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][41],ones,M_vol);
+//        item_5(it,36)=int_c_35/int_omega_35;
+//
+//        REAL int_c_36=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][42],saturations,M_vol);
+//        REAL int_omega_36=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][42],ones,M_vol);
+//        item_5(it,37)=int_c_36/int_omega_36;
+//
+//        REAL int_c_37=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][43],saturations,M_vol);
+//        REAL int_omega_37=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][43],ones,M_vol);
+//        item_5(it,38)=int_c_37/int_omega_37;
+//
+//        REAL int_c_38=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][44],saturations,M_vol);
+//        REAL int_omega_38=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][44],ones,M_vol);
+//        item_5(it,39)=int_c_38/int_omega_38;
+//
+//        REAL int_c_39=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][45],saturations,M_vol);
+//        REAL int_omega_39=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][45],ones,M_vol);
+//        item_5(it,40)=int_c_39/int_omega_39;
+//
+//        REAL int_c_40=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][46],saturations,M_vol);
+//        REAL int_omega_40=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][46],ones,M_vol);
+//        item_5(it,41)=int_c_40/int_omega_40;
+//
+//        REAL int_c_41=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][47],saturations,M_vol);
+//        REAL int_omega_41=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][47],ones,M_vol);
+//        item_5(it,42)=int_c_41/int_omega_41;
+//
+//        REAL int_c_42=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][48],saturations,M_vol);
+//        REAL int_omega_42=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][48],ones,M_vol);
+//        item_5(it,43)=int_c_42/int_omega_42;
+//
+//        REAL int_c_43=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][49],saturations,M_vol);
+//        REAL int_omega_43=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][49],ones,M_vol);
+//        item_5(it,44)=int_c_43/int_omega_43;
+//
+//        REAL int_c_44=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][50],saturations,M_vol);
+//        REAL int_omega_44=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][50],ones,M_vol);
+//        item_5(it,45)=int_c_44/int_omega_44;
+//
+//        REAL int_c_45=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][51],saturations,M_vol);
+//        REAL int_omega_45=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][51],ones,M_vol);
+//        item_5(it,46)=int_c_45/int_omega_45;
+//
+//        REAL int_c_46=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][52],saturations,M_vol);
+//        REAL int_omega_46=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][52],ones,M_vol);
+//        item_5(it,47)=int_c_46/int_omega_46;
+//
+//        REAL int_c_47=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][53],saturations,M_vol);
+//        REAL int_omega_47=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][53],ones,M_vol);
+//        item_5(it,48)=int_c_47/int_omega_47;
+//
+//        REAL int_c_48=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][54],saturations,M_vol);
+//        REAL int_omega_48=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][54],ones,M_vol);
+//        item_5(it,49)=int_c_48/int_omega_48;
+//
+//        REAL int_c_49=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][55],saturations,M_vol);
+//        REAL int_omega_49=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][55],ones,M_vol);
+//        item_5(it,50)=int_c_49/int_omega_49;
+//
+//        REAL int_c_50=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][56],saturations,M_vol);
+//        REAL int_omega_50=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][56],ones,M_vol);
+//        item_5(it,51)=int_c_50/int_omega_50;
+//
+//        REAL int_c_51=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][57],saturations,M_vol);
+//        REAL int_omega_51=IntegrateSaturations(it-1,dim_mat_id_dof_indexes[2][57],ones,M_vol);
+//        item_5(it,52)=int_c_51/int_omega_51;
+//
+//    }
+//
+//    log_file << std::endl;
+//    log_file << "Integral of concentration on fracture for each time value : " << std::endl;
+//    item_5.Print("it5 = ",log_file,EMathematicaInput);
+//    log_file << std::endl;
+//    log_file << std::endl;
+//    log_file.flush();
+//
+//    std::ofstream file_5("item_5.txt");
+//    item_5.Print("it5 = ",file_5,EMathematicaInput);
+//
     
     
 }
@@ -3323,7 +3322,7 @@ TPZTransform<REAL> Transform_Face_To_Volume(TPZGeoEl * gel_face, TPZGeoEl * gel_
     return t3;
 }
 
-TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag){
+TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag, bool mult){
     
     TPZMultiphysicsCompMesh * cmesh_transport = dynamic_cast<TPZMultiphysicsCompMesh *>(tracer_analysis->Mesh());
     
@@ -3426,21 +3425,62 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 }
                 volume->SetDimension(data.second);
             }
-            if(it == n_steps - 1)
+            
             {
                 int div = 0;
                 std::set<int> mat_id_3D;
                 mat_id_3D.insert(1);
                 mat_id_3D.insert(2);
-                std::string file_reservoir("cube_s.vtk");
-                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
-                tracer_analysis->PostProcess(div,3);
+                if (mult){
+                    std::string file_reservoir("cube_s.vtk");
+                    tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+                    tracer_analysis->PostProcess(div,3);
+                }
+                else{
+                    std::string file_reservoir("cube_s_case4.vtk");
+                    tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+                    tracer_analysis->PostProcess(div,3);
+                }
+          
 
                 std::set<int> mat_id_2D;
                 mat_id_2D.insert(6);
+//                mat_id_2D.insert(7);
+//                mat_id_2D.insert(8);
+//                mat_id_2D.insert(9);
+//                mat_id_2D.insert(10);
+//                mat_id_2D.insert(11);
+//                mat_id_2D.insert(12);
+//                mat_id_2D.insert(13);
+                 if (mult){
                 std::string file_frac("fracture_s.vtk");
-                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
-                tracer_analysis->PostProcess(div,2);
+                     tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+                     tracer_analysis->PostProcess(div,2);
+                 }
+                 else{
+                     for (int i = 7; i<58; i++) {
+                         mat_id_2D.insert(i);
+                     }
+                      std::string file_frac("fracture_s_case4.vtk");
+                     tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+                     tracer_analysis->PostProcess(div,2);
+                 }
+               
+                
+                std::set<int> mat_id_1D;
+                mat_id_2D.insert(14);
+               if (mult){
+                
+                std::string file_frac1d("fracture_s1.vtk");
+                tracer_analysis->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac1d);
+                tracer_analysis->PostProcess(div,1);
+               }
+               else{
+                   mat_id_1D.insert(58);
+                   std::string file_frac1d("fracture_s1_case4.vtk");
+                   tracer_analysis->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac1d);
+                   tracer_analysis->PostProcess(div,1);
+               }
             }
 
             
@@ -4213,9 +4253,10 @@ TPZCompMesh * FluxMesh(TPZGeoMesh * geometry, int order, SimulationCase sim_data
     int dimension = geometry->Dimension();
     int nvols = sim_data.omega_ids.size();
     int nbound = sim_data.gamma_ids.size();
-
+    
     TPZCompMesh *cmesh = new TPZCompMesh(geometry);
     
+    cmesh->SetDefaultOrder(order);
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
@@ -4827,13 +4868,14 @@ void InsertFractureMaterial(TPZCompMesh *cmesh){
 }
 
 
-TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh, TPZStack<TFracture> &fractures)
+TPZCompMesh *CreateTransportMesh(TPZMultiphysicsCompMesh *cmesh, TPZStack<TFracture> &fractures, int ref)
 {
     TPZCompMesh *q_cmesh = cmesh->MeshVector()[0];
     TPZGeoMesh * geometry = q_cmesh->Reference();
     if (!geometry) {
         DebugStop();
     }
+    UniformRefinement(geometry, ref);
     
     TPZCompMesh *s_cmesh = new TPZCompMesh(geometry);
     

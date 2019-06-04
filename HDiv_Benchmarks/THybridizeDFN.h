@@ -84,7 +84,7 @@ public:
     
     TPZCompMesh * DuplicateMultiphysicsCMeshMaterials(TPZCompMesh * cmesh);
     
-    TPZVec<int> & ExtractActiveApproxSpaces(TPZCompMesh * cmesh);
+    TPZVec<int>  & ExtractActiveApproxSpaces(TPZCompMesh * cmesh);
     
     TPZVec<TPZCompMesh *> & GetMeshVector(TPZCompMesh * cmesh);
     

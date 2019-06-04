@@ -155,7 +155,12 @@ Physical Volume("RockMatrix_2") = {vol_2[]};
 Physical Surface("BCInlet") = {62};
 Physical Surface("BCOutlet") = {30};
 Physical Surface("BCImpervious") = {32, 44, 50, 56, 58, 46, 60, 48, 162, 64, 36, 34, 38};
-
 Physical Surface("Fractures") = {52};
 
 
+//+
+Physical Surface("BCImpervious") += {58, 64, 60, 56, 44, 48, 40, 162, 50, 36, 46, 32, 34, 38};
+//+
+Physical Surface("BCInlet") += {62};
+//+
+Physical Surface("BCOutlet") += {30};
