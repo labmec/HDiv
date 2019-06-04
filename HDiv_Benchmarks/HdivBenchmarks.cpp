@@ -358,7 +358,7 @@ void Pretty_cube(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -691,7 +691,7 @@ void Case_1(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -1169,7 +1169,7 @@ void Case_2(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -1179,7 +1179,7 @@ void Case_2(){
     dim_name_and_physical_tag[1]["FracturesIntersections"] = 7;
     dim_name_and_physical_tag[0]["CrossingIntresections"] = 8;
     
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag_auxiliary(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag_auxiliary(4); // From 0D to 3D
     dim_name_and_physical_tag_auxiliary[3]["RockMatrix_1"] = -1986;
     dim_name_and_physical_tag_auxiliary[3]["RockMatrix_2"] = -1986;
     dim_name_and_physical_tag_auxiliary[2]["BCInlet"] = -1986;
@@ -1582,7 +1582,7 @@ void Case_3(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -2125,7 +2125,7 @@ void Case_4(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["DOMAIN"]=1;
     dim_name_and_physical_tag[2]["AUXILIARY_52"]=5;
     dim_name_and_physical_tag[2]["AUXILIARY_53"]=5;

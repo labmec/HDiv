@@ -295,7 +295,7 @@ void Pretty_cube(){
     /// 6 fractures
     /// 7 fractures intersections
     /// 8 crossing intersections
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
@@ -686,7 +686,7 @@ TPZAnalysis * CreateAnalysis(TPZCompMesh * cmesh, SimulationCase & sim_data){
 void Pretty_cubeII(){
     
     //Lectura de la malha
-    TPZManVector<std::map<std::string,int>,5> dim_name_and_physical_tag(4); // From 0D to 3D
+    TPZManVector<std::map<std::string,int>,4> dim_name_and_physical_tag(4); // From 0D to 3D
     dim_name_and_physical_tag[3]["RockMatrix_1"] = 1;
     dim_name_and_physical_tag[3]["RockMatrix_2"] = 2;
     dim_name_and_physical_tag[2]["BCInlet"] = 3;
