@@ -1,7 +1,7 @@
 
 # Configure the path.h.in file.
 # This file can only use the @VARIABLE@ syntax in the file
-configure_file(path.h.in ${PROJECT_SOURCE_DIR}/HDiv_Benchmarks/path.h @ONLY)
+configure_file(path.h.in ${PROJECT_SOURCE_DIR}/HDiv_Benchmarks_II/path.h @ONLY)
 
 
 file(GLOB header *.h)
