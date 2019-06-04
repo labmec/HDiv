@@ -319,9 +319,9 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
     int firsts_s_l    = 0;
     
 
-    TPZManVector<REAL,3> n = data.normal;
-    TPZManVector<REAL,3> q_l =  datavecleft[q_b].sol[0];
-    REAL qn = q_l[0];
+    TPZVec<REAL> n = data.normal;
+    TPZVec<REAL> q_l =  datavecleft[q_b].sol[0];
+    REAL qn = 0.0;
     for (int i = 0; i < 3; i++) {
         qn += q_l[i]*n[i];
     }
@@ -331,9 +331,6 @@ void TPZTracerFlow::ContributeBCInterface(TPZMaterialData &data, TPZVec<TPZMater
         case 0 :    // BC inlet
         {
             REAL s_inlet = bc.Val2()(0,0);
-//            if (qn > 0.0 || IsZero(qn)) {
-//                std::cout << "TPZTracerFlow:: Outlet flux in inlet boundary condition qn = " << qn << std::endl;
-//            }
             for (int is = 0; is < n_phi_s_l; is++) {
                 ef(is + firsts_s_l) += +1.0* m_dt * weight * s_inlet * phiS_l(is,0)*qn;
             }

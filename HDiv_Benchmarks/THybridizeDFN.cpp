@@ -45,17 +45,14 @@ void THybridizeDFN::CreateInterfaceElements(int target_dim, int interface_id, TP
             cel->LoadElementReference();
         }
     }
- 
-    TPZManVector<int64_t,2> left_mesh_indexes(1,1), right_mesh_indexes(1,0);
     
+    TPZManVector<int64_t,2> left_mesh_indexes(1,1), right_mesh_indexes(1,0);
     for (auto cel : celpressure) {
         if (!cel) continue;
         TPZStack<TPZCompElSide> celstack;
         TPZGeoEl *gel = cel->Reference();
         TPZGeoElSide gelside(gel, gel->NSides() - 1);
-        
         TPZCompElSide celside = gelside.Reference();
-     
         gelside.EqualLevelCompElementList(celstack, 0, 0);
         int count = 0;
         for (auto &celstackside : celstack) {
@@ -66,7 +63,6 @@ void THybridizeDFN::CreateInterfaceElements(int target_dim, int interface_id, TP
                 int n_connects = right_cel->NConnects();
                 if (n_connects == 1) {
                     int64_t index;
-                    
                     TPZMultiphysicsInterfaceElement * mp_interface_el = new TPZMultiphysicsInterfaceElement(*cmesh, gbc.CreatedElement(), index, celside, celstackside);
                     mp_interface_el->SetLeftRightElementIndices(left_mesh_indexes,right_mesh_indexes);
                     count++;
@@ -229,6 +225,7 @@ TPZCompMesh * THybridizeDFN::DuplicateMultiphysicsCMeshMaterials(TPZCompMesh * c
 
 void THybridizeDFN::CleanUpMultiphysicsCMesh(TPZCompMesh * cmesh){
     cmesh->CleanUp();
+   // cmesh->SetReference(NULL);
 }
 
 void THybridizeDFN::InsertMaterialsForHibridization(int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id){

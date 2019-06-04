@@ -26,6 +26,11 @@ class CreateDFN : public TPZHybridizeHDiv {
     
 private:
     
+    int fHDivWrapMatid =0;
+    int fLagrangeInterface=0;
+    int fInterfaceMatid=0;
+    int fflux_resistivity_id =0;
+    
     /// Set of boundary material ids - boundary condition type - boundary data associated to 2D elements
     // first : material id
     // second : boundary condition type
@@ -92,20 +97,7 @@ private:
     /// switch the reference of the pressure computational element to the geometric element of the neighbouring fracture element
     // it will also change the material id of HDivBound element to resistivity material id
     // inserts the material objects 0f boundary conditions of fractures in the flux mesh
-    void BuildMixedOperatorOnFractures(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id);
-    
-    /// Construct a lagrange multiplier approximation spaces for a DFN
-    TPZCompMesh * Hybridize(TPZCompMesh * cmesh);
-    
-    TPZStack<TPZCompElSide> AnalyzeSide(int target_dim, TPZGeoEl * gel, int side);
-    
-    std::pair<int,int> HybridizeInSide(const TPZVec<TPZCompElSide> &candidates, TPZCompMesh * flux_cmesh, int & flux_trace_mat_id, int & lagrange_mat_id);
-    
-    int CreateBCGeometricalElement(const TPZCompElSide & cel_side, TPZCompMesh * flux_cmesh,int & bc_impervious_id);
-    
-    void ClassifyCompelSides(int target_dim, TPZCompMesh * flux_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_lagrange_mult, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id);
-    
-    void CreateLagrangeMultiplierSpace(TPZCompMesh * p_cmesh, TPZStack<std::pair<int, int>> & gel_index_and_order_stack);
+    void BuildFracturesAproxSpace(int p_order, int target_dim, TPZCompMesh * cmesh, int & flux_trace_id, int & lagrange_id, int & flux_resistivity_id, int & mp_nterface_id);
     
     void BuildMultiphysicsCMesh(int dim, TPZCompMesh * hybrid_cmesh, TPZVec<int> & approx_spaces, TPZManVector<TPZCompMesh *, 3> mesh_vec);
     
@@ -132,6 +124,21 @@ private:
     
     /// group and condense the elements
     static void GroupElements(TPZMultiphysicsCompMesh *cmesh);
+    
+    TPZCompMesh *CreateDFNCmesh(TPZMultiphysicsCompMesh *initial_mesh);
+    
+    void SetPeriferalMaterialIds(int HDivWrapMatid, int LagrangeInterface, int InterfaceMatid, int flux_resistivity_id){
+        fHDivWrapMatid = HDivWrapMatid;
+        fLagrangeInterface =LagrangeInterface;
+        fInterfaceMatid =InterfaceMatid;
+        fflux_resistivity_id =flux_resistivity_id;
+    }
+    
+    void * Hybridize(TPZMultiphysicsCompMesh *multiphysics, bool group_elements, double Lagrange_term_multiplier);
+    
+    void CheckODElements(TPZCompMesh *dfn_hybrid_cmesh);
+    void CreateAllInterfaceElements(int interface_id, TPZCompMesh *cmesh, TPZVec<TPZCompMesh *> & mesh_vec);
+    
 };
 
 #endif /* THybridizeDFN_h */
