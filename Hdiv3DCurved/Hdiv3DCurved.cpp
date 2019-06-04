@@ -354,7 +354,7 @@ void Configuration_Non_Affine(){
     common.UseFrontalQ = false;
     common.UseGmshMeshQ = true;
     common.n_h_levels = 5;
-    common.n_p_levels = 2;
+    common.n_p_levels = 1;
     common.int_order  = 5;
     common.n_threads  = 64;
     common.NonAffineQ = true;
