@@ -356,7 +356,7 @@ void Configuration_Non_Affine(){
     common.n_h_levels = 5;
     common.n_p_levels = 1;
     common.int_order  = 5;
-    common.n_threads  = 64;
+    common.n_threads  = 32;
     common.NonAffineQ = true;
     common.domain_type = "cube";
     common.conv_summary = "convergence_summary";
@@ -370,7 +370,7 @@ void Configuration_Non_Affine(){
     H1Case_1.mesh_type = "linear";
     H1Case_1.elemen_type = 1;
     H1Case_1.dump_folder = "H1_H_non_affine_cube";
-    simulations.Push(H1Case_1);
+//    simulations.Push(H1Case_1);
     
     //    // Dual Formulation n = 0
     struct SimulationCase HdivCase_1 = common;
@@ -379,7 +379,7 @@ void Configuration_Non_Affine(){
     HdivCase_1.n_acc_terms = 0;
     HdivCase_1.elemen_type = 1;
     HdivCase_1.dump_folder = "Hdiv_n_0_H_non_affine_cube";
-    simulations.Push(HdivCase_1);
+//    simulations.Push(HdivCase_1);
     
     //    // Dual Formulation n = 1
     struct SimulationCase HdivCase_2 = common;
@@ -388,7 +388,7 @@ void Configuration_Non_Affine(){
     HdivCase_2.n_acc_terms = 1;
     HdivCase_2.elemen_type = 1;
     HdivCase_2.dump_folder = "Hdiv_n_1_H_non_affine_cube";
-    simulations.Push(HdivCase_2);
+//    simulations.Push(HdivCase_2);
     
     //    // Dual Formulation n = 2
     struct SimulationCase HdivCase_3 = common;
@@ -4295,7 +4295,7 @@ void PertubationMatrix_I(TPZManVector<REAL> CoordX, REAL pertub_param, REAL ElSi
 void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REAL & error_h1)
 {
     bool Serial_ErrorQ = false;
-    int nthreads = 64;
+    int nthreads = 32;
     
     TPZCompMesh * cmesh = analysis->Mesh();
     int64_t nel = cmesh->NElements();
@@ -4345,7 +4345,7 @@ void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REA
 void ErrorHdiv(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REAL & error_hdiv){
     
     bool Serial_ErrorQ = false;
-    int nthreads = 64;
+    int nthreads = 32;
     
     TPZCompMesh * cmesh = analysis->Mesh();
     int64_t nel = cmesh->NElements();
