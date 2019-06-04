@@ -196,7 +196,7 @@ void UniformRefinement(TPZGeoMesh * geometry, int h_level);
 
 void InsertInterfacesBetweenElements(int transport_matid, TPZCompMesh * cmesh, std::vector<int> & cel_indexes);
 
-TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag, bool mult);
+TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag);
 
 void VolumeMatrix(TPZAnalysis * tracer_analysis, TPZFMatrix<STATE> & M_vol_diag);
 
@@ -243,11 +243,10 @@ int main(){
     
 
 //    Pretty_cube();
-//   Case_4();
+   Case_4();
 //     Case_2();
 //    Case_3();
-    Case_1();
-
+//    Case_1();
 }
 
 /// Executes cube
@@ -388,7 +387,7 @@ void Pretty_cube(){
     gmesh->Print(file_txt);
 #endif
     
-    int p_order = 1;
+    int p_order = 3;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
@@ -516,7 +515,7 @@ void Pretty_cube(){
     int n_steps = 10;
     REAL dt     = 10.0;
     TPZFMatrix<STATE> M_diag;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag, false);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
     
     ///// Post-processing data
     std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
@@ -712,7 +711,7 @@ void Case_1(){
     gmesh = Geometry.GeometricGmshMesh(file_gmsh.c_str());
     Geometry.PrintPartitionSummary(std::cout);
     
-    UniformRefinement(gmesh, 2);
+    UniformRefinement(gmesh, 0);
     
 #ifdef PZDEBUG
     std::ofstream file("geometry_case_1_base.vtk");
@@ -722,10 +721,15 @@ void Case_1(){
 #endif
     
     
-    int p_order = 4;
+    int p_order = 2;
     TPZVec<TPZCompMesh *> meshvec;
     TPZCompMesh *cmixedmesh = NULL;
     cmixedmesh = MPCMeshMixed(gmesh, p_order, sim, meshvec);
+    
+  
+    
+    
+    
     
 //#ifdef PZDEBUG
 //    std::ofstream filemixed("mixed_cmesh.txt");
@@ -744,14 +748,14 @@ void Case_1(){
     TPZMultiphysicsCompMesh * mp_cmesh = dynamic_cast<TPZMultiphysicsCompMesh *>(cmeshm);
     
     /// Craate transpor computational mesh
-    TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data,1);
+ TPZCompMesh *s_cmesh = CreateTransportMesh(mp_cmesh, fracture_data,2);
     TPZManVector<TPZCompMesh *,3> meshtrvec(3);
     meshtrvec[0] = meshvec[0];
     meshtrvec[1] = meshvec[1];
-    meshtrvec[2] = s_cmesh;
+  meshtrvec[2] = s_cmesh;
     
-    TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
-    TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
+  TPZMultiphysicsCompMesh *cmesh_transport = MPTransportMesh(mp_cmesh, fracture_data, sim, meshtrvec);
+TPZAnalysis * tracer_analysis = CreateTransportAnalysis(cmesh_transport, sim);
     
     bool solve_dfn_problem_Q = true;
     if (solve_dfn_problem_Q) {
@@ -810,151 +814,151 @@ void Case_1(){
 //        an->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac_intersections);
 //        an->PostProcess(div,1);
     }
-    
+//    
     int n_steps = 100;
     REAL dt     = 1.0e7;
     TPZFMatrix<STATE> M_diag;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag, true);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
     
-    ///// Post-processing data
-    std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
-    {
-        std::set<int> volumetric_mat_ids = {1,2,6,7,8}; /// Available materials
-        TPZCompMesh * s_cmesh = meshtrvec[2];
-        if (!s_cmesh) {
-            DebugStop();
-        }
-        TPZGeoMesh * geometry = cmesh_transport->Reference();
-        if (!geometry) {
-            DebugStop();
-        }
-        geometry->ResetReference();
-        cmesh_transport->LoadReferences();
-        
-        for (auto cel : cmesh_transport->ElementVec()) {
-            if (!cel) {
-                continue;
-            }
-            TPZGeoEl * gel = cel->Reference();
-            if (!gel) {
-                DebugStop();
-            }
-            int mat_id = gel->MaterialId();
-            int gel_dim = gel->Dimension();
-            
-            int n_connects = cel->NConnects();
-            if (n_connects==0 || n_connects==2) {
-                continue;
-            }
-            
-            if (n_connects!=1) {
-                DebugStop();
-            }
-            
-            TPZConnect & c = cel->Connect(0);
-            int64_t equ = c.SequenceNumber(); // because polynomial order is zero, i.e. block size = 1.
-            dim_mat_id_dof_indexes[gel_dim][mat_id].push_back(equ);
-            
-        }
-    }
-    
-    int target_mat_id_in = 3;
-    std::map<int, REAL> gel_index_to_int_qn_inlet;
-    std::map<int, REAL> gel_index_to_int_p_inlet;
-    IntegrateFluxAndPressure(target_mat_id_in, meshtrvec, gel_index_to_int_qn_inlet, gel_index_to_int_p_inlet);
-    
-    REAL qn_inlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_qn_inlet) {
-        qn_inlet_integral += pair.second;
-    }
-    
-    REAL p_inlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_p_inlet) {
-        p_inlet_integral += pair.second;
-    }
-    
-    int target_mat_id_out = 4;
-    std::map<int, REAL> gel_index_to_int_qn;
-    std::map<int, REAL> gel_index_to_int_p;
-    IntegrateFluxAndPressure(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
-    
-    REAL qn_outlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_qn) {
-        qn_outlet_integral += pair.second;
-    }
-    
-    REAL p_outlet_integral = 0.0;
-    for (auto pair : gel_index_to_int_p) {
-        p_outlet_integral += pair.second;
-    }
-    
-    log_file << std::endl;
-    log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
-    log_file << "Inlet boundary : " << std::endl;
-    log_file << "Integrated flux q on inlet boundary = " << qn_inlet_integral << std::endl;
-    log_file << "Integrated pressure p on inlet boundary = " << p_inlet_integral << std::endl;
-    log_file << "Outlet boundary : " << std::endl;
-    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
-    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
-    
-    TPZFMatrix<REAL> item_2(n_steps+1,2,0.0);
-    TPZFMatrix<REAL> item_3(n_steps+1,2,0.0);
-    TPZFMatrix<REAL> item_4(n_steps+1,2,0.0);
-    int n_equ = meshtrvec[2]->NEquations();
-    for (int it = 1; it <= n_steps; it++) {
-
-        REAL time = (it*dt)/(86400*365);
-        REAL int_c3_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][1], saturations, M_diag);
-        REAL int_c2_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
-        
-        item_2(it,0) = time;
-        item_2(it,1) = int_c3_vol_1;
-
-        item_3(it,0) = time;
-        item_3(it,1) = int_c2_vol_1;
-        
-        for (int i = 0; i <n_equ; i++) {
-            cmesh_transport->Solution()(i,0) = saturations(i,it-1);
-        }
-        cmesh_transport->LoadSolutionFromMultiPhysics();
-        std::map<int, REAL> gel_index_to_s;
-        GetSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_s);
-        
-        REAL c_integral = 0.0;
-        for (auto pair : gel_index_to_int_qn) {
-            c_integral += pair.second * gel_index_to_s[pair.first];
-        }
-        
-        item_4(it,0) = time;
-        item_4(it,1) = c_integral;
-
-    }
-    
-    log_file << std::endl;
-    log_file << "Appeding items 2, 3 and 4 (pag 6/17 Flemisch (2018)) : " << std::endl;
-    log_file << "Integral of concentration for each time value : " << std::endl;
-    item_2.Print("it2 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
-    log_file << std::endl;
-    log_file << "Integral of concentration on fracture for each time value : " << std::endl;
-    item_3.Print("it3 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
-    log_file << std::endl;
-    log_file << "Integral of concentration flux on outlet boundary for each time value : " << std::endl;
-    item_4.Print("it4 = ",log_file,EMathematicaInput);
-    log_file << std::endl;
-    log_file << std::endl;
-    log_file.flush();
-    
-    std::ofstream file_2("item_2.txt");
-    item_2.Print("it2 = ",file_2,EMathematicaInput);
-    
-    std::ofstream file_3("item_3.txt");
-    item_3.Print("it3 = ",file_3,EMathematicaInput);
-    
-    std::ofstream file_4("item_4.txt");
-    item_4.Print("it4 = ",file_4,EMathematicaInput);
-    
+//    ///// Post-processing data
+//    std::map<int,std::map<int,std::vector<int>>> dim_mat_id_dof_indexes;
+//    {
+//        std::set<int> volumetric_mat_ids = {1,2,6,7,8}; /// Available materials
+//        TPZCompMesh * s_cmesh = meshtrvec[2];
+//        if (!s_cmesh) {
+//            DebugStop();
+//        }
+//        TPZGeoMesh * geometry = cmesh_transport->Reference();
+//        if (!geometry) {
+//            DebugStop();
+//        }
+//        geometry->ResetReference();
+//        cmesh_transport->LoadReferences();
+//        
+//        for (auto cel : cmesh_transport->ElementVec()) {
+//            if (!cel) {
+//                continue;
+//            }
+//            TPZGeoEl * gel = cel->Reference();
+//            if (!gel) {
+//                DebugStop();
+//            }
+//            int mat_id = gel->MaterialId();
+//            int gel_dim = gel->Dimension();
+//            
+//            int n_connects = cel->NConnects();
+//            if (n_connects==0 || n_connects==2) {
+//                continue;
+//            }
+//            
+//            if (n_connects!=1) {
+//                DebugStop();
+//            }
+//            
+//            TPZConnect & c = cel->Connect(0);
+//            int64_t equ = c.SequenceNumber(); // because polynomial order is zero, i.e. block size = 1.
+//            dim_mat_id_dof_indexes[gel_dim][mat_id].push_back(equ);
+//            
+//        }
+//    }
+//    
+//    int target_mat_id_in = 3;
+//    std::map<int, REAL> gel_index_to_int_qn_inlet;
+//    std::map<int, REAL> gel_index_to_int_p_inlet;
+//    IntegrateFluxAndPressure(target_mat_id_in, meshtrvec, gel_index_to_int_qn_inlet, gel_index_to_int_p_inlet);
+//    
+//    REAL qn_inlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_qn_inlet) {
+//        qn_inlet_integral += pair.second;
+//    }
+//    
+//    REAL p_inlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_p_inlet) {
+//        p_inlet_integral += pair.second;
+//    }
+//    
+//    int target_mat_id_out = 4;
+//    std::map<int, REAL> gel_index_to_int_qn;
+//    std::map<int, REAL> gel_index_to_int_p;
+//    IntegrateFluxAndPressure(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_int_p);
+//    
+//    REAL qn_outlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_qn) {
+//        qn_outlet_integral += pair.second;
+//    }
+//    
+//    REAL p_outlet_integral = 0.0;
+//    for (auto pair : gel_index_to_int_p) {
+//        p_outlet_integral += pair.second;
+//    }
+//    
+//    log_file << std::endl;
+//    log_file << "Integral values for Mixed-Hybrid DFN problem : " << std::endl;
+//    log_file << "Inlet boundary : " << std::endl;
+//    log_file << "Integrated flux q on inlet boundary = " << qn_inlet_integral << std::endl;
+//    log_file << "Integrated pressure p on inlet boundary = " << p_inlet_integral << std::endl;
+//    log_file << "Outlet boundary : " << std::endl;
+//    log_file << "Integrated flux q on outlet boundary = " << qn_outlet_integral << std::endl;
+//    log_file << "Integrated pressure p on outlet boundary = " << p_outlet_integral << std::endl;
+//    
+//    TPZFMatrix<REAL> item_2(n_steps+1,2,0.0);
+//    TPZFMatrix<REAL> item_3(n_steps+1,2,0.0);
+//    TPZFMatrix<REAL> item_4(n_steps+1,2,0.0);
+//    int n_equ = meshtrvec[2]->NEquations();
+//    for (int it = 1; it <= n_steps; it++) {
+//
+//        REAL time = (it*dt)/(86400*365);
+//        REAL int_c3_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[3][1], saturations, M_diag);
+//        REAL int_c2_vol_1 = IntegrateSaturations(it-1, dim_mat_id_dof_indexes[2][6], saturations, M_diag);
+//        
+//        item_2(it,0) = time;
+//        item_2(it,1) = int_c3_vol_1;
+//
+//        item_3(it,0) = time;
+//        item_3(it,1) = int_c2_vol_1;
+//        
+//        for (int i = 0; i <n_equ; i++) {
+//            cmesh_transport->Solution()(i,0) = saturations(i,it-1);
+//        }
+//        cmesh_transport->LoadSolutionFromMultiPhysics();
+//        std::map<int, REAL> gel_index_to_s;
+//        GetSaturation(target_mat_id_out, meshtrvec, gel_index_to_int_qn, gel_index_to_s);
+//        
+//        REAL c_integral = 0.0;
+//        for (auto pair : gel_index_to_int_qn) {
+//            c_integral += pair.second * gel_index_to_s[pair.first];
+//        }
+//        
+//        item_4(it,0) = time;
+//        item_4(it,1) = c_integral;
+//
+//    }
+//    
+//    log_file << std::endl;
+//    log_file << "Appeding items 2, 3 and 4 (pag 6/17 Flemisch (2018)) : " << std::endl;
+//    log_file << "Integral of concentration for each time value : " << std::endl;
+//    item_2.Print("it2 = ",log_file,EMathematicaInput);
+//    log_file << std::endl;
+//    log_file << std::endl;
+//    log_file << "Integral of concentration on fracture for each time value : " << std::endl;
+//    item_3.Print("it3 = ",log_file,EMathematicaInput);
+//    log_file << std::endl;
+//    log_file << std::endl;
+//    log_file << "Integral of concentration flux on outlet boundary for each time value : " << std::endl;
+//    item_4.Print("it4 = ",log_file,EMathematicaInput);
+//    log_file << std::endl;
+//    log_file << std::endl;
+//    log_file.flush();
+//    
+//    std::ofstream file_2("item_2.txt");
+//    item_2.Print("it2 = ",file_2,EMathematicaInput);
+//    
+//    std::ofstream file_3("item_3.txt");
+//    item_3.Print("it3 = ",file_3,EMathematicaInput);
+//    
+//    std::ofstream file_4("item_4.txt");
+//    item_4.Print("it4 = ",file_4,EMathematicaInput);
+//    
     return;
 }
 
@@ -1336,7 +1340,7 @@ void Case_2(){
     int n_steps = 100;
     REAL dt     = 0.0025;
     TPZFMatrix<STATE> M_diag, M_vol;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag,false);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
     VolumeMatrix(tracer_analysis, M_vol);
     
     ///// Post-processing data
@@ -1738,7 +1742,7 @@ void Case_3(){
     int n_steps = 50;
     REAL dt     = 0.01;
     TPZFMatrix<STATE> M_diag, M_vol;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag,false);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
     VolumeMatrix(tracer_analysis, M_vol);
 
     ///// Post-processing data
@@ -2305,7 +2309,7 @@ void Case_4(){
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file2);
     Geometry.PrintPartitionSummary(std::cout);
     
-    UniformRefinement(gmesh, h_level);
+   // UniformRefinement(gmesh, h_level);
     
 
     
@@ -2361,10 +2365,10 @@ void Case_4(){
     }
     
 #ifdef PZDEBUG
-    std::ofstream file("geometry_case_4_base.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
-    std::ofstream file_txt("geometry_case_4_base.txt");
-    gmesh->Print(file_txt);
+//    std::ofstream file("geometry_case_4_base.vtk");
+//    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, file);
+//    std::ofstream file_txt("geometry_case_4_base.txt");
+//    gmesh->Print(file_txt);
 #endif
     
     ////// End:: Geometry reader
@@ -2389,10 +2393,10 @@ void Case_4(){
     
 #ifdef PZDEBUG2
     {
-        std::ofstream file("geometry_case_3_base_dfn.vtk");
-        TPZVTKGeoMesh::PrintGMeshVTK(mp_cmesh->Reference(), file);
-        std::ofstream file_txt("geometry_case_3_base_dfn.txt");
-        mp_cmesh->Reference()->Print(file_txt);
+//        std::ofstream file("geometry_case_3_base_dfn.vtk");
+//        TPZVTKGeoMesh::PrintGMeshVTK(mp_cmesh->Reference(), file);
+//        std::ofstream file_txt("geometry_case_3_base_dfn.txt");
+//        mp_cmesh->Reference()->Print(file_txt);
     }
 #endif
     
@@ -2415,17 +2419,17 @@ void Case_4(){
         
 #ifdef PZDEBUG2
         {
-            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
-            mesh_vec[0]->ComputeNodElCon();
-            mesh_vec[0]->Print(file_hybrid_mixed_q);
-            
-            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
-            mesh_vec[1]->ComputeNodElCon();
-            mesh_vec[1]->Print(file_hybrid_mixed_p);
-            
-            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
-            cmeshm->ComputeNodElCon();
-            cmeshm->Print(file_hybrid_mixed);
+//            std::ofstream file_hybrid_mixed_q("Hybrid_mixed_cmesh_q.txt");
+//            mesh_vec[0]->ComputeNodElCon();
+//            mesh_vec[0]->Print(file_hybrid_mixed_q);
+//
+//            std::ofstream file_hybrid_mixed_p("Hybrid_mixed_cmesh_p.txt");
+//            mesh_vec[1]->ComputeNodElCon();
+//            mesh_vec[1]->Print(file_hybrid_mixed_p);
+//
+//            std::ofstream file_hybrid_mixed("Hybrid_mixed_cmesh.txt");
+//            cmeshm->ComputeNodElCon();
+//            cmeshm->Print(file_hybrid_mixed);
         }
 #endif
         
@@ -2446,10 +2450,10 @@ void Case_4(){
         log_file << "DFN neq with condensation = " << mp_cmesh->NEquations() << std::endl;
         
 #ifdef PZDEBUG
-        std::ofstream file("geometry_case_3_base_dfn.vtk");
-        TPZVTKGeoMesh::PrintGMeshVTK(mp_cmesh->Reference(), file);
-        std::ofstream file_txt("geometry_case_3_base_dfn.txt");
-        mp_cmesh->Reference()->Print(file_txt);
+//        std::ofstream file("geometry_case_3_base_dfn.vtk");
+//        TPZVTKGeoMesh::PrintGMeshVTK(mp_cmesh->Reference(), file);
+//        std::ofstream file_txt("geometry_case_3_base_dfn.txt");
+//        mp_cmesh->Reference()->Print(file_txt);
 #endif
         
         TPZAnalysis *an = CreateAnalysis(mp_cmesh, sim);
@@ -2457,8 +2461,8 @@ void Case_4(){
         an->Assemble();
         std::cout << "Assembly for DFN complete." << std::endl;
         
-        std::ofstream mat_file("matrix_data.txt");
-        an->Solver().Matrix()->Print("j = ",mat_file,EInputFormat);
+//        std::ofstream mat_file("matrix_data.txt");
+//        an->Solver().Matrix()->Print("j = ",mat_file,EInputFormat);
         
         std::cout << "Solving DFN problem." << std::endl;
         an->Solve();
@@ -2491,10 +2495,10 @@ void Case_4(){
     }
     
     
-    int n_steps = 100;
+    int n_steps = 50;
     REAL dt     = 50.0;
     TPZFMatrix<STATE> M_diag, M_vol;
-    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag,false);
+    TPZFMatrix<STATE> saturations = TimeForward(tracer_analysis, n_steps, dt, M_diag);
     VolumeMatrix(tracer_analysis, M_vol);
     
 //
@@ -3322,7 +3326,7 @@ TPZTransform<REAL> Transform_Face_To_Volume(TPZGeoEl * gel_face, TPZGeoEl * gel_
     return t3;
 }
 
-TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag, bool mult){
+TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL & dt, TPZFMatrix<STATE> & M_diag){
     
     TPZMultiphysicsCompMesh * cmesh_transport = dynamic_cast<TPZMultiphysicsCompMesh *>(tracer_analysis->Mesh());
     
@@ -3431,56 +3435,30 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 std::set<int> mat_id_3D;
                 mat_id_3D.insert(1);
                 mat_id_3D.insert(2);
-                if (mult){
                     std::string file_reservoir("cube_s.vtk");
                     tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
                     tracer_analysis->PostProcess(div,3);
-                }
-                else{
-                    std::string file_reservoir("cube_s_case4.vtk");
-                    tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
-                    tracer_analysis->PostProcess(div,3);
-                }
           
 
                 std::set<int> mat_id_2D;
-                mat_id_2D.insert(6);
-//                mat_id_2D.insert(7);
-//                mat_id_2D.insert(8);
-//                mat_id_2D.insert(9);
-//                mat_id_2D.insert(10);
-//                mat_id_2D.insert(11);
-//                mat_id_2D.insert(12);
-//                mat_id_2D.insert(13);
-                 if (mult){
+                
+                
+                for (int i = 6; i<58; i++) {
+                    mat_id_2D.insert(i);
+                }
+
+               
                 std::string file_frac("fracture_s.vtk");
                      tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
                      tracer_analysis->PostProcess(div,2);
-                 }
-                 else{
-                     for (int i = 7; i<58; i++) {
-                         mat_id_2D.insert(i);
-                     }
-                      std::string file_frac("fracture_s_case4.vtk");
-                     tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
-                     tracer_analysis->PostProcess(div,2);
-                 }
-               
-                
+
                 std::set<int> mat_id_1D;
-                mat_id_2D.insert(14);
-               if (mult){
-                
+                mat_id_1D.insert(58);
+              
                 std::string file_frac1d("fracture_s1.vtk");
                 tracer_analysis->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac1d);
                 tracer_analysis->PostProcess(div,1);
-               }
-               else{
-                   mat_id_1D.insert(58);
-                   std::string file_frac1d("fracture_s1_case4.vtk");
-                   tracer_analysis->DefineGraphMesh(1,mat_id_1D,scalnames,vecnames,file_frac1d);
-                   tracer_analysis->PostProcess(div,1);
-               }
+              
             }
 
             
