@@ -301,7 +301,7 @@ void Configuration_Affine(){
     common.n_h_levels = 2;
     common.n_p_levels = 1;
     common.int_order  = 10;
-    common.n_threads  = 12;
+    common.n_threads  = 64;
     common.NonAffineQ = false;
     common.domain_type = "cube";
     common.conv_summary = "convergence_summary";
@@ -353,10 +353,10 @@ void Configuration_Non_Affine(){
     common.UsePardisoQ = true;
     common.UseFrontalQ = false;
     common.UseGmshMeshQ = true;
-    common.n_h_levels = 4;
+    common.n_h_levels = 5;
     common.n_p_levels = 2;
-    common.int_order  = 4;
-    common.n_threads  = 8;
+    common.int_order  = 5;
+    common.n_threads  = 64;
     common.NonAffineQ = true;
     common.domain_type = "cube";
     common.conv_summary = "convergence_summary";
@@ -4294,8 +4294,8 @@ void PertubationMatrix_I(TPZManVector<REAL> CoordX, REAL pertub_param, REAL ElSi
 
 void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REAL & error_h1)
 {
-    bool Serial_ErrorQ = true;
-    int nthreads = 12;
+    bool Serial_ErrorQ = false;
+    int nthreads = 64;
     
     TPZCompMesh * cmesh = analysis->Mesh();
     int64_t nel = cmesh->NElements();
@@ -4330,7 +4330,7 @@ void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REA
     else{
         analysis->SetThreadsForError(nthreads);
         analysis->SetExact(Analytic);
-        analysis->PostProcessError(globalerror);
+        analysis->PostProcessError(globalerror,false);
         
         error_primal    = globalerror[0];
         error_dual      = globalerror[1];
@@ -4345,7 +4345,7 @@ void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REA
 void ErrorHdiv(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REAL & error_hdiv){
     
     bool Serial_ErrorQ = false;
-    int nthreads = 12;
+    int nthreads = 64;
     
     TPZCompMesh * cmesh = analysis->Mesh();
     int64_t nel = cmesh->NElements();
