@@ -254,16 +254,15 @@ void Configuration_Affine();
  */
 void Configuration_Non_Affine();
 
+//#define NEWTEST
 
 
 int main()
 {
     
-    
   HDivPiola = 1;
     
   gRefDBase.InitializeAllUniformRefPatterns();
-    //	gRefDBase.InitializeRefPatterns();
     
 #ifdef LOG4CXX
     InitializePZLOG();
@@ -271,8 +270,7 @@ int main()
     
     
     
-    bool IsAffineSettingQ = true;
-    
+    bool IsAffineSettingQ = false;
     
     if (IsAffineSettingQ) {
         // Runing the affine meshes
@@ -300,7 +298,7 @@ void Configuration_Affine(){
     common.UsePardisoQ = true;
     common.UseFrontalQ = false;
     common.UseGmshMeshQ = true;
-    common.n_h_levels = 3;
+    common.n_h_levels = 2;
     common.n_p_levels = 1;
     common.int_order  = 10;
     common.n_threads  = 12;
@@ -313,19 +311,23 @@ void Configuration_Affine(){
     
     //     // Primal Formulation over the solid cube
     struct SimulationCase H1Case_1 = common;
-    H1Case_1.IsHdivQ = true;
+    H1Case_1.IsHdivQ = false;
     H1Case_1.mesh_type = "linear";
-    H1Case_1.elemen_type = 0;
-    H1Case_1.dump_folder = "H1_T_affine_cube";
+    
+//    H1Case_1.elemen_type = 0;
+//    H1Case_1.dump_folder = "H1_T_affine_cube";
 //    simulations.Push(H1Case_1);
+    
     H1Case_1.elemen_type = 1;
     H1Case_1.dump_folder = "H1_H_affine_cube";
-//    simulations.Push(H1Case_1);
-    H1Case_1.elemen_type = 2;
-    H1Case_1.dump_folder = "H1_P_affine_cube";
     simulations.Push(H1Case_1);
-    H1Case_1.elemen_type = 3;
-    H1Case_1.dump_folder = "H1_Hybrid_affine_cube";
+    
+//    H1Case_1.elemen_type = 2;
+//    H1Case_1.dump_folder = "H1_P_affine_cube";
+//    simulations.Push(H1Case_1);
+    
+//    H1Case_1.elemen_type = 3;
+//    H1Case_1.dump_folder = "H1_Hybrid_affine_cube";
 //    simulations.Push(H1Case_1);
     
 //    //    // Dual Formulation n = 1
@@ -345,14 +347,13 @@ void Configuration_Affine(){
 void Configuration_Non_Affine(){
     
     TPZStack<SimulationCase> simulations;
-    bool IsNonAffineQ = true;
     // Formulations over the cube
     struct SimulationCase common;
 
     common.UsePardisoQ = true;
     common.UseFrontalQ = false;
     common.UseGmshMeshQ = true;
-    common.n_h_levels = 1;
+    common.n_h_levels = 2;
     common.n_p_levels = 1;
     common.int_order  = 4;
     common.n_threads  = 8;
@@ -363,135 +364,41 @@ void Configuration_Non_Affine(){
     common.gamma_ids.Push(-1);    // Gamma_D outer surface
     common.gamma_ids.Push(-2);    // Gamma_D inner surface
     
-    if (IsNonAffineQ) {
-        
-//        //     // Primal Formulation over the solid cube
-//        struct SimulationCase H1Case_1 = common;
-//        H1Case_1.IsHdivQ = false;
-//        H1Case_1.mesh_type = "linear";
-//        H1Case_1.elemen_type = 1;
-//        H1Case_1.dump_folder = "H1_H_non_affine_cube";
-//        simulations.Push(H1Case_1);
-
-        //    // Dual Formulation n = 0
-        struct SimulationCase HdivCase_1 = common;
-        HdivCase_1.IsHdivQ = true;
-        HdivCase_1.mesh_type = "linear";
-        HdivCase_1.n_acc_terms = 0;
-        HdivCase_1.elemen_type = 1;
-        HdivCase_1.dump_folder = "Hdiv_n_0_H_non_affine_cube";
-        simulations.Push(HdivCase_1);
-//
-//        //    // Dual Formulation n = 1
-//        struct SimulationCase HdivCase_2 = common;
-//        HdivCase_2.IsHdivQ = true;
-//        HdivCase_2.mesh_type = "linear";
-//        HdivCase_2.n_acc_terms = 1;
-//        HdivCase_2.elemen_type = 1;
-//        HdivCase_2.dump_folder = "Hdiv_n_1_H_non_affine_cube";
-//        simulations.Push(HdivCase_2);
-//
-//        //    // Dual Formulation n = 2
-//        struct SimulationCase HdivCase_3 = common;
-//        HdivCase_3.IsHdivQ = true;
-//        HdivCase_3.mesh_type = "linear";
-//        HdivCase_3.n_acc_terms = 2;
-//        HdivCase_3.elemen_type = 1;
-//        HdivCase_3.dump_folder = "Hdiv_n_2_H_non_affine_cube";
-//        simulations.Push(HdivCase_3);
-        
-    }
-    else{
-        
-        common.UsePardisoQ = true;
-        common.UseFrontalQ = false;
-        common.UseGmshMeshQ = true;
-        common.n_h_levels = 2;
-        common.n_p_levels = 2;
-        common.int_order  = 10;
-        common.n_threads  = 10;
-        common.NonAffineQ = IsNonAffineQ;
-        common.domain_type = "cube";
-        common.conv_summary = "convergence_summary";
-        common.omega_ids.Push(1);     // Domain
-        common.gamma_ids.Push(-1);    // Gamma_D outer surface
-        common.gamma_ids.Push(-2);    // Gamma_D inner surface
-        
-//        //     // Primal Formulation over the solid cube
-//        struct SimulationCase H1Case_1 = common;
-//        H1Case_1.IsHdivQ = false;
-//        H1Case_1.mesh_type = "linear";
-//        H1Case_1.elemen_type = 0;
-//        H1Case_1.dump_folder = "H1_T_affine_cube";
-//        simulations.Push(H1Case_1);
-//        H1Case_1.elemen_type = 1;
-//        H1Case_1.dump_folder = "H1_H_affine_cube";
-//        simulations.Push(H1Case_1);
-//        H1Case_1.elemen_type = 2;
-//        H1Case_1.dump_folder = "H1_P_affine_cube";
-//        simulations.Push(H1Case_1);
-//
-//        //    // Dual Formulation n = 0
-//        struct SimulationCase HdivCase_1 = common;
-//        HdivCase_1.IsHdivQ = true;
-//        HdivCase_1.mesh_type = "linear";
-//        HdivCase_1.n_acc_terms = 0;
-//        HdivCase_1.elemen_type = 0;
-//        HdivCase_1.dump_folder = "Hdiv_n_0_T_affine_cube";
-//        simulations.Push(HdivCase_1);
-//        HdivCase_1.elemen_type = 1;
-//        HdivCase_1.dump_folder = "Hdiv_n_0_H_affine_cube";
-//        simulations.Push(HdivCase_1);
-//        HdivCase_1.elemen_type = 2;
-//        HdivCase_1.dump_folder = "Hdiv_n_0_P_affine_cube";
-//        simulations.Push(HdivCase_1);
-//
-//        //    // Dual Formulation n = 1
-//        struct SimulationCase HdivCase_2 = common;
-//        HdivCase_2.IsHdivQ = true;
-//        HdivCase_2.mesh_type = "linear";
-//        HdivCase_2.n_acc_terms = 1;
-//        HdivCase_2.elemen_type = 0;
-//        HdivCase_2.dump_folder = "Hdiv_n_1_T_affine_cube";
-//        simulations.Push(HdivCase_2);
-//        HdivCase_2.elemen_type = 1;
-//        HdivCase_2.dump_folder = "Hdiv_n_1_H_affine_cube";
-//        simulations.Push(HdivCase_2);
-//        HdivCase_2.elemen_type = 2;
-//        HdivCase_2.dump_folder = "Hdiv_n_1_P_affine_cube";
-//        simulations.Push(HdivCase_2);
-//
-//        //    // Dual Formulation n = 2
-//        struct SimulationCase HdivCase_3 = common;
-//        HdivCase_3.IsHdivQ = true;
-//        HdivCase_3.mesh_type = "linear";
-//        HdivCase_3.n_acc_terms = 2;
-//        HdivCase_3.elemen_type = 0;
-//        HdivCase_3.dump_folder = "Hdiv_n_2_T_affine_cube";
-//        simulations.Push(HdivCase_3);
-//        HdivCase_3.elemen_type = 1;
-//        HdivCase_3.dump_folder = "Hdiv_n_2_H_affine_cube";
-//        simulations.Push(HdivCase_3);
-//        HdivCase_3.elemen_type = 2;
-//        HdivCase_3.dump_folder = "Hdiv_n_2_P_affine_cube";
-//        simulations.Push(HdivCase_3);
-        
-        //    // Dual Formulation n = 3
-        struct SimulationCase HdivCase_4 = common;
-        HdivCase_4.IsHdivQ = true;
-        HdivCase_4.mesh_type = "linear";
-        HdivCase_4.n_acc_terms = 3;
-        HdivCase_4.elemen_type = 0;
-        HdivCase_4.dump_folder = "Hdiv_n_3_T_affine_cube";
-//        simulations.Push(HdivCase_4);
-        HdivCase_4.elemen_type = 1;
-        HdivCase_4.dump_folder = "Hdiv_n_3_H_affine_cube";
-        simulations.Push(HdivCase_4);
-        HdivCase_4.elemen_type = 2;
-        HdivCase_4.dump_folder = "Hdiv_n_3_P_affine_cube";
-//        simulations.Push(HdivCase_4);
-        
-    }
+    //     // Primal Formulation over the solid cube
+    struct SimulationCase H1Case_1 = common;
+//    H1Case_1.IsHdivQ = false;
+//    H1Case_1.mesh_type = "linear";
+//    H1Case_1.elemen_type = 1;
+//    H1Case_1.dump_folder = "H1_H_non_affine_cube";
+//    simulations.Push(H1Case_1);
+    
+//    //    // Dual Formulation n = 0
+    struct SimulationCase HdivCase_1 = common;
+    HdivCase_1.IsHdivQ = true;
+    HdivCase_1.mesh_type = "linear";
+    HdivCase_1.n_acc_terms = 0;
+    HdivCase_1.elemen_type = 1;
+    HdivCase_1.dump_folder = "Hdiv_n_0_H_non_affine_cube";
+    simulations.Push(HdivCase_1);
+    
+    //
+    //        //    // Dual Formulation n = 1
+    //        struct SimulationCase HdivCase_2 = common;
+    //        HdivCase_2.IsHdivQ = true;
+    //        HdivCase_2.mesh_type = "linear";
+    //        HdivCase_2.n_acc_terms = 1;
+    //        HdivCase_2.elemen_type = 1;
+    //        HdivCase_2.dump_folder = "Hdiv_n_1_H_non_affine_cube";
+    //        simulations.Push(HdivCase_2);
+    //
+    //        //    // Dual Formulation n = 2
+    //        struct SimulationCase HdivCase_3 = common;
+    //        HdivCase_3.IsHdivQ = true;
+    //        HdivCase_3.mesh_type = "linear";
+    //        HdivCase_3.n_acc_terms = 2;
+    //        HdivCase_3.elemen_type = 1;
+    //        HdivCase_3.dump_folder = "Hdiv_n_2_H_non_affine_cube";
+    //        simulations.Push(HdivCase_3);
     
     ComputeCases(simulations);
 }
@@ -665,11 +572,13 @@ void ComputeApproximation(SimulationCase & sim_data){
                 boost::posix_time::ptime int_unwrap_t1 = boost::posix_time::microsec_clock::local_time();
 #endif
             std::cout << "Post processing\n";
-                UnwrapMesh(cmesh);
-                analysis->LoadSolution();
-                cmesh->Solution() *= -1.0; /* consequence of newton correction */
-                analysis->LoadSolution(cmesh->Solution());
+            UnwrapMesh(cmesh);
+            analysis->LoadSolution();
+            cmesh->Solution() *= -1.0; /* consequence of newton correction */
+            analysis->LoadSolution(cmesh->Solution());
+            if (sim_data.IsHdivQ) {
                 TPZBuildMultiphysicsMesh::TransferFromMultiPhysics(meshvec, cmesh);
+            }
                 
 #ifdef USING_BOOST
                 boost::posix_time::ptime int_unwrap_t2 = boost::posix_time::microsec_clock::local_time();
@@ -774,7 +683,6 @@ void ComputeApproximation(SimulationCase & sim_data){
 void ComputeConvergenceRates(TPZVec<REAL> &error, TPZVec<REAL> &h_size, TPZVec<REAL> &convergence){
     
     int ndata = error.size();
-    STATE log0p5 = log(0.5);
     for (int i = 1; i < ndata; i++) {
         STATE logerror = log(error[i-1]);
         STATE logerrori = log(error[i]);
@@ -2233,9 +2141,16 @@ TPZGeoMesh * MakeCubeFromHexahedrons(int ndiv, SimulationCase  & sim_data){
     TPZGeoMesh * GeoMesh_cube = MakeCube(sim_data);
     
     if (sim_data.NonAffineQ) {
+#ifdef NEWTEST
+        UniformRefinement(GeoMesh_cube, 0);
+#else
         UniformRefinement(GeoMesh_cube, ndiv);
+#endif
         RefineHexahedronsToTetrahedrons(GeoMesh_cube, 1);
         RefineTetrahedronsToHexahedrons(GeoMesh_cube, 1);
+#ifdef NEWTEST
+        UniformRefinement(GeoMesh_cube, ndiv);
+#endif
     }else{
         UniformRefinement(GeoMesh_cube, ndiv+1);
     }
@@ -4380,7 +4295,7 @@ void PertubationMatrix_I(TPZManVector<REAL> CoordX, REAL pertub_param, REAL ElSi
 
 void ErrorH1(TPZAnalysis * analysis, REAL &error_primal , REAL & error_dual, REAL & error_h1)
 {
-    bool Serial_ErrorQ = false;
+    bool Serial_ErrorQ = true;
     int nthreads = 12;
     
     TPZCompMesh * cmesh = analysis->Mesh();
