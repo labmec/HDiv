@@ -123,8 +123,8 @@ bool ComputePressureJumpOnFaces(TPZCompMesh *cmesh,int matid,STATE &Error) {
         
         //if side has codimension 1 and it is inner then compute the jump pressure
         //Computing pressure on center of the side
-        TPZManVector<REAL,3> pt(3,0.);
-        TPZManVector<REAL,3> pt_el(3,0.);
+        TPZManVector<REAL,3> pt(celside.Reference().Dimension(),0.);
+        TPZManVector<REAL,3> pt_el(gel->Dimension(),0.);
         TPZManVector<REAL,3> pt_n(3,0.);
         TPZManVector<REAL,3> pt_el_n(3,0.);
         volEl = celside.Reference().Area();
@@ -144,9 +144,11 @@ bool ComputePressureJumpOnFaces(TPZCompMesh *cmesh,int matid,STATE &Error) {
         // working on faces from neighboard element with commom face
        // TPZCompElSide celside_n = AnotherSideFaces.Pop();
         TPZGeoElSide gelside_n = neighcelside.Reference();
+        pt_n.Resize(gelside_n.Dimension());
         gelside_n.CenterPoint(pt_n);
         TPZGeoElSide gelsideh_n(gelside_n.Element(),gelside_n.Element()->NSides()-1);
         tr = gelside_n.SideToSideTransform(gelsideh_n);
+        pt_el_n.Resize(gelsideh_n.Dimension());
         tr.Apply(pt_n,pt_el_n);
         neighcelside.Element()->Solution(pt_el_n,varpress,solneigh);
         STATE Err = volEl*(sol[0] - solneigh[0]);
