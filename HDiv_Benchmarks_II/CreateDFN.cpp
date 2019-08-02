@@ -845,7 +845,7 @@ TPZCompMesh * CreateDFN::CreateDFNCmesh(TPZMultiphysicsCompMesh * mp_initial_cme
     return dfn_hybrid_cmesh;
 }
 /// make a hybrid mesh from a H(div) multiphysics mesh
-void *CreateDFN::Hybridize(TPZMultiphysicsCompMesh *multiphysics, bool group_elements, double Lagrange_term_multiplier)
+void CreateDFN::Hybridize(TPZMultiphysicsCompMesh *multiphysics, bool group_elements, double Lagrange_term_multiplier)
 {
     
     TPZHybridizeHDiv hybrid;
