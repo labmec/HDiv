@@ -134,7 +134,7 @@ private:
         fflux_resistivity_id =flux_resistivity_id;
     }
     
-    void * Hybridize(TPZMultiphysicsCompMesh *multiphysics, bool group_elements, double Lagrange_term_multiplier);
+    void Hybridize(TPZMultiphysicsCompMesh *multiphysics, bool group_elements, double Lagrange_term_multiplier);
     
     void CheckODElements(TPZCompMesh *dfn_hybrid_cmesh);
     void CreateAllInterfaceElements(int interface_id, TPZCompMesh *cmesh, TPZVec<TPZCompMesh *> & mesh_vec);
