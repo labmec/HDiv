@@ -2,11 +2,11 @@ Geometry.Tolerance = 3.33333333333e-05;
 
 s = 1.0;
 
-//h_domain = 0.125; /// 30k
-//ng = 12; /// 30k
+h_domain = 0.125; /// 30k
+ng = 12; /// 30k
 
-h_domain = 0.05; /// 30k
-ng = 25; /// 30k
+h_domain = 0.05; /// 150k
+ng = 25; /// 150k
 
 
 nf_0 = ng;

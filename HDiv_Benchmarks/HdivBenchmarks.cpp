@@ -244,8 +244,8 @@ int main(){
 
 //    Pretty_cube();
 //   Case_4();
-     Case_2();
-//    Case_3();
+//     Case_2();
+    Case_3();
 //    Case_1();
 }
 
@@ -1605,8 +1605,8 @@ void Case_3(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
-      std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
+//      std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
