@@ -3,11 +3,11 @@
 // Gmsh project created on Sun Mar 31 19:13:00 2019
 SetFactory("OpenCASCADE");
 
-//h = 1.0; // 923 tet
+h = 1.0; // 923 tet -> 0.5k cells
 
-h = 0.14; // 3907 tet
+//h = 0.14; // 3907 tet -> 4k cells
 
-//h = 0.062; // 38742 tet
+//h = 0.062; // 38742 tet -> 32k cells
 
 //Small fractures defintion 
 p1 = newp; Point(p1) = {0.5, 0.75, 0.625,h};
