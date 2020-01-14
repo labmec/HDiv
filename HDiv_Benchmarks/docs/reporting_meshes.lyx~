@@ -81,9 +81,11 @@ Benchmarks 3D gmsh files
 \end_layout
 
 \begin_layout Abstract
-This short document describes all the information regarding the geometrical
- partitions used for the reported resutls associated to UNICAMP-Hybrid Hdiv
- method.
+This short document reports the number of cells in several dimensions, regarding
+ the geometrical partitions used for the generated resutls associated to
+ method labeled with "UNICAMP-Hybrid_Hdiv".
+ The method is nothing more than a hybrid lagrange multiplier method for
+ mixed operators in different dimensions.
 \end_layout
 
 \begin_layout Section*
@@ -639,7 +641,7 @@ noprefix "false"
 
 \end_inset
 
- presents the number of cells by dimension in meshes used for case 2.
+ presents the number of cells by dimension in meshes used for case 3.
  The Gmsh file used is 
 \series bold
 case_3.geo
@@ -653,7 +655,7 @@ case_3.geo
 placement H
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Plain Layout
 \align center
@@ -831,6 +833,174 @@ name "tab:Meshes-for-Case3"
 
 Meshes for Case 3: subcases classified by an approximated number of volumetric
  cells.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+Case 4
+\end_layout
+
+\begin_layout Standard
+The table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Meshes-for-Case4"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ presents the number of cells by dimension in meshes used for case 4.
+ The Gmsh file used is 
+\series bold
+case_4.geo
+\series default
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+placement H
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="2" columns="5">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Case
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+3D cells
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2D cells
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1D cells
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0D cells
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\approx$
+\end_inset
+
+ 95k cells
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+94293
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+24853
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+938
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:Meshes-for-Case4"
+
+\end_inset
+
+Meshes for Case 4 with approximated 95k volumetric cells.
 \end_layout
 
 \end_inset

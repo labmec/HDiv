@@ -243,9 +243,9 @@ int main(){
     
 
 //    Pretty_cube();
-//   Case_4();
+   Case_4();
 //     Case_2();
-    Case_3();
+//    Case_3();
 //    Case_1();
 }
 
