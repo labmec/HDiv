@@ -451,7 +451,7 @@ Subcase
 \begin_inset Formula $\approx$
 \end_inset
 
- 1k cells
+ 0.5k cells
 \end_layout
 
 \end_inset
@@ -460,7 +460,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-1054
+923
 \end_layout
 
 \end_inset
@@ -469,7 +469,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-526
+534
 \end_layout
 
 \end_inset
@@ -478,7 +478,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-0
+69
 \end_layout
 
 \end_inset
@@ -487,7 +487,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-0
+27
 \end_layout
 
 \end_inset
@@ -501,7 +501,7 @@ Subcase
 \begin_inset Formula $\approx$
 \end_inset
 
- 10k cells
+ 4k cells
 \end_layout
 
 \end_inset
@@ -510,7 +510,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-10589
+3901
 \end_layout
 
 \end_inset
@@ -519,7 +519,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-2884
+1896
 \end_layout
 
 \end_inset
@@ -528,7 +528,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-0
+90
 \end_layout
 
 \end_inset
@@ -537,7 +537,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-0
+27
 \end_layout
 
 \end_inset
@@ -551,7 +551,7 @@ Subcase
 \begin_inset Formula $\approx$
 \end_inset
 
- 10k cells
+ 32k cells
 \end_layout
 
 \end_inset
@@ -560,7 +560,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-101524
+38643
 \end_layout
 
 \end_inset
@@ -569,7 +569,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-13436
+10744
 \end_layout
 
 \end_inset
@@ -578,7 +578,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-0
+249
 \end_layout
 
 \end_inset
@@ -587,7 +587,7 @@ Subcase
 \begin_inset Text
 
 \begin_layout Plain Layout
-0
+27
 \end_layout
 
 \end_inset
