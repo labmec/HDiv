@@ -42,8 +42,6 @@
 
 #include "pzlog.h"
 
-#include "pzhdivfull.h"
-
 #include <iostream>
 #include <math.h>
 using namespace std;

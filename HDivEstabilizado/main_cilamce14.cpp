@@ -42,7 +42,6 @@
 
 #include "pzlog.h"
 
-#include "pzhdivfull.h"
 #include "pzaxestools.h"
 #include "TPZCopySolve.h"
 #include "pzstrmatrix.h"

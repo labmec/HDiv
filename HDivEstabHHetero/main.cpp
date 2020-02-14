@@ -42,13 +42,13 @@
 
 #include "pzlog.h"
 
-#include "pzhdivfull.h"
 #include "pzaxestools.h"
 #include "TPZCopySolve.h"
 #include "pzstrmatrix.h"
 
 #include <iostream>
 #include <math.h>
+
 using namespace std;
 
 int MatId = 1;
