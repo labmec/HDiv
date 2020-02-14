@@ -135,7 +135,6 @@ bool problema3D;
 
 int main()
 {
-    HDivPiola = 0;
     bool SecondIntegration = false;
     
     //InitializePZLOG();
@@ -377,13 +376,7 @@ int main()
         }
         
         std::ofstream errtable("../ErrosConvergencia.txt");
-        if(HDivPiola==0){
-            errtable << "\nSolucão HDiv com transformacao e normais Normalizadas";
-        }else if(HDivPiola==1){
-            errtable << "\nSolucão HDiv com transformada de Piola";
-        }else{
-             errtable << "\nSolucão HDiv com vetores constantes";
-        }
+
         if(zigzag){
             errtable << ": MALHA TRAPEZOIDAL";
         }else{

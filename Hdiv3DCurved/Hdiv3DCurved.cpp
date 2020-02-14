@@ -259,9 +259,7 @@ void Configuration_Non_Affine();
 
 int main()
 {
-    
-  HDivPiola = 1;
-    
+     
   gRefDBase.InitializeAllUniformRefPatterns();
     
 #ifdef LOG4CXX

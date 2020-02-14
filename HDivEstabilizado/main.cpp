@@ -372,12 +372,7 @@ TPZCompMesh *CMeshFlux(TPZGeoMesh *gmesh, int pOrder)
     cmesh->InsertMaterialObject(mat);
 	
 
-    if(isFullHdiv){
-        cmesh->SetAllCreateFunctionsHDivFull();
-    }
-    else{
-		cmesh->SetAllCreateFunctionsHDiv();
-    }
+    cmesh->SetAllCreateFunctionsHDiv();
 	
     cmesh->InsertMaterialObject(BCond0);
     cmesh->InsertMaterialObject(BCond1);

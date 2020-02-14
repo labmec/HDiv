@@ -8,6 +8,8 @@
 #include "pzgeoelbc.h"
 #include "TPZGmshReader.h"
 #include "TPZRefPatternTools.h"
+#include "TPZRefPatternDataBase.h"
+
 #include "TPZVTKGeoMesh.h"
 
 #include "pzcmesh.h"

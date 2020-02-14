@@ -580,12 +580,7 @@ TPZCompMesh *CMeshFlux2(int pOrder,TPZGeoMesh *gmesh)
 	TPZCompMesh * cmesh = new TPZCompMesh(gmesh);
     cmesh->SetDimModel(dim);
 	
-    if(IsFullHdiv){
-        cmesh->SetAllCreateFunctionsHDivFull();
-    }
-    else{
-		cmesh->SetAllCreateFunctionsHDiv();
-    }
+    cmesh->SetAllCreateFunctionsHDiv();
 
     cmesh->InsertMaterialObject(mat);
     cmesh->SetDefaultOrder(pOrder);
