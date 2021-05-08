@@ -243,10 +243,10 @@ int main(){
     
 
 //    Pretty_cube();
-//    Case_1();
+    Case_1();
 //     Case_2();
 //    Case_3();
-    Case_4();
+//    Case_4();
 
 }
 
@@ -1191,9 +1191,9 @@ void Case_2(){
     
     TPZGmshReader Geometry, Geometry_aux;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_500.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_4k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_2/case_2_32k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -1601,9 +1601,9 @@ void Case_3(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_30k.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_3/case_3_150k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
     std::string version("4.1");
     
@@ -3426,22 +3426,22 @@ TPZFMatrix<STATE> TimeForward(TPZAnalysis * tracer_analysis, int & n_steps, REAL
                 }
                 volume->SetDimension(data.second);
             }
-//            if(it == n_steps - 1)
-//            {
-//                int div = 0;
-//                std::set<int> mat_id_3D;
-//                mat_id_3D.insert(1);
-//                mat_id_3D.insert(2);
-//                std::string file_reservoir("cube_s.vtk");
-//                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
-//                tracer_analysis->PostProcess(div,3);
-//
-//                std::set<int> mat_id_2D;
-//                mat_id_2D.insert(6);
-//                std::string file_frac("fracture_s.vtk");
-//                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
-//                tracer_analysis->PostProcess(div,2);
-//            }
+            if(it == n_steps - 1)
+            {
+                int div = 0;
+                std::set<int> mat_id_3D;
+                mat_id_3D.insert(1);
+                mat_id_3D.insert(2);
+                std::string file_reservoir("cube_s.vtk");
+                tracer_analysis->DefineGraphMesh(3,mat_id_3D,scalnames,vecnames,file_reservoir);
+                tracer_analysis->PostProcess(div,3);
+
+                std::set<int> mat_id_2D;
+                mat_id_2D.insert(6);
+                std::string file_frac("fracture_s.vtk");
+                tracer_analysis->DefineGraphMesh(2,mat_id_2D,scalnames,vecnames,file_frac);
+                tracer_analysis->PostProcess(div,2);
+            }
 
             
             // configuring next time step
