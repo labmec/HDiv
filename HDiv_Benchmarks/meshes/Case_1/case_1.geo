@@ -1,9 +1,9 @@
 
 Mesh.Algorithm = 6;
 
-//h = 1.5;   /// approx 1k tet : 1054 tetrahera and 526 triangles
+h = 1.5;   /// approx 1k tet : 1054 tetrahera and 526 triangles
 
-h = 0.55;   /// approx 1k tet : 10589 tetrahera and 2884 triangles
+//h = 0.55;   /// approx 1k tet : 10589 tetrahera and 2884 triangles
 
 //h = 0.24;   /// approx 1k tet : 101524 tetrahera and 13436 triangles
 

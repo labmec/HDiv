@@ -703,8 +703,8 @@ void Case_1(){
     
     TPZGmshReader Geometry;
     std::string source_dir = SOURCE_DIR;
-//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1.msh";
-    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
+    std::string file_gmsh = source_dir + "/meshes/Case_1/jose_simple.msh";
+//    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_1k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_10k.msh";
 //    std::string file_gmsh = source_dir + "/meshes/Case_1/case_1_100k.msh";
     TPZGeoMesh *gmesh = new TPZGeoMesh;
